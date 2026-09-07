@@ -15,4 +15,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    host: true,
+    allowedHosts: [
+      'boilerplate.test',
+      '.test' // O usa true para permitir cualquier dominio local
+    ]
+  }  
 })

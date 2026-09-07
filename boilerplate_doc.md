@@ -280,7 +280,29 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         npm audit fix
         npm approve-scripts @prisma/client prisma @prisma/engines esbuild
         ```
-5. Crear archivo de variables de entorno `backend/.env`:
+5. Ejecutar la inicialización de Prisma
+    ```bash
+    npx prisma init
+    ```
+6. Añadir un modelo básico o de prueba en `backend/prisma/schema.prisma`:
+    ```prisma
+    generator client {
+        provider = "prisma-client-js"
+    }
+
+    datasource db {
+        provider = "postgresql" // O el motor que estés usando (mysql, sqlite, etc.)
+        url      = env("DATABASE_URL")
+    }
+
+    // Añade este modelo de prueba para que 'prisma generate' funcione
+    model User {
+        id        Int      @id @default(autoincrement())
+        email     String   @unique
+        createdAt DateTime @default(now())
+    }
+    ```
+7. Crear archivo de variables de entorno `backend/.env`:
     ```env
     # ==========================================
     # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
@@ -296,7 +318,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     # APP_URL=https://api.tudominio.com
     # NODE_ENV=production
     ```
-6. Crear `backend/.gitignore`:
+8. Crear `backend/.gitignore`:
     ```gitignore
     node_modules/
     .env
@@ -307,7 +329,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     dist/
     build/
     ```
-7. Crea el archivo `backend/src/server.js`:
+9.  Crea el archivo `backend/src/server.js`:
     ```js
     require('dotenv').config();
     const express = require('express');
@@ -340,7 +362,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     ```
-8. Prueba la ejecución:
+10. Prueba la ejecución:
     ```
     npm run dev
     ```
@@ -379,8 +401,21 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     cd frontend
     npm install eslint-plugin-oxlint@latest oxlint@latest --save-dev
     ```
-
-3. Una vez creado, navegamos al directorio e instalamos las dependencias base generadas por Vue:
+3. Editar `frontend/vite.config.js`:
+    ```js
+    // ...
+    export default defineConfig({
+        // ...
+        server: {
+            host: true,
+            allowedHosts: [
+                'boilerplate.test',
+                '.test' // O usa true para permitir cualquier dominio local
+            ]
+        }  
+    })    
+    ```
+4. Una vez creado, navegamos al directorio e instalamos las dependencias base generadas por Vue:
     ```bash    
     npm install
     ```
@@ -388,7 +423,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     ```bash
     npm install --legacy-peer-deps
     ```
-4. Prueba la ejecución:
+5. Prueba la ejecución:
     ```
     npm run dev
     ```
@@ -442,38 +477,142 @@ git commit -m "chore: initial commit"
 gh repo create boilerplate-node-2026 --public --source=. --remote=origin --push
 ```
 
+## 📄 Dockerización
+1. Mapear el dominio local en tu Sistema Operativo:
+    + Abre el archivo hosts de tu sistema con permisos de administrador:
+        + Windows (WSL): `C:\Windows\System32\drivers\etc\hosts`.
+        + Linux/WSL: `/etc/hosts`.
+    + Agrega esta línea al final:
+        ```
+        127.0.0.1   boilerplate.test
+        ```
+2. Dockerización del Backend:
+    + Crea `backend/.dockerignore`:
+        ```dockerignore
+        node_modules
+        npm-debug.log
+        .env
+        .git
+        .gitignore
+        README.md
+        dist        
+        ```
+    + Crea `backend/Dockerfile`:
+        ```Dockerfile
+        FROM node:20-alpine AS base
 
+        WORKDIR /usr/src/app
 
+        # Dependencias para Prisma / OpenSSL en Alpine
+        RUN apk add --no-cache openssl
 
+        COPY package*.json ./
+        COPY prisma ./prisma/
 
-## --------------------------------------------------------
+        RUN npm ci
+        RUN npx prisma generate
 
+        COPY . .
 
+        EXPOSE 3000
 
-#### Paso 2: Crear el Orquestador de Infraestructura Local (docker-compose.yml)
-+ En la raíz del proyecto (`mi-proyecto-starter/`), crea el archivo `docker-compose.yml`:
+        CMD ["npm", "run", "dev"]
+        ```
+3. Dockerización del Frontend:
+    + Crea `frontend/.dockerignore`:
+        ```dockerignore
+        node_modules
+        dist
+        .git
+        .gitignore
+        README.md
+        ```
+    + Crea `frontend/Dockerfile`:
+        ```Dockerfile
+        FROM node:20-alpine
+
+        WORKDIR /usr/src/app
+
+        COPY package*.json ./
+
+        RUN npm ci
+
+        COPY . .
+
+        EXPOSE 5173
+
+        CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+        ```
+4. Configurar Nginx Reverse Proxy:
+    + Crea una carpeta nginx en la raíz del proyecto con el archivo `nginx/default.conf`:
+        ```conf
+        server {
+            listen 80;
+            server_name boilerplate.test;
+
+            # Enrutamiento al Frontend (Vue 3 / Vite)
+            location / {
+                proxy_pass http://frontend:5173;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+            }
+
+            # Enrutamiento al Backend (Express API)
+            location /api/ {
+                proxy_pass http://backend:3000;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }
+        }
+        ```
+5. Orquestación de Infraestructura Local con `docker-compose.yml`
++ Crea el archivo `docker-compose.yml` en la raíz del proyecto:
 ```yml
 services:
+  # Nginx Gateway
+  proxy:
+    image: nginx:alpine
+    container_name: boilerplate_proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+
+  # Base de Datos PostgreSQL
   postgres_dev:
     image: postgres:15-alpine
-    container_name: local_starter_postgres
+    container_name: boilerplate_postgres
     restart: always
     environment:
       POSTGRES_USER: dev_user
       POSTGRES_PASSWORD: dev_password
-      POSTGRES_DB: local_starter_db
+      POSTGRES_DB: boilerplate_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d boilerplate_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
+  # MinIO (S3 Local)
   minio:
     image: minio/minio:RELEASE.2024-01-18T22-51-28Z
-    container_name: local_starter_minio
+    container_name: boilerplate_minio
     restart: always
     ports:
-      - "9000:9000"   # Puerto de la API S3
-      - "9001:9001"   # Consola Web
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: minio_admin
       MINIO_ROOT_PASSWORD: minio_password123
@@ -481,35 +620,134 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
 
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: boilerplate_backend
+    restart: always
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - APP_URL=http://boilerplate.test
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres_dev:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    command: npm run dev
+
+  # Frontend SPA
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: boilerplate_frontend
+    restart: always
+    environment:
+      - VITE_API_URL=http://boilerplate.test/api
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - backend
+
+  prisma-studio:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: boilerplate_prisma_studio
+    restart: always
+    ports:
+      - "5555:5555"
+    environment:
+      - DATABASE_URL=postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres_dev:
+        condition: service_healthy
+    command: npx prisma studio --port 5555 --browser none
+
 volumes:
   postgres_data:
   minio_data:
 ```
+6. Ajustar `.env` en el Backend:
+    + Actualiza tu archivo `backend/.env` para usar el nombre del contenedor de la base de datos:
+        ```env
+        # ==========================================
+        # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
+        # ==========================================
+        PORT=3000
+        APP_URL=http://boilerplate.test
+        NODE_ENV=development
 
-+ Crea también un archivo `.gitignore` en la raíz para evitar subir archivos temporales o volúmenes accidentales:
-    ```gitignore
-    # Docker / Datos locales
-    .postgres_data/
-    *.log
+        # ==========================================
+        # CONFIGURACIÓN DEL SERVIDOR BACKEND PRODUCCIÓN
+        # ==========================================
+        # PORT=3000
+        # APP_URL=https://api.tudominio.com
+        # NODE_ENV=production
 
-    # Archivos de entorno
-    .env
-    .env.local
-    ```
+        # ==========================================
+        # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS LOCAL
+        # ==========================================
+        DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db?schema=public"
 
-#### Paso 3: Inicializar la Base de Datos Local
-+ Ejecuta el siguiente comando en la raíz para levantar el contenedor de PostgreSQL en segundo plano:
-```bash
-docker compose up -d
-```
+        # ==========================================
+        # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS PRODUCCIÓN
+        # ==========================================
+        # DATABASE_URL=
 
-+ Verificación del Servicio:
-    + Para confirmar que la base de datos está activa y escuchando en el puerto 5432:
-        ```bash
-        docker ps
+        # ==========================================
+        # CONFIGURACIÓN DEL BUCKET DE ALMACENAMIENTO DE ARCHIVOS LOCAL
+        # ==========================================
+        AWS_ENDPOINT="http://minio:9000"
+
+        # ==========================================
+        # CONFIGURACIÓN DEL BUCKET DE ALMACENAMIENTO DE ARCHIVOS PRODUCCIÓN
+        # ==========================================
+        # AWS_ENDPOINT
         ```
-    + Deberías ver el contenedor local_starter_postgres con estado Up.
+7. Comandos de Ejecución:
+    + Levantar todo el entorno:
+        ```bash
+        # Levantar todos los servicios
+        docker compose up -d --build
 
+        # Levantar solo un servicio, por ejemplo el backend o el frontend
+        docker compose up -d --build backend
+        docker compose up -d --build frontend
+        ```
+    + Verificar acceso:
+        + Frontend: [http://boilerplate.test](http://boilerplate.test)
+        + API Health Check: [http://boilerplate.test/api/health](http://boilerplate.test/api/health)
+        + MinIO Console: [http://localhost:9001](http://localhost:9001)
+        + Prisma Studio: [http://localhost:5555](http://localhost:5555)
+    + Ver logs del sistema:
+        ```bash
+        docker compose logs -f backend
+        docker compose logs -f frontend
+        docker compose logs minio
+        ```
+    + Comandos de interes
+        ```bash
+        # Ejecutar migraciones o comandos de Prisma dentro del contenedor
+        docker compose exec backend npx prisma migrate dev
+
+        # Estado de los contenedores
+        docker compose ps
+        ```
+
+## --------------------------------------------------------
 
 
 ## --------------------------------------------------------
