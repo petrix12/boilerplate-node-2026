@@ -4865,6 +4865,14 @@ Crearemos un script reutilizable e independiente que inserta las tablas iniciale
 
 
 ## Implementar funcionalidad a Auditoría y Logs
++ Esto esta pendiente:
+    + Configuración de Variables de Entorno: Desplázate hasta la sección Environment Variables y añade en Render y en .env:
+        + JWT_SECRET: tu_clave_secreta_super_segura
+        + FRONTEND_URL_PROD: https://familytree2026.vercel.app
+        + FRONTEND_URL_LOCAL_VITE: http://localhost:5173
+        + FRONTEND_URL_LOCAL_VUE_CLI: http://localhost:8080
+        + AWS_ENDPOINT=
+
 ### Auditoria para eventos de usuarios y autenticación
 1. Crear el Contexto de Auditoría (`src/middlewares/auditContext.middleware.js`)
     + Crea este archivo para capturar la identidad del usuario conectado (`req.user.id`) en cada petición entrante mediante AsyncLocalStorage de Node.js.
@@ -5369,123 +5377,6 @@ Crearemos un script reutilizable e independiente que inserta las tablas iniciale
 
 ## -------------------------
 
-## Guía de Despliegue en Producción (CI/CD $0 USD)
-
-### Persistencia de Datos (Supabase PostgreSQL)
-1. Crear un nuevo proyecto en Supabase.
-2. Ir a `Project Settings` > `Database` y copiar la cadena de conexión URI (modo Transaction o Session).
-3. Aplicar las migraciones desde tu entorno local hacia la base de datos de producción:
-    ```bash
-    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" npx prisma migrate deploy
-    ```
-    + Estructura de variables para la documentación:
-        + `<USER>`: Usuario por defecto de la base de datos (habitualmente postgres).
-        + `<PROJECT_REF>`: Identificador único o Reference ID de tu proyecto en Supabase (ej. twnivqutsljjpwutfwgs).
-        + `<ENCODED_PASSWORD>`: Contraseña de la base de datos con caracteres especiales codificados en formato URL (ejemplo: = se convierte en %3D, # en %23).
-        + `<POOLER_HOST>`: Host del Connection Pooler asignado a tu región en Supabase (ej. aws-0-eu-west-2.pooler.supabase.com).
-        + `<PORT>`: Puerto de conexión (5432 para modo Session o 6543 para modo Transaction con ?pgbouncer=true).
-        + `<DATABASE_NAME>`: Nombre de la base de datos lógica (por defecto postgres).
-
-### API Backend (Render Web Service)
-1. Creación de Cuenta y Vinculación con GitHub:
-    + Accede a [render.com](https://render.com/) y haz clic en Get Started.
-    + Selecciona Sign Up with GitHub para autorizar el acceso a tus repositorios.
-2. Creación del Web Service:
-    + En el Dashboard de Render, haz clic en New + y selecciona Web Service.
-    + Elige tu repositorio del backend (familytree2026-backend).
-    + Completa los campos de configuración:
-        + Name: familytree2026-backend
-        + Region: Frankfurt (EU Central) o la más cercana a tu base de datos.
-        + Branch: main
-        + Runtime: Node
-        + Build Command: npm install && npx prisma generate
-        + Start Command: npm start (o node server.js / node index.js, dependiendo de cómo arranques tu servidor en el package.json)
-        + Instance Type: Free ($0/mo)
-    + Configuración de Variables de Entorno: Desplázate hasta la sección Environment Variables y añade:
-        + DATABASE_URL: postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>
-        + JWT_SECRET: tu_clave_secreta_super_segura
-        + PORT: 10000
-        + FRONTEND_URL_PROD: https://familytree2026.vercel.app
-        + FRONTEND_URL_LOCAL_VITE: http://localhost:5173
-        + FRONTEND_URL_LOCAL_VUE_CLI: http://localhost:8080
-    + Haz clic en Create Web Service.
-    + Copia la URL pública generada (ej. [https://familytree2026-backend.onrender.com](https://familytree2026-backend.onrender.com)).
-
-### Configuración de Enrutamiento SPA en Vercel
-1. Crea un archivo llamado `vercel.json` en la raíz de tu proyecto frontend (`familytree2026-frontend/vercel.json`) con el siguiente contenido:
-    ```json
-    {
-        "rewrites": [
-            {
-                "source": "/(.*)",
-                "destination": "/index.html"
-            }
-        ]
-    }
-    ```
-2. Guarda el archivo vercel.json en la raíz de familytree2026-frontend.
-3. Sube los cambios a tu repositorio:
-    ```bash
-    git add vercel.json
-    git commit -m "fix: add vercel rewrites for SPA routing"
-    git push origin main
-    ```
-
-### Capa de Presentación (Vercel)
-1. Creación de Cuenta:
-    + Accede a vercel.com mediante Continue with GitHub.
-    + En el onboarding, selecciona "I'm working on personal projects" para habilitar el plan Hobby 100% gratuito (sin tarjeta).
-    + En el aviso de seguridad 2FA, selecciona "Skip securing my account".
-    + Haz clic en Add New... > Project e importa familytree2026-frontend.
-2. Importación y Despliegue del Frontend:
-    + En el Dashboard, haz clic en Add New... > Project.
-    + Importa el repositorio del frontend (familytree2026-frontend).
-3. Ajustes de Build & Runtime:
-    + En Settings > Build and Deployment:
-        + Node.js Version: 20.x
-        + Install Command (Override): npm install --legacy-peer-deps (evita errores ERESOLVE por peer dependencies de paquetes como oxlint).
-4. Variables de Entorno en Vercel:
-    + En Settings > Environment Variables:
-        + Key: VITE_API_BASE_URL
-        + Value: https://familytree2026-backend.onrender.com/api/v1
-5. Despliegue Final:
-    + Haz clic en Deploy. Tras guardar o cambiar variables de entorno, ejecuta siempre un Redeploy (sin usar Build Cache) para inyectar la URL de la API en los archivos estáticos de React/Vite.
-
-### Ejecutar seeder en producción
-1. Abre la terminal en la carpeta de tu backend (`familytree2026-backend`).
-2. Ejecuta el comando de seed pasando la cadena de conexión de producción de Supabase:
-    ```bash
-    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" npx prisma db seed
-    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" node src/seeders/superadmin.seeder.js
-    ```
-    + Asegúrate de reemplazar las credenciales por las reales de Supabase, tal como hiciste al aplicar las migraciones.
-
-### Subir cambios a Vercel
-1. Iniciar sesión en Vercel:
-    ```bash
-    npx vercel login
-    ```
-2. Vincular el proyecto local:
-    ```bash
-    npx vercel link
-    ```
-    + Responde Y a Set up and deploy?
-    + Elige tu scope/usuario (petrix1).
-    + Selecciona Link to existing project y elige familytree2026-frontend.
-3. Forzar el Despliegue a Producción:
-    ```bash
-    npx vercel --prod
-    ```
-
-### Cambiar el nombre del proyecto
-+ Al cambiar el nombre del proyecto de `familytree2026-frontend` a `familytree2026`, Vercel actualizará la URL principal automáticamente a `familytree2026.vercel.app`.
-1. Ve a Vercel Dashboard.
-2. Entra en tu proyecto `familytree2026-frontend`.
-4. Ve a la pestaña Settings (Configuración) en la barra superior.
-5. En la sección General, busca el campo Project Name.
-6. Cámbialo de `familytree2026-frontend` a `familytree2026`.
-7. Haz clic en Save (Guardar).
-8. Actualiza la variable de entorno de CORS en Render (FRONTEND_URL_PROD en el servicio familytree2026-backend) agregando la nueva dirección [https://familytree2026.vercel.app](https://familytree2026.vercel.app).
 
 ## -------------------------
 

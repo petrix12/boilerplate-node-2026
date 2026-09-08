@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql" // O el motor que estés usando (mysql, sqlite, etc.)
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // Añade este modelo de prueba para que 'prisma generate' funcione
