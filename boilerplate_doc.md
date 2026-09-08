@@ -787,10 +787,6 @@ volumes:
         + DATABASE_URL (Puerto 6543): Conexión en modo Transaction (?pgbouncer=true) utilizada por la aplicación Node.js en producción.
         + DIRECT_URL (Puerto 5432): Conexión en modo Session que requiere Prisma CLI para ejecutar migraciones directas sin pasar por PgBouncer.
 
-
-
-## --------------------------------------------------------
-
 ### API Backend (Render Web Service)
 1. Creación de Cuenta y Vinculación con GitHub:
     + Accede a [render.com](https://render.com/) y haz clic en Get Started.
@@ -814,12 +810,17 @@ volumes:
         + DATABASE_URL: "postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:6543/<DATABASE_NAME>?pgbouncer=true"
         + DIRECT_URL: "postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:5432/<DATABASE_NAME>"
     + Haz clic en `Deploy Web Service`.
-    + Copia la URL pública generada (ej. [https://familytree2026-backend.onrender.com](https://familytree2026-backend.onrender.com)).
+    + Copia la URL pública generada (ej. [https://boilerplate-node-2026.onrender.com](https://boilerplate-node-2026.onrender.com)).
+3. Prueba de funcionamiento:
+    + Verifica el endpoint:
+        ```bash
+        curl https://boilerplate-node-2026.onrender.com/api/health
+        ```
 
 ## --------------------------------------------------------
 
 ### Configuración de Enrutamiento SPA en Vercel
-1. Crea un archivo llamado `vercel.json` en la raíz de tu proyecto frontend (`familytree2026-frontend/vercel.json`) con el siguiente contenido:
+1. Crea un archivo llamado `vercel.json` en la raíz de tu proyecto frontend (`frontend/vercel.json`) con el siguiente contenido:
     ```json
     {
         "rewrites": [
@@ -830,13 +831,14 @@ volumes:
         ]
     }
     ```
-2. Guarda el archivo vercel.json en la raíz de familytree2026-frontend.
-3. Sube los cambios a tu repositorio:
+2. Sube los cambios a tu repositorio:
     ```bash
     git add vercel.json
     git commit -m "fix: add vercel rewrites for SPA routing"
     git push origin main
     ```
+
+## --------------------------------------------------------
 
 ### Capa de Presentación (Vercel)
 1. Creación de Cuenta:
