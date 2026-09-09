@@ -372,14 +372,6 @@
 
 ## 📑 Módulo de Autenticación (Auth)
 Esta fase implementa el registro de usuarios, el inicio de sesión y la emisión de tokens JWT (JSON Web Tokens) que incluirán los roles del usuario para proteger las rutas de la API.
-
-2. Definir Variables de Entorno para JWT: Abre tu archivo `.env` y añade las claves de configuración para los tokens JWT:
-    ```env
-    # JWT Settings
-    JWT_SECRET=super_secret_key_familytree_2026_change_in_production
-    JWT_EXPIRES_IN=24h
-    ```
-
 3. Estructura de Capas para la Autenticación: Crearemos los archivos necesarios siguiendo la arquitectura limpia del proyecto:
     ```
     src/
@@ -908,11 +900,6 @@ Para completar la base de autenticación reutilizable (Starter Kit) y permitir q
     + Si existe el archivo `src/assets/base.css`, puedes borrarlo o vaciarlo para que no interfiera con las clases de Tailwind.
 
 ### 🌐 Paso 4: Cliente HTTP Centralizado (`src/api/axios.js`)
-1. Crea el archivo `.env` en la raíz de `familytree2026-frontend`:
-    ```env
-    # URL Base de la API REST para el Backend local
-    VITE_API_BASE_URL=http://localhost:4000/api/v1
-    ```
 2. Crea la `carpeta src/api/` y el archivo `src/api/axios.js`:
     ```js
     import axios from 'axios';
@@ -2465,12 +2452,6 @@ Crearemos un script reutilizable e independiente que inserta las tablas iniciale
 
     seedSuperAdmin();
     ```
-3. Configuración del Archivo `.env` Local
-    + Edita el archivo `.env` en la raíz de `familytree2026-backend` y agrega las siguiente variables de entorno:
-        ```env
-        SUPER_ADMIN_EMAIL = admin@familytree.com
-        SUPER_ADMIN_PASSWORD = 12345678
-        ```
 4. Agrega el comando para correr el seeder en el `package.json` de tu Backend:
     ```json
     "scripts": {
@@ -4863,16 +4844,6 @@ Crearemos un script reutilizable e independiente que inserta las tablas iniciale
     module.exports = { getClientIp };
     ```
 
-
-## Implementar funcionalidad a Auditoría y Logs
-+ Esto esta pendiente:
-    + Configuración de Variables de Entorno: Desplázate hasta la sección Environment Variables y añade en Render y en .env:
-        + JWT_SECRET: tu_clave_secreta_super_segura
-        + FRONTEND_URL_PROD: https://familytree2026.vercel.app
-        + FRONTEND_URL_LOCAL_VITE: http://localhost:5173
-        + FRONTEND_URL_LOCAL_VUE_CLI: http://localhost:8080
-        + AWS_ENDPOINT=
-
 ### Auditoria para eventos de usuarios y autenticación
 1. Crear el Contexto de Auditoría (`src/middlewares/auditContext.middleware.js`)
     + Crea este archivo para capturar la identidad del usuario conectado (`req.user.id`) en cada petición entrante mediante AsyncLocalStorage de Node.js.
@@ -5345,15 +5316,6 @@ Crearemos un script reutilizable e independiente que inserta las tablas iniciale
         credentials: true
     }));
     ```
-2. Agregar las siguientes variables de entorno en `.env`:
-    ```env
-    # ==========================================
-    # CONFIGURACIÓN DEL FRONTEND
-    # ==========================================
-    FRONTEND_URL_PROD=https://familytree2026.vercel.app
-    FRONTEND_URL_LOCAL_VITE=http://localhost:5173
-    FRONTEND_URL_LOCAL_VUE_CLI=http://localhost:8080
-    ```
 
 ### Consumo dinámico de la API en el Frontend (`src/api/axios.js`)
 + Modificar `src/api/axios.js`:
@@ -5380,43 +5342,8 @@ Crearemos un script reutilizable e independiente que inserta las tablas iniciale
 
 ## -------------------------
 
-```bash
-```
-
-## Verificar Servidores en Ejecución
-
-### Terminal 1 (Backend):
-```bash
-cd familytree2026-backend
-npm run dev
-```
-
-### Terminal 2 (Frontend):
-```bash
-cd familytree2026-frontend
-npm run dev
-```
-
-
-### Base de datos
-```bash
-cd familytree2026-backend
-npx prisma studio
-# en caso de problemas
-npx prisma studio --url "postgresql://dev_user:dev_password@localhost:5432/local_starter_db?schema=public"
-```
 
 ### Url
-#### Backend
-1. Home:
-    + Dev:  `http://localhost:4000`
-    + Prod: `https://familytree2026-backend.onrender.com`
-2. Healthcheck (Comprobación de estado):
-    + Dev:  `http://localhost:4000/api/v1/health`
-    + Prod: `https://familytree2026-backend.onrender.com/api/v1/health`
-3. Endpoint de Usuario (Protegido):
-    + Dev:  `http://localhost:4000/api/v1/auth/me`
-    + Prod: `https://familytree2026-backend.onrender.com/api/v1/auth/me`
 
 #### Frontend
 1. Home:
@@ -5436,78 +5363,3 @@ npx prisma studio --url "postgresql://dev_user:dev_password@localhost:5432/local
     + Estando deslogueado, intenta escribir manualmente `http://localhost:5173/dashboard` en la barra de direcciones. El Navigation Guard debe rebotarte de inmediato a `/login`.
 
 
-## Levantar backend, frontend y cliente de bd en local
-1. Instala la herramienta globalmente en tu WSL:
-    ```bash
-    npm install -g concurrently
-    ```
-2. Crea un alias o un pequeño script en tu home (~/start_services.sh):
-    ```bash
-    nano ~/start_services.sh
-    ```
-3. Pega lo siguiente dentro del archivo:
-    ```sh
-    #!/bin/bash
-    concurrently \
-    --names "BACKEND,PRISMA,FRONTEND" \
-    --prefix-colors "blue,magenta,green" \
-    "cd /home/bazop/projects/family_tree2026/familytree2026-backend && npm run dev" \
-    "cd /home/bazop/projects/family_tree2026/familytree2026-backend && npx prisma studio" \
-    "cd /home/bazop/projects/family_tree2026/familytree2026-frontend && npm run dev"
-    ```
-4. Dale permisos de ejecución:
-    ```bash
-    chmod +x ~/start_services.sh
-    ```
-5. A partir de este momento, solo necesitas abrir tu terminal de WSL y ejecutar:
-    ```bash
-    ~/start_services.sh
-    ```
-    + Nota: en caso de que algún puerto este ocupado por un proceso anterior que se quedó colgado:
-        ```bash
-        fuser -k 4000/tcp
-        ```
-    + Cerrar todos los procesos de Node activos de golpe:
-        ```bash
-        killall -9 node
-        ```
-
-
-
-## borradores
-`http://localhost:51212/`
-
-`http://localhost:5173/admin/users`
-`https://familytree2026.vercel.app/admin/users`
-
-familytree2026-backend
-familytree2026-frontend
-familytree2026-documentacion
-
-
-git remote add origin https://github.com/TU_USUARIO/starter-backend.git
-git remote add origin https://github.com/petrix12/familytree2026-backend.git
-
-git remote add origin git@github.com:petrix12/familytree2026-backend.git
-git remote add origin git@github.com:petrix12/familytree2026-frontend.git
-git remote add origin git@github.com:petrix12/familytree2026-documentacion.git
-
-
-git remote add origin https://github.com/TU_USUARIO/starter-backend.git
-
-
-git remote add origin git@github.com:TU_USUARIO/starter-backend.git
-
-## Tares
-### Pendientes
-+ [ ] Refactorización de rutas y controladores en el backend.
-+ [ ] CRUD avatars en User Admin.
-+ [ ] Login con redes sociales.
-+ [ ] Solicitar autenticación de email.
-+ [ ] Adecuar la aplicación para que sea mas general, por ejemplo cambiar familytree2026-backend por backend, adaptar la vista del home, etc.
-+ [ ] Sección de suscripción (Con planes)
-+ [ ] Multi-idiomas
-+ [ ] Drag and Drop para gestionar archivos
-
-### Listo
-+ [x] Dockerización.

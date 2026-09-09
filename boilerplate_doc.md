@@ -175,7 +175,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
 
 #### Paso 2: Crear estructura del Backend Inicial
 1. Inicialización del Proyecto e Instalación de Dependencias:
-    + Ubicados en la carpeta familytree2026-backend, inicializamos el paquete de Node.js e instalamos el conjunto de librerías necesarias:
+    + Ubicados en la carpeta `backend`, inicializamos el paquete de Node.js e instalamos el conjunto de librerías necesarias:
         ```bash
         # 1. Navegar al directorio del backend
         cd ~/projects/boilerplate-node-2026
@@ -318,24 +318,10 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     NODE_ENV=development
 
     # ==========================================
-    # CONFIGURACIÓN DEL SERVIDOR BACKEND PRODUCCIÓN
-    # ==========================================
-    # PORT=3000
-    # APP_URL=https://api.tudominio.com
-    # NODE_ENV=production
-
-    # ==========================================
     # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS LOCAL
     # ==========================================
     DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
     DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
-
-
-    # ==========================================
-    # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS PRODUCCIÓN
-    # ==========================================
-    # DATABASE_URL=
-    # DIRECT_URL=
     ```
 8. Crear `backend/.gitignore`:
     ```gitignore
@@ -402,7 +388,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         # Ubicarse en la raíz del proyecto
         cd ~/projects/boilerplate-node-2026
 
-        # Crear el proyecto Vue 3 (o dentro de familytree2026-frontend)
+        # Crear el proyecto Vue 3
         npm create vue@latest frontend
         ```
     + Opciones durante la creación del CLI de Vue:
@@ -710,33 +696,15 @@ volumes:
         NODE_ENV=development
 
         # ==========================================
-        # CONFIGURACIÓN DEL SERVIDOR BACKEND PRODUCCIÓN
-        # ==========================================
-        # PORT=3000
-        # APP_URL=https://api.tudominio.com
-        # NODE_ENV=production
-
-        # ==========================================
         # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS LOCAL
         # ==========================================        
         DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
         DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
 
         # ==========================================
-        # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS PRODUCCIÓN
-        # ==========================================
-        # DATABASE_URL=
-        # DIRECT_URL=
-
-        # ==========================================
         # CONFIGURACIÓN DEL BUCKET DE ALMACENAMIENTO DE ARCHIVOS LOCAL
         # ==========================================
-        AWS_ENDPOINT="http://minio:9000"
-
-        # ==========================================
-        # CONFIGURACIÓN DEL BUCKET DE ALMACENAMIENTO DE ARCHIVOS PRODUCCIÓN
-        # ==========================================
-        # AWS_ENDPOINT
+        S3_ENDPOINT="http://minio:9000"
         ```
 7. Comandos de Ejecución:
     + Levantar todo el entorno:
@@ -787,6 +755,15 @@ volumes:
         + DATABASE_URL (Puerto 6543): Conexión en modo Transaction (?pgbouncer=true) utilizada por la aplicación Node.js en producción.
         + DIRECT_URL (Puerto 5432): Conexión en modo Session que requiere Prisma CLI para ejecutar migraciones directas sin pasar por PgBouncer.
 
+### Ejecutar seeder en producción (Supabase)
+1. Abre la terminal en la carpeta de tu `backend`.
+2. Ejecuta el comando de seed pasando la cadena de conexión de producción de Supabase:
+    ```bash
+    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" npx prisma db seed
+    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" node src/seeders/superadmin.seeder.js
+    ```
+    + Asegúrate de reemplazar las credenciales por las reales de Supabase, tal como hiciste al aplicar las migraciones.
+
 ### API Backend (Render Web Service)
 1. Creación de Cuenta y Vinculación con GitHub:
     + Accede a [render.com](https://render.com/) y haz clic en Get Started.
@@ -817,8 +794,6 @@ volumes:
         curl https://boilerplate-node-2026.onrender.com/api/health
         ```
 
-## --------------------------------------------------------
-
 ### Configuración de Enrutamiento SPA en Vercel
 1. Crea un archivo llamado `vercel.json` en la raíz de tu proyecto frontend (`frontend/vercel.json`) con el siguiente contenido:
     ```json
@@ -838,64 +813,148 @@ volumes:
     git push origin main
     ```
 
-## --------------------------------------------------------
-
 ### Capa de Presentación (Vercel)
 1. Creación de Cuenta:
     + Accede a vercel.com mediante Continue with GitHub.
     + En el onboarding, selecciona "I'm working on personal projects" para habilitar el plan Hobby 100% gratuito (sin tarjeta).
     + En el aviso de seguridad 2FA, selecciona "Skip securing my account".
-    + Haz clic en Add New... > Project e importa familytree2026-frontend.
+    + Haz clic en Add New... > Project e importa `boilerplate-node-2026`.
+    + 
 2. Importación y Despliegue del Frontend:
     + En el Dashboard, haz clic en Add New... > Project.
-    + Importa el repositorio del frontend (familytree2026-frontend).
-3. Ajustes de Build & Runtime:
+    + Importa el repositorio del frontend (`boilerplate-node-2026`).
+    + Root Directory: `frontend`.
+3. Ajustes de Build & Runtime (En caso de ser necesario):
     + En Settings > Build and Deployment:
         + Node.js Version: 20.x
         + Install Command (Override): npm install --legacy-peer-deps (evita errores ERESOLVE por peer dependencies de paquetes como oxlint).
 4. Variables de Entorno en Vercel:
     + En Settings > Environment Variables:
         + Key: VITE_API_BASE_URL
-        + Value: https://familytree2026-backend.onrender.com/api/v1
+        + Value: "https://boilerplate-node-2026.onrender.com/api/v1"
 5. Despliegue Final:
     + Haz clic en Deploy. Tras guardar o cambiar variables de entorno, ejecuta siempre un Redeploy (sin usar Build Cache) para inyectar la URL de la API en los archivos estáticos de React/Vite.
 
-### Ejecutar seeder en producción
-1. Abre la terminal en la carpeta de tu backend (`familytree2026-backend`).
-2. Ejecuta el comando de seed pasando la cadena de conexión de producción de Supabase:
-    ```bash
-    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" npx prisma db seed
-    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" node src/seeders/superadmin.seeder.js
-    ```
-    + Asegúrate de reemplazar las credenciales por las reales de Supabase, tal como hiciste al aplicar las migraciones.
 
-### Subir cambios a Vercel
-1. Iniciar sesión en Vercel:
-    ```bash
-    npx vercel login
-    ```
-2. Vincular el proyecto local:
-    ```bash
-    npx vercel link
-    ```
-    + Responde Y a Set up and deploy?
-    + Elige tu scope/usuario (petrix1).
-    + Selecciona Link to existing project y elige familytree2026-frontend.
-3. Forzar el Despliegue a Producción:
-    ```bash
-    npx vercel --prod
-    ```
+## 📄 Variables de entorno
+### Backend
+1. Variables de Entorno del Backend (`backend/.env`):
+    ```env
+    # ===================================================================================================
+    # CONFIGURACIÓN DEL SERVIDOR BACKEND
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL - - -
+    # ==========================================
+    PORT=3000
+    APP_URL=http://localhost:3000
+    NODE_ENV=development
+    # ==========================================
+    # - - - PRODUCCIÓN - - -
+    # ==========================================
+    # PORT=10000
+    # APP_URL=https://tu-proyecto.onrender.com
+    # NODE_ENV=production
 
-### Cambiar el nombre del proyecto
-+ Al cambiar el nombre del proyecto de `familytree2026-frontend` a `familytree2026`, Vercel actualizará la URL principal automáticamente a `familytree2026.vercel.app`.
-1. Ve a Vercel Dashboard.
-2. Entra en tu proyecto `familytree2026-frontend`.
-4. Ve a la pestaña Settings (Configuración) en la barra superior.
-5. En la sección General, busca el campo Project Name.
-6. Cámbialo de `familytree2026-frontend` a `familytree2026`.
-7. Haz clic en Save (Guardar).
-8. Actualiza la variable de entorno de CORS en Render (FRONTEND_URL_PROD en el servicio familytree2026-backend) agregando la nueva dirección [https://familytree2026.vercel.app](https://familytree2026.vercel.app).
+    # ===================================================================================================
+    # CREDENCIALES DE SUPER ADMIN (PARA CREAR USUARIO ADMINISTRADOR)
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL Y PRODUCCIÓN - - -
+    # ==========================================
+    SUPER_ADMIN_EMAIL = admin@boilerplate.com
+    SUPER_ADMIN_PASSWORD = tu_password_super_seguro
 
+    # ===================================================================================================
+    # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL - - -
+    # ==========================================
+    DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+    DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+    # ==========================================
+    # - - - PRODUCCIÓN - - -
+    # ==========================================
+    # DATABASE_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:6543/postgres?pgbouncer=true"
+    # DIRECT_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:5432/postgres?pgbouncer=true"
+
+    # ===================================================================================================
+    # ALMACENAMIENTO S3
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL - - -
+    # ==========================================
+    S3_ENDPOINT="http://minio:9000"
+    S3_REGION="us-east-1"
+    S3_ACCESS_KEY_ID="minio_admin"
+    S3_SECRET_ACCESS_KEY="minio_password123"
+    S3_BUCKET_NAME="app-uploads"
+    S3_FORCE_PATH_STYLE="true" # Obligatorio para MinIO y Supabase S3
+    S3_PUBLIC_URL="http://minio:9000/app-uploads"
+    # ==========================================
+    # - - - PRODUCCIÓN - - -
+    # ==========================================
+    # S3_ENDPOINT="https://<Project ID>.storage.supabase.co/storage/v1/s3"               
+    # S3_REGION="<Región>"
+    # S3_ACCESS_KEY_ID="<S3 Access Key>"
+    # S3_SECRET_ACCESS_KEY="<S3 Secret Access Key>"
+    # S3_BUCKET_NAME="app-uploads"
+    # S3_FORCE_PATH_STYLE="true"
+    # S3_PUBLIC_URL="https://<Project ID>.supabase.co/storage/v1/object/public/app-uploads"
+
+    # ===================================================================================================
+    # AUTENTICACIÓN (JWT)
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL - - -
+    # ==========================================
+    JWT_SECRET="familytree_dev_jwt_secret_key_2026_super_secure"
+    JWT_EXPIRES_IN="7d"
+    # ==========================================
+    # - - - PRODUCCIÓN - - -
+    # ==========================================
+    # Esta token lo puedes generar con el comando: openssl rand -hex 32
+    # JWT_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX             
+    # JWT_EXPIRES_IN=24h
+
+    # ===================================================================================================
+    # CONFIGURACIÓN DEL FRONTEND
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL Y PRODUCCIÓN - - -
+    # ==========================================
+    FRONTEND_URL_PROD=https://tu-proyecto.vercel.app
+    FRONTEND_URL_LOCAL_VITE=http://localhost:5173
+    FRONTEND_URL_LOCAL_VUE_CLI=http://localhost:8080
+    ```
+2. Actualizar variables de entorno en `https://render.com`.
+
+### Frontend
+1. Variables de Entorno del Frontend (`frontend/.env`):
+    ```env
+    # ===================================================================================================
+    # CONFIGURACIÓN DEL SERVIDOR FRONTEND
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL - - -
+    # ==========================================
+    # Con Docker
+    VITE_API_BASE_URL=http://boilerplate.test/api/v1
+    # Sin Docker
+    # VITE_API_BASE_URL=http://localhost:3000/api/v1
+    # ==========================================
+    # - - - PRODUCCIÓN - - -
+    # ==========================================
+    # VITE_API_BASE_URL=https://tu-proyecto.onrender.com/api/v1
+    ```
+2. Actualizar variables de entorno en `https://vercel.com`.
+
+
+
+## --------------------------------------------------------
+ANTES DE CONTINUAR ESTABLECER LAS VARIABLES DE ENTORNO DEFINITIVAS
+## --------------------------------------------------------
 
 ## --------------------------------------------------------
 
@@ -903,7 +962,31 @@ volumes:
 
 
 
+## A mano
+1. **Docker**:
+    + Ver todos los logs:
+        ```bash
+        docker compose logs -f
+        ```
+    + Ver solo los logs de servicios específicos (ej. Backend y Frontend):
+        ```bash
+        docker compose logs -f backend frontend
+        ```
+    + Ver las últimas N líneas de logs (ej. 50 líneas por servicio) y seguir escuchando:
+        ```bash
+        docker compose logs -f --tail=50
+        ```
 
+## Tares
+### Pendientes
++ [ ] Refactorización de rutas y controladores en el backend.
++ [ ] CRUD avatars en User Admin.
++ [ ] Login con redes sociales.
++ [ ] Solicitar autenticación de email.
++ [ ] Adecuar la aplicación para que sea mas general, por ejemplo cambiar familytree2026-backend por backend, adaptar la vista del home, etc.
++ [ ] Sección de suscripción (Con planes)
++ [ ] Multi-idiomas
++ [ ] Drag and Drop para gestionar archivos
 
-
-
+### Terminadas
++ [x] Dockerización.
