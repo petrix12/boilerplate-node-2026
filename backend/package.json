@@ -1,23 +1,35 @@
 {
-    "name": "backend",
+    "name": "boilerplate-node-2026-backend",
     "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
+    "description": "API Backend para boilerplate-node-2026",
+    "main": "src/app.js",
+    "type": "commonjs",
     "scripts": {
-        "start": "node src/server.js",
-        "start:prod": "npx prisma migrate deploy && node src/server.js",
-        "dev": "nodemon src/server.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "start": "node src/app.js",
+        "start:prod": "npx prisma migrate deploy && node src/app.js",
+        "dev": "nodemon src/app.js",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "seed": "node prisma/seed.js"
     },
+    "prisma": {
+        "seed": "node prisma/seed.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/petrix12/boilerplate-node-2026.git",
+        "directory": "backend"
+    },
+    "bugs": {
+        "url": "https://github.com/petrix12/boilerplate-node-2026/issues"
+    },
+    "homepage": "https://github.com/petrix12/boilerplate-node-2026/tree/main/backend#readme",
     "keywords": [],
     "author": "",
     "license": "ISC",
-    "type": "commonjs",
     "dependencies": {
         "@aws-sdk/client-s3": "^3.1127.0",
         "@prisma/adapter-pg": "6.4.0",
         "@prisma/client": "6.4.0",
-        "@supabase/supabase-js": "^2.115.0",
         "bcryptjs": "^3.0.3",
         "cors": "^2.8.6",
         "dotenv": "^17.4.2",

@@ -1,16 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "postgresql" // O el motor que estés usando (mysql, sqlite, etc.)
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// Añade este modelo de prueba para que 'prisma generate' funcione
+// Modelo de Usuario
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  password  String
+  isActive  Boolean    @default(true)
+  avatarUrl String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  roles     UserRole[]
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+// Modelo de Rol
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now()) @updatedAt
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+// Modelo de Permission
+model Permission {
+  id          String           @id @default(uuid())
+  action      String           @unique // Ej: "users:read", "users:write"
+  module      String // Ej: "users", "roles", "system"
+  description String?
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+// Tabla Pivote: Relación M:N entre Role y Permission
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// Tabla Intermedia para Relación N:M
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// Auditoría y Logs
+model AuditLog {
+  id     String  @id @default(uuid())
+  userId String? // Opcional por si la acción la ejecuta un usuario no autenticado o el sistema
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action   String // Ejemplos: 'USER_CREATED', 'ROLE_UPDATED', 'PERSON_DELETED'
+  entity   String // La entidad afectada: 'User', 'Person', 'Tree', 'Auth'
+  entityId String? // ID del registro afectado (si aplica)
+
+  details   Json? // Información extra (ej. cambios anteriores y nuevos, IP, User-Agent)
+  ipAddress String?
+
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+// Modelo SystemLog
+model SystemLog {
+  id         String   @id @default(uuid())
+  level      String   @default("ERROR") // ERROR, WARN, INFO
+  message    String
+  stackTrace String?  @db.Text
+  path       String?
+  method     String?
+  statusCode Int?     @default(500)
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@map("system_logs")
 }
