@@ -3755,21 +3755,71 @@ volumes:
         ```
 
 
-
-
-## --------------------------------------------------------
-
-pendiente probar endpoints
-establecer politicas de seguridad en tablas de base de datos de supabase
-revisar la seguridad del backend
-
-
-
-## --------------------------------------------------------
 ## 💻 Desarrollo del Frontend
 
+### 📦 Paso 1: Instalación de Dependencias
++ Instalamos Axios para las peticiones HTTP y el plugin oficial de Tailwind CSS v4 para Vite entre otras:
+    ```bash
+     # Instalar cliente HTTP
+    npm install axios
+
+     # Instalar Tailwind CSS v4 y su integración con Vite
+    npm install -D tailwindcss @tailwindcss/vite
+
+     # Sweet Alert 2
+    npm install sweetalert2
+
+     # Hero icons for Vue.js
+    npm install @heroicons/vue
+
+     # Flatpickr
+    npm install flatpickr
+    ```
+
+### ⚙️ Paso 3: Configuración de Vite y Tailwind v4
+
 ## --------------------------------------------------------
 
+
+
+1. Abre el archivo `vite.config.js` déjalo exactamente así:
+    ```js
+    import { fileURLToPath, URL } from 'node:url'
+    import { defineConfig } from 'vite'
+    import vue from '@vitejs/plugin-vue'
+    import tailwindcss from '@tailwindcss/vite'
+
+    export default defineConfig({
+        plugins: [
+            vue(),
+            tailwindcss(),
+        ],
+        resolve: {
+            alias: {
+                '@': fileURLToPath(new URL('./src', import.meta.url))
+            }
+        }
+    })
+    ```
+2. Abre el archivo `src/assets/main.css` (o `src/style.css`), borra todo lo que tenga dentro y deja únicamente esta línea:
+    ```css
+    @import "tailwindcss";
+    
+    /* Asegura que la raíz ocupe siempre al menos el 100% de la ventana */
+    html,
+    body,
+    #app {
+        min-height: 100vh;
+        min-height: 100dvh; /* Soporte dinámico para navegadores modernos */
+        margin: 0;
+        padding: 0;
+        background-color: #0f172a; /* Reemplaza por el color oscuro base de tu tema (ej. slate-900) */
+        color: #f8fafc;
+    }
+    ```
+    + Si existe el archivo `src/assets/base.css`, puedes borrarlo o vaciarlo para que no interfiera con las clases de Tailwind.
+
+## --------------------------------------------------------
 
 
 
@@ -3790,17 +3840,25 @@ revisar la seguridad del backend
         ```bash
         docker compose logs -f --tail=50
         ```
+    + Resetear base de datos
+        ```
+        docker compose exec backend npx prisma migrate reset --force
+        # o en su forma definida en el package.json
+        docker compose exec backend npm run db:reset
+        ```
 
 ## Tares
 ### Pendientes
-+ [ ] Refactorización de rutas y controladores en el backend.
 + [ ] CRUD avatars en User Admin.
 + [ ] Login con redes sociales.
 + [ ] Solicitar autenticación de email.
-+ [ ] Adecuar la aplicación para que sea mas general, por ejemplo cambiar familytree2026-backend por backend, adaptar la vista del home, etc.
 + [ ] Sección de suscripción (Con planes)
 + [ ] Multi-idiomas
 + [ ] Drag and Drop para gestionar archivos
++ [ ] Establecer politicas de seguridad en tablas de base de datos de supabase
++ [ ] Revisar la seguridad del backend
 
 ### Terminadas
 + [x] Dockerización.
++ [x] Refactorización de rutas y controladores en el backend.
++ [x] Adecuar la aplicación para que sea mas general, por ejemplo cambiar familytree2026-backend por backend, adaptar la vista del home, etc.
