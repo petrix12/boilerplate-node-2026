@@ -9,7 +9,8 @@
         "start:prod": "npx prisma migrate deploy && node src/app.js",
         "dev": "nodemon src/app.js",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "seed": "node prisma/seed.js"
+        "seed": "node prisma/seed.js",
+        "db:reset": "prisma migrate reset --force"
     },
     "prisma": {
         "seed": "node prisma/seed.js"

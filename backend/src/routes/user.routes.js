@@ -28,4 +28,8 @@ router.put('/:id', checkPermission('users:update'), userController.updateUser);
 router.put('/:id/roles', authorizeRoles('SUPER_ADMIN'), userController.updateUserRoles);
 router.delete('/:id', checkPermission('users:delete'), userController.deleteUser);
 
+// 🆕 Endpoints Administrativos para Avatar por ID
+router.post('/:id/avatar', checkPermission('SUPER_ADMIN'), upload.single('avatar'), userController.uploadUserAvatarById);
+router.delete('/:id/avatar', checkPermission('SUPER_ADMIN'), userController.deleteUserAvatarById);
+
 module.exports = router;  

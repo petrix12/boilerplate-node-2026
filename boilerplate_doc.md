@@ -1089,69 +1089,35 @@ volumes:
     }   
     ```
     + Define los modelos (Usuarios, Roles, Auditorías, etc.) y la conexión a PostgreSQL.
-2. Crear script de Seed Principal `backend/prisma/seed.js`:
+2. Crear el Orquestador Principal de Seeders `backend/prisma/seed.js`:
     ```js
-    const { PrismaClient } = require('@prisma/client');
-    const { PrismaPg } = require('@prisma/adapter-pg');
-    const { Pool } = require('pg');
-    require('dotenv').config();
-
-    // Inicializar el pool de conexiones con la URL de la base de datos
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const adapter = new PrismaPg(pool);
-    const prisma = new PrismaClient({ adapter });
+    // backend/prisma/seed.js
+    const prisma = require('../src/config/prisma');
+    const seedRolesAndPermissions = require('../src/seeders/role-permission.seeder');
+    const seedSuperAdmin = require('../src/seeders/superadmin.seeder');
 
     async function main() {
-        console.log('🌱 Iniciando la carga de datos iniciales (Seed)...');
-
-        const roles = [
-            { name: 'SUPER_ADMIN', description: 'Acceso total y gestión del sistema' },
-            { name: 'ADMIN', description: 'Administrador de contenido y usuarios' },
-            { name: 'USER', description: 'Usuario estándar registrado' },
-        ];
-
-        for (const role of roles) {
-            await prisma.role.upsert({
-                where: { name: role.name },
-                update: {},
-                create: role,
-            });
-        }
-
-        console.log('✅ Roles creados/verificados correctamente en la base de datos.');
-
-        const permissions = [
-            // Módulo de Usuarios
-            { action: 'users:read', module: 'users', description: 'Permite ver el listado y detalle de usuarios' },
-            { action: 'users:create', module: 'users', description: 'Permite registrar nuevos usuarios' },
-            { action: 'users:update', module: 'users', description: 'Permite editar datos de usuarios existentes' },
-            { action: 'users:delete', module: 'users', description: 'Permite eliminar usuarios' },
-            
-            // Módulo de Roles y Permisos
-            { action: 'roles:read', module: 'roles', description: 'Permite ver la lista de roles y sus permisos' },
-            { action: 'roles:create', module: 'roles', description: 'Permite crear nuevos roles' },
-            { action: 'roles:update', module: 'roles', description: 'Permite modificar roles y asignar permisos' },
-            { action: 'roles:delete', module: 'roles', description: 'Permite eliminar roles' },
-        ];
+        console.log('🚀 === INICIANDO EJECUCIÓN DE SEEDERS ===\n');
         
-        for (const perm of permissions) {
-            await prisma.permission.upsert({
-                where: { action: perm.action },
-                update: { description: perm.description, module: perm.module },
-                create: perm,
-            });
-        }
-
-        console.log('✅ Catálogo de permisos inicializado con éxito.');  
+        // 1. Ejecutar catálogo RBAC
+        await seedRolesAndPermissions();
+        console.log('----------------------------------------');
+        
+        // 2. Ejecutar SuperAdmin
+        await seedSuperAdmin();
+        console.log('----------------------------------------');
+        
+        console.log('\n✨ === SEEDERS EJECUTADOS CON ÉXITO ===');
     }
 
-    main().catch((e) => {
-        console.error('❌ Error ejecutando el seed:', e);
-        process.exit(1);
-    }).finally(async () => {
-        await prisma.$disconnect();
-        await pool.end();
-    });    
+    main()
+        .catch((e) => {
+            console.error('❌ Error fatal durante el proceso de seed:', e);
+            process.exit(1);
+        })
+        .finally(async () => {
+            await prisma.$disconnect();
+        });   
     ```
 
 ### 🛠️ Paso 2: Clientes de Servicios y Unidades de Configuración (`src/config/`)
@@ -2173,6 +2139,53 @@ volumes:
         }
     };
 
+    // Helper genérico para procesar la subida de un avatar por userId
+    const processAvatarUpload = async (userId, file) => {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return { error: 'Usuario no encontrado', statusCode: 404 };
+
+        const bucketName = process.env.S3_BUCKET_NAME || 'app-uploads';
+        await ensureBucketExists(bucketName);
+
+        if (user.avatarUrl) await deleteExistingS3File(user.avatarUrl);
+
+        const fileExt = path.extname(file.originalname);
+        const fileName = `avatars/user_${userId}_${Date.now()}${fileExt}`;
+
+        await s3Client.send(new PutObjectCommand({
+            Bucket: bucketName,
+            Key: fileName,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+        }));
+
+        const publicUrl = `${process.env.S3_PUBLIC_URL}/${fileName}`;
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: { avatarUrl: publicUrl },
+            select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
+        });
+
+        return { user: updatedUser };
+    };
+
+    // Helper genérico para eliminar un avatar por userId
+    const processAvatarDelete = async (userId) => {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return { error: 'Usuario no encontrado', statusCode: 404 };
+
+        if (user.avatarUrl) await deleteExistingS3File(user.avatarUrl);
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: { avatarUrl: null },
+            select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
+        });
+
+        return { user: updatedUser };
+    };
+
     // Listar usuarios (búsqueda + paginación + ordenamiento)
     const getUsers = async (req, res) => {
         try {
@@ -2272,7 +2285,7 @@ volumes:
     const updateUser = async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, email, password } = req.body;
+            const { name, email, password, avatarUrl } = req.body;
 
             const existingUser = await prisma.user.findUnique({ where: { id } });
             if (!existingUser) {
@@ -2294,6 +2307,14 @@ volumes:
             if (password && password.trim() !== '') {
                 const salt = await bcrypt.genSalt(10);
                 updateData.password = await bcrypt.hash(password, salt);
+            }
+
+            // Si se recibe explícitamente avatarUrl: null, eliminamos el archivo en S3 y en la BD
+            if (avatarUrl === null) {
+                if (existingUser.avatarUrl) {
+                    await deleteExistingS3File(existingUser.avatarUrl);
+                }
+                updateData.avatarUrl = null;
             }
 
             const updatedUser = await prisma.user.update({
@@ -2457,6 +2478,36 @@ volumes:
         }
     };
 
+    // Subir Avatar de un Usuario por ID (Admin)
+    const uploadUserAvatarById = async (req, res) => {
+        try {
+            const { id } = req.params;
+            if (!req.file) return res.status(400).json({ status: 'fail', message: 'No se ha adjuntado ninguna imagen' });
+
+            const result = await processAvatarUpload(id, req.file);
+            if (result.error) return res.status(result.statusCode).json({ status: 'fail', message: result.error });
+
+            return res.status(200).json({ status: 'success', message: 'Avatar de usuario actualizado', data: { user: result.user } });
+        } catch (error) {
+            console.error('Error en uploadUserAvatarById:', error);
+            return res.status(500).json({ status: 'error', message: 'Error al procesar la imagen' });
+        }
+    };
+
+    // Eliminar Avatar de un Usuario por ID (Admin)
+    const deleteUserAvatarById = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const result = await processAvatarDelete(id);
+            if (result.error) return res.status(result.statusCode).json({ status: 'fail', message: result.error });
+
+            return res.status(200).json({ status: 'success', message: 'Avatar de usuario eliminado', data: { user: result.user } });
+        } catch (error) {
+            console.error('Error en deleteUserAvatarById:', error);
+            return res.status(500).json({ status: 'error', message: 'Error al eliminar el avatar' });
+        }
+    };
+
     module.exports = {
         getUsers,
         createUser,
@@ -2466,7 +2517,9 @@ volumes:
         updateProfile,
         uploadAvatar,
         deleteAvatar,
-    };      
+        uploadUserAvatarById,
+        deleteUserAvatarById
+    };
     ```
 5. `backend/src/controllers/audit.controller.js`: Consulta de registros de auditoría del sistema:
     ```js
@@ -2635,7 +2688,11 @@ volumes:
     router.put('/:id/roles', authorizeRoles('SUPER_ADMIN'), userController.updateUserRoles);
     router.delete('/:id', checkPermission('users:delete'), userController.deleteUser);
 
-    module.exports = router;    
+    // 🆕 Endpoints Administrativos para Avatar por ID
+    router.post('/:id/avatar', checkPermission('SUPER_ADMIN'), upload.single('avatar'), userController.uploadUserAvatarById);
+    router.delete('/:id/avatar', checkPermission('SUPER_ADMIN'), userController.deleteUserAvatarById);
+
+    module.exports = router;
     ```
 3. `backend/src/routes/role.routes.js`: Rutas administración de roles (/api/v1/role/*):
     ```js
@@ -2687,7 +2744,80 @@ volumes:
 
 ### 🌱 Paso 9: Seeders y Scripts de Datos (`src/seeders/` & `src/`)
 + Define la siembra de datos de desarrollo y producción:
-1. `backend/src/seeders/superadmin.seeder.js`: Script para generar el usuario Superadmin por defecto:
+1. `backend/src/seeders/role-permission.seeder.js`: Script para generar roles y permisos:
+    ```js
+    const prisma = require('../config/prisma');
+
+    async function seedRolesAndPermissions() {
+        console.log('🌱 Iniciando la carga de roles y permisos iniciales...');
+
+        // 1. Definición de Roles
+        const roles = [
+            { name: 'SUPER_ADMIN', description: 'Acceso total y gestión del sistema' },
+            { name: 'ADMIN', description: 'Administrador de contenido y usuarios' },
+            { name: 'USER', description: 'Usuario estándar registrado' },
+        ];
+
+        for (const role of roles) {
+            await prisma.role.upsert({
+                where: { name: role.name },
+                update: { description: role.description },
+                create: role,
+            });
+        }
+
+        console.log('✅ Roles creados/verificados.');
+
+        // 2. Definición de Permisos Catálogo
+        const permissions = [
+            // Acceso Global al Dashboard Admin
+            { action: 'admin:access', module: 'admin', description: 'Permite acceder al panel de administración' },
+
+            // Módulo de Usuarios
+            { action: 'users:read', module: 'users', description: 'Permite ver el listado y detalle de usuarios' },
+            { action: 'users:create', module: 'users', description: 'Permite registrar nuevos usuarios' },
+            { action: 'users:update', module: 'users', description: 'Permite editar datos de usuarios existentes' },
+            { action: 'users:delete', module: 'users', description: 'Permite eliminar usuarios' },
+            
+            // Módulo de Roles y Permisos
+            { action: 'roles:read', module: 'roles', description: 'Permite ver la lista de roles y sus permisos' },
+            { action: 'roles:create', module: 'roles', description: 'Permite crear nuevos roles' },
+            { action: 'roles:update', module: 'roles', description: 'Permite modificar roles y asignar permisos' },
+            { action: 'roles:delete', module: 'roles', description: 'Permite eliminar roles' },
+
+            // Módulo de Auditoría y Logs de Aplicación
+            { action: 'audit:read', module: 'audit', description: 'Permite ver el historial de auditoría y actividades' },
+
+            // Módulo de Monitoreo y Logs del Sistema (Backend, DB)
+            { action: 'system:logs:read', module: 'system', description: 'Permite consultar logs técnicos del servidor y la base de datos' },
+        ];
+        
+        for (const perm of permissions) {
+            await prisma.permission.upsert({
+                where: { action: perm.action },
+                update: { description: perm.description, module: perm.module },
+                create: perm,
+            });
+        }
+
+        console.log('✅ Catálogo de permisos actualizado.');  
+    }
+
+    // Ejecutar si se invoca directamente por CLI
+    if (require.main === module) {
+        seedRolesAndPermissions()
+            .catch((e) => {
+                console.error('❌ Error ejecutando el seed:', e);
+                process.exit(1);
+            })
+            .finally(async () => {
+                await prisma.$disconnect();
+            });
+    }
+
+    module.exports = seedRolesAndPermissions;    
+    ```
+2. `backend/src/seeders/superadmin.seeder.js`: Script para generar el usuario Superadmin por defecto:
     ```js
     const bcrypt = require('bcryptjs');
     const prisma = require('../config/prisma');
@@ -2697,64 +2827,76 @@ volumes:
         try {
             console.log('🌱 Iniciando Seeder de SuperAdmin...');
 
-            const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@familytree.com';
+            const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@boilerplate.com';
             const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
 
             if (!adminPassword) {
                 throw new Error('❌ Error: Debes definir SUPER_ADMIN_PASSWORD en tu archivo .env');
             }
 
-            // 1. Asegurar los 3 roles base en la BD
-            const roles = [
-                { name: 'SUPER_ADMIN', description: 'Acceso total y gestión del sistema' },
-                { name: 'ADMIN', description: 'Administrador de contenido y usuarios' },
-                { name: 'USER', description: 'Usuario estándar' },
-            ];
-
-            for (const r of roles) {
-                await prisma.role.upsert({
-                    where: { name: r.name },
-                    update: {},
-                    create: r,
-                });
-            }
-
-            // 2. Obtener el ID del rol SUPER_ADMIN
+            // 1. Verificar que el rol SUPER_ADMIN exista (sembrado previamente por role-permission.seeder.js)
             const superAdminRole = await prisma.role.findUnique({
                 where: { name: 'SUPER_ADMIN' },
             });
 
-            // 3. Crear o actualizar el Usuario SUPER_ADMIN
+            if (!superAdminRole) {
+                throw new Error('❌ El rol SUPER_ADMIN no existe. Ejecuta primero el seeder de Roles y Permisos.');
+            }
+
+            // 2. Comprobar si el usuario ya existe
+            const existingUser = await prisma.user.findUnique({
+                where: { email: adminEmail },
+                include: { roles: true },
+            });
+
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(adminPassword, salt);
 
-            const adminUser = await prisma.user.upsert({
-                where: { email: adminEmail },
-                update: {},
-                create: {
-                    name: 'Super Admin',
-                    email: adminEmail,
-                    password: hashedPassword,
-                    roles: {
-                        create: {
-                            roleId: superAdminRole.id,
+            if (!existingUser) {
+                // Crear usuario con el rol de SuperAdmin
+                const adminUser = await prisma.user.create({
+                    data: {
+                        name: 'Super Admin',
+                        email: adminEmail,
+                        password: hashedPassword,
+                        roles: {
+                            create: {
+                                roleId: superAdminRole.id,
+                            },
                         },
                     },
-                },
-            });
-
-            console.log('✅ Seeder ejecutado con éxito.');
-            console.log(`👤 SuperAdmin verificado: ${adminUser.email}`);
+                });
+                console.log(`✅ SuperAdmin creado con éxito: ${adminUser.email}`);
+            } else {
+                // Asegurar que tenga el rol asignado si ya existía el usuario
+                const hasRole = existingUser.roles.some((r) => r.roleId === superAdminRole.id);
+                if (!hasRole) {
+                    await prisma.userRole.create({
+                        data: {
+                            userId: existingUser.id,
+                            roleId: superAdminRole.id,
+                        },
+                    });
+                }
+                console.log(`👤 SuperAdmin verificado: ${existingUser.email}`);
+            }
         } catch (error) {
-            console.error('❌ Error ejecutando el Seeder:', error.message);
-        } finally {
-            await prisma.$disconnect();
+            console.error('❌ Error ejecutando el Seeder de SuperAdmin:', error.message);
+            throw error;
         }
     };
 
-    seedSuperAdmin();    
+    if (require.main === module) {
+        seedSuperAdmin()
+            .catch(() => process.exit(1))
+            .finally(async () => {
+                await prisma.$disconnect();
+            });
+    }
+
+    module.exports = seedSuperAdmin;   
     ```
-2. `backend/src/seeders/users.seeder.js`: Datos falsos/de prueba para desarrollo:
+3. `backend/src/seeders/users.seeder.js`: Datos falsos/de prueba para desarrollo:
     ```js
     const { fakerES: faker } = require('@faker-js/faker');
     const bcrypt = require('bcryptjs');
@@ -2794,7 +2936,7 @@ volumes:
 
     seedUsers();    
     ```
-3. `backend/src/seeders/audit.seeder.js`: Script independiente para verificar o poblar la tabla de auditoría:
+4. `backend/src/seeders/audit.seeder.js`: Script independiente para verificar o poblar la tabla de auditoría:
     ```js
     const prisma = require('../config/prisma');
 
@@ -2850,7 +2992,7 @@ volumes:
             .finally(async () => await prisma.$disconnect());
     }   
     ```
- 4. Agrega el comando para correr el seeder en el `package.json` de tu Backend:
+ 5. Agrega el comando para correr el seeder en el `package.json` de tu Backend:
      ```json
     {
         "scripts": {
@@ -2972,7 +3114,8 @@ volumes:
             "start:prod": "npx prisma migrate deploy && node src/app.js",
             "dev": "nodemon src/app.js",
             "test": "echo \"Error: no test specified\" && exit 1",
-            "seed": "node prisma/seed.js"
+            "seed": "node prisma/seed.js",
+            "db:reset": "prisma migrate reset --force"
         },
         "prisma": {
             "seed": "node prisma/seed.js"
@@ -2993,7 +3136,6 @@ volumes:
             "@aws-sdk/client-s3": "^3.1127.0",
             "@prisma/adapter-pg": "6.4.0",
             "@prisma/client": "6.4.0",
-            "@supabase/supabase-js": "^2.115.0",
             "bcryptjs": "^3.0.3",
             "cors": "^2.8.6",
             "dotenv": "^17.4.2",
@@ -3060,37 +3202,30 @@ volumes:
         ```
 
 ## 📋 Resumen de Endpoints
-| Módulo    | Método   | Endpoint                    | Permiso / Rol requerido   |
-| --------- | -------- | --------------------------- | ------------------------- |
-| **XXXX**  | `GET`    | `/api/v1/health`            | Público                   |-
-| **Auth**  | `POST`   | `/api/v1/auth/register`     | Público                   |-
-| **Auth**  | `POST`   | `/api/v1/auth/login`        | Público                   |-
-| **Auth**  | `GET`    | `/api/v1/auth/me`           | Autenticado               |-
-| **Auth**  | `POST`   | `/api/v1/auth/logout`       | Autenticado               |-
-| **Users** | `PUT`    | `/api/v1/users/profile`     | Autenticado (Propietario) |-
-| **Users** | `POST`   | `/api/v1/users/avatar`      | Autenticado (Propietario) |R
-| **Users** | `DELETE` | `/api/v1/users/avatar`      | Autenticado (Propietario) |R
-| **Users** | `GET`    | `/api/v1/users`             | `users:read`              |-
-| **Users** | `POST`   | `/api/v1/users`             | `users:create`            |-
-| **Users** | `PUT`    | `/api/v1/users/:id`         | `users:update`            |-
-| **Users** | `PUT`    | `/api/v1/users/:id/roles`   | Rol `SUPER_ADMIN`         |-
-| **Users** | `DELETE` | `/api/v1/users/:id`         | `users:delete`            |-
-| **Roles** | `GET`    | `/api/v1/roles`             | `roles:read`              |-
-| **Roles** | `GET`    | `/api/v1/roles/permissions` | `roles:read`              |-
-| **Roles** | `POST`   | `/api/v1/roles`             | `roles:create`            |-
-| **Roles** | `PUT`    | `/api/v1/roles/:id`         | `roles:update`            |-
-| **Roles** | `DELETE` | `/api/v1/roles/:id`         | `roles:delete`            |-
-| **Audit** | `GET`    | `/api/v1/audit-logs`        | Rol `SUPER_ADMIN`         |-
+| Módulo     | Método   | Endpoint                    | Permiso / Rol requerido   |
+| ---------- | -------- | --------------------------- | ------------------------- |
+| **System** | `GET`    | `/api/v1/health`            | Público                   |
+| **Auth**   | `POST`   | `/api/v1/auth/register`     | Público                   |
+| **Auth**   | `POST`   | `/api/v1/auth/login`        | Público                   |
+| **Auth**   | `GET`    | `/api/v1/auth/me`           | Autenticado               |
+| **Auth**   | `POST`   | `/api/v1/auth/logout`       | Autenticado               |
+| **Users**  | `PUT`    | `/api/v1/users/profile`     | Autenticado (Propietario) |
+| **Users**  | `POST`   | `/api/v1/users/avatar`      | Autenticado (Propietario) |
+| **Users**  | `DELETE` | `/api/v1/users/avatar`      | Autenticado (Propietario) |
+| **Users**  | `POST`   | `/api/v1/users/:id/avatar`  | Rol `SUPER_ADMIN`         |
+| **Users**  | `DELETE` | `/api/v1/users/:id/avatar`  | Rol `SUPER_ADMIN`         |
+| **Users**  | `GET`    | `/api/v1/users`             | `users:read`              |
+| **Users**  | `POST`   | `/api/v1/users`             | `users:create`            |
+| **Users**  | `PUT`    | `/api/v1/users/:id`         | `users:update`            |
+| **Users**  | `PUT`    | `/api/v1/users/:id/roles`   | Rol `SUPER_ADMIN`         |
+| **Users**  | `DELETE` | `/api/v1/users/:id`         | `users:delete`            |
+| **Roles**  | `GET`    | `/api/v1/roles`             | `roles:read`              |
+| **Roles**  | `GET`    | `/api/v1/roles/permissions` | `roles:read`              |
+| **Roles**  | `POST`   | `/api/v1/roles`             | `roles:create`            |
+| **Roles**  | `PUT`    | `/api/v1/roles/:id`         | `roles:update`            |
+| **Roles**  | `DELETE` | `/api/v1/roles/:id`         | `roles:delete`            |
+| **Audit**  | `GET`    | `/api/v1/audit-logs`        | Rol `SUPER_ADMIN`         |
 
-
-| Módulo    | Método   | Endpoint                    | Permiso / Rol requerido   |
-| --------- | -------- | --------------------------- | ------------------------- |
-| **Auth**  | `POST`   | `/api/v1/auth/logout`       | Autenticado               |
-| **Users** | `POST`   | `/api/v1/users/avatar`      | Autenticado (Propietario) |
-| **Users** | `DELETE` | `/api/v1/users/avatar`      | Autenticado (Propietario) |
-| **Users** | `POST`   | `/api/v1/users`             | `users:create`            |
-| **Users** | `PUT`    | `/api/v1/users/:id`         | `users:update`            |
-| **Roles** | `GET`    | `/api/v1/roles/permissions` | `roles:read`              |
 
 ## ✅ Pruebas de Endpoints
 ### 🚀 Health Check (Público)
@@ -3186,7 +3321,6 @@ volumes:
         {"status":"success","message":"Sesión cerrada correctamente"}        
         ```
 
-
 ### 🚀 Módulo de Usuario Actual y Perfil
 1. Guardar token:
     ```bash
@@ -3276,6 +3410,52 @@ volumes:
         Keep-Alive: timeout=5
 
         {"status":"success","message":"Avatar eliminado","data":{"user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","name":"Super Admin","email":"admin@boilerplate.com","avatarUrl":null,"createdAt":"2026-09-10T19:44:08.864Z"}}}
+        ```
+6. Guardar id de usuario:
+    ```bash
+    # Este es un id cualquier existente
+    TARGET_USER_ID="14f33bf7-e8c4-488d-bef0-dbc2f828402c"
+    ```
+7. Subir / Reemplazar Avatar por ID (POST `/api/v1/users/:id/avatar`):
+    ```bash
+    curl -i -X POST "http://localhost:3000/api/v1/users/$TARGET_USER_ID/avatar" \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -F "avatar=@/home/bazop/projects/boilerplate-node-2026/temporal/img/img03.png"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 348
+        ETag: W/"15c-+1fGSa5zAD6d/yWw/sJuLuoL7wM"
+        Date: Sat, 12 Sep 2026 12:44:02 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Avatar de usuario actualizado","data":{"user":{"id":"14f33bf7-e8c4-488d-bef0-dbc2f828402c","name":"Emilio Piña Sisneros","email":"emilio.pinasisneros@hotmail.com","avatarUrl":"http://minio:9000/app-uploads/avatars/user_14f33bf7-e8c4-488d-bef0-dbc2f828402c_1789217042038.png","createdAt":"2026-09-10T19:44:37.296Z"}}}
+        ```
+8. Eliminar Avatar por ID (DELETE `/api/v1/users/:id/avatar`):
+    ```bash
+    curl -i -X DELETE "http://localhost:3000/api/v1/users/$TARGET_USER_ID/avatar" \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 251
+        ETag: W/"fb-ATd7/p6oRhvdKsfLfdyg0lFnpL4"
+        Date: Sat, 12 Sep 2026 12:46:12 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Avatar de usuario eliminado","data":{"user":{"id":"14f33bf7-e8c4-488d-bef0-dbc2f828402c","name":"Emilio Piña Sisneros","email":"emilio.pinasisneros@hotmail.com","avatarUrl":null,"createdAt":"2026-09-10T19:44:37.296Z"}}}
         ```
 
 ### 🚀 Módulo de Gestión de Usuarios y Permisos
@@ -3402,6 +3582,7 @@ volumes:
     ```
     + Output:
         ```bash
+        HTTP/1.1 201 Created
         X-Powered-By: Express
         Vary: Origin
         Access-Control-Allow-Credentials: true
@@ -3426,6 +3607,8 @@ volumes:
     ```
     + Output:
         ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express        
         Vary: Origin
         Access-Control-Allow-Credentials: true
         Content-Type: application/json; charset=utf-8
@@ -3489,20 +3672,20 @@ volumes:
     curl -i -X GET http://localhost:3000/api/v1/roles/permissions \
         -H "Authorization: Bearer $ADMIN_TOKEN"
     ```
-    + Output (REPETIR):
+    + Output:
         ```bash
         HTTP/1.1 200 OK
         X-Powered-By: Express
         Vary: Origin
         Access-Control-Allow-Credentials: true
         Content-Type: application/json; charset=utf-8
-        Content-Length: 46
-        ETag: W/"2e-UdOzrZS4A35oyYj2U7KNzb4+pqA"
-        Date: Sat, 12 Sep 2026 09:23:38 GMT
+        Content-Length: 2055
+        ETag: W/"807-KFqX1eBBYdnSUIVJCaamTeuVHgI"
+        Date: Sat, 12 Sep 2026 13:48:55 GMT
         Connection: keep-alive
         Keep-Alive: timeout=5
 
-        {"status":"success","data":{"permissions":[]}}        
+        {"status":"success","data":{"permissions":[{"id":"55432b21-be17-48c2-a70c-032b71a0abb3","action":"admin:access","module":"admin","description":"Permite acceder al panel de administración","createdAt":"2026-09-12T13:44:35.831Z"},{"id":"f81bb368-26ca-453c-a535-b4211d72695a","action":"audit:read","module":"audit","description":"Permite ver el historial de auditoría y actividades","createdAt":"2026-09-12T13:44:35.885Z"},{"id":"29964da3-5596-4bf3-a7f8-c53ab3e632c5","action":"roles:create","module":"roles","description":"Permite crear nuevos roles","createdAt":"2026-09-12T13:44:35.865Z"},{"id":"4f6d24a7-d44b-434b-b8c1-de62465cabc7","action":"roles:delete","module":"roles","description":"Permite eliminar roles","createdAt":"2026-09-12T13:44:35.878Z"},{"id":"470a7381-25e7-4c0b-a29e-8d5080446d5a","action":"roles:read","module":"roles","description":"Permite ver lalista de roles y sus permisos","createdAt":"2026-09-12T13:44:35.860Z"},{"id":"94512c45-b397-45a4-ac6c-e463ba4c69f0","action":"roles:update","module":"roles","description":"Permite modificar roles y asignar permisos","createdAt":"2026-09-12T13:44:35.870Z"},{"id":"af557cb8-24ea-42c9-b498-7b2e14fce236","action":"system:logs:read","module":"system","description":"Permite consultar logs técnicos del servidor y la base de datos","createdAt":"2026-09-12T13:44:35.889Z"},{"id":"96321d6f-9a44-4777-bfba-68c1b49a81d9","action":"users:create","module":"users","description":"Permite registrar nuevos usuarios","createdAt":"2026-09-12T13:44:35.845Z"},{"id":"fda4b531-15a3-41b6-ad1c-4d054c72b357","action":"users:delete","module":"users","description":"Permite eliminar usuarios","createdAt":"2026-09-12T13:44:35.854Z"},{"id":"14164c6b-2abb-434d-be97-0fad2a97a678","action":"users:read","module":"users","description":"Permite ver el listado y detalle de usuarios","createdAt":"2026-09-12T13:44:35.839Z"},{"id":"e8ccff77-5a83-4ba4-a029-4a39b4bbfc61","action":"users:update","module":"users","description":"Permite editar datos de usuarios existentes","createdAt":"2026-09-12T13:44:35.850Z"}]}}
         ```
 
 ### 🚀 Asignación de Roles a un Usuario y Limpieza
@@ -3572,13 +3755,6 @@ volumes:
         ```
 
 
-3. mmmmm:
-    ```bash
-    ```
-    + Output:
-        ```bash
-        
-        ```
 
 
 ## --------------------------------------------------------

@@ -19,6 +19,53 @@ const deleteExistingS3File = async (publicUrl) => {
     }
 };
 
+// Helper genérico para procesar la subida de un avatar por userId
+const processAvatarUpload = async (userId, file) => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return { error: 'Usuario no encontrado', statusCode: 404 };
+
+    const bucketName = process.env.S3_BUCKET_NAME || 'app-uploads';
+    await ensureBucketExists(bucketName);
+
+    if (user.avatarUrl) await deleteExistingS3File(user.avatarUrl);
+
+    const fileExt = path.extname(file.originalname);
+    const fileName = `avatars/user_${userId}_${Date.now()}${fileExt}`;
+
+    await s3Client.send(new PutObjectCommand({
+        Bucket: bucketName,
+        Key: fileName,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+    }));
+
+    const publicUrl = `${process.env.S3_PUBLIC_URL}/${fileName}`;
+
+    const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl: publicUrl },
+        select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
+    });
+
+    return { user: updatedUser };
+};
+
+// Helper genérico para eliminar un avatar por userId
+const processAvatarDelete = async (userId) => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return { error: 'Usuario no encontrado', statusCode: 404 };
+
+    if (user.avatarUrl) await deleteExistingS3File(user.avatarUrl);
+
+    const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl: null },
+        select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
+    });
+
+    return { user: updatedUser };
+};
+
 // Listar usuarios (búsqueda + paginación + ordenamiento)
 const getUsers = async (req, res) => {
     try {
@@ -118,7 +165,7 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, email, password } = req.body;
+        const { name, email, password, avatarUrl } = req.body;
 
         const existingUser = await prisma.user.findUnique({ where: { id } });
         if (!existingUser) {
@@ -140,6 +187,14 @@ const updateUser = async (req, res) => {
         if (password && password.trim() !== '') {
             const salt = await bcrypt.genSalt(10);
             updateData.password = await bcrypt.hash(password, salt);
+        }
+
+        // Si se recibe explícitamente avatarUrl: null, eliminamos el archivo en S3 y en la BD
+        if (avatarUrl === null) {
+            if (existingUser.avatarUrl) {
+                await deleteExistingS3File(existingUser.avatarUrl);
+            }
+            updateData.avatarUrl = null;
         }
 
         const updatedUser = await prisma.user.update({
@@ -303,6 +358,36 @@ const deleteAvatar = async (req, res) => {
     }
 };
 
+// Subir Avatar de un Usuario por ID (Admin)
+const uploadUserAvatarById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!req.file) return res.status(400).json({ status: 'fail', message: 'No se ha adjuntado ninguna imagen' });
+
+        const result = await processAvatarUpload(id, req.file);
+        if (result.error) return res.status(result.statusCode).json({ status: 'fail', message: result.error });
+
+        return res.status(200).json({ status: 'success', message: 'Avatar de usuario actualizado', data: { user: result.user } });
+    } catch (error) {
+        console.error('Error en uploadUserAvatarById:', error);
+        return res.status(500).json({ status: 'error', message: 'Error al procesar la imagen' });
+    }
+};
+
+// Eliminar Avatar de un Usuario por ID (Admin)
+const deleteUserAvatarById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await processAvatarDelete(id);
+        if (result.error) return res.status(result.statusCode).json({ status: 'fail', message: result.error });
+
+        return res.status(200).json({ status: 'success', message: 'Avatar de usuario eliminado', data: { user: result.user } });
+    } catch (error) {
+        console.error('Error en deleteUserAvatarById:', error);
+        return res.status(500).json({ status: 'error', message: 'Error al eliminar el avatar' });
+    }
+};
+
 module.exports = {
     getUsers,
     createUser,
@@ -312,4 +397,6 @@ module.exports = {
     updateProfile,
     uploadAvatar,
     deleteAvatar,
+    uploadUserAvatarById,
+    deleteUserAvatarById
 }; 
