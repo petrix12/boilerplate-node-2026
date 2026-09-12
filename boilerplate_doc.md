@@ -645,6 +645,8 @@ services:
       dockerfile: Dockerfile
     container_name: boilerplate_backend
     restart: always
+    ports:
+      - "3000:3000"    
     environment:
       - NODE_ENV=development
       - PORT=3000
@@ -1283,18 +1285,41 @@ volumes:
 1. `backend/src/middlewares/error.middleware.js`: Capturador global de excepciones/errores de la API:
     ```js
     const { prismaRaw } = require('../config/prisma');
+    const multer = require('multer');
 
     const errorHandler = async (err, req, res, next) => {
-        const statusCode = err.statusCode || (res.statusCode !== 200 ? res.statusCode : 500);
-        const message = err.message || 'Error interno del servidor';
+        let statusCode = err.statusCode || (res.statusCode !== 200 ? res.statusCode : 500);
+        let message = err.message || 'Error interno del servidor';
+        let errorCode = null;
 
-        console.error(`[SYSTEM ERROR] ${req.method} ${req.originalUrl}:`, err);
+        // 1. Detección y normalización de errores de Multer
+        if (err instanceof multer.MulterError) {
+            statusCode = 400;
+            errorCode = err.code;
 
+            switch (err.code) {
+                case 'LIMIT_FILE_SIZE':
+                    message = 'El archivo supera el tamaño máximo permitido (máx 2MB)';
+                    break;
+                case 'LIMIT_UNEXPECTED_FILE':
+                    message = `El campo '${err.field}' no es válido para la carga del archivo`;
+                    break;
+                case 'LIMIT_FILE_COUNT':
+                    message = 'Has excedido el número máximo de archivos permitidos';
+                    break;
+                default:
+                    message = `Error en la carga: ${err.message}`;
+            }
+        }
+
+        const logLevel = statusCode >= 500 ? 'ERROR' : 'WARN';
+        console.error(`[SYSTEM ${logLevel}] ${req.method} ${req.originalUrl}:`, err);
+
+        // 2. Registro en base de datos (System Log)
         try {
-            // Usamos prismaRaw directamente
             await prismaRaw.systemLog.create({
                 data: {
-                    level: 'ERROR',
+                    level: logLevel,
                     message: message,
                     stackTrace: err.stack,
                     path: req.originalUrl,
@@ -1308,13 +1333,20 @@ volumes:
             console.error('⚠️ Falló al insertar el log en la BD:', dbErr.message);
         }
 
-        res.status(statusCode).json({
-            status: 'error',
+        // 3. Respuesta JSON al cliente
+        const responsePayload = {
+            status: statusCode >= 500 ? 'error' : 'fail',
             message: statusCode === 500 ? 'Ha ocurrido un error inesperado en el servidor' : message
-        });
+        };
+
+        if (errorCode) {
+            responsePayload.code = errorCode;
+        }
+
+        return res.status(statusCode).json(responsePayload);
     };
 
-    module.exports = { errorHandler };    
+    module.exports = { errorHandler };  
     ```
 2. `backend/src/middlewares/validate.middleware.js`: Validación de esquemas de entrada (request body/params):
     ```js
@@ -1592,17 +1624,12 @@ volumes:
 
     const generateToken = (user, roles = []) => {
         return jwt.sign(
-            {
-                id: user.id,
-                email: user.email,
-                roles: roles,
-            },
+            { id: user.id, email: user.email, roles },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
     };
 
-    // 1. REGISTRO DE USUARIO (Sin roles por defecto)
     const register = async (req, res) => {
         try {
             const { email, password, firstName, lastName } = req.body;
@@ -1610,42 +1637,23 @@ volumes:
 
             const existingUser = await prisma.user.findUnique({ where: { email } });
             if (existingUser) {
-                return res.status(400).json({
-                    status: 'fail',
-                    message: 'El correo electrónico ya está registrado',
-                });
+                return res.status(400).json({ status: 'fail', message: 'El correo electrónico ya está registrado' });
             }
 
             const salt = await bcrypt.genSalt(10);
             const passwordHash = await bcrypt.hash(password, salt);
 
             const newUser = await prisma.user.create({
-                data: {
-                    email,
-                    password: passwordHash,
-                    name: fullName,
-                },
-                select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    avatarUrl: true,
-                    createdAt: true,
-                },
+                data: { email, password: passwordHash, name: fullName },
+                select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true },
             });
 
             const token = generateToken(newUser, []);
 
             return res.status(201).json({
                 status: 'success',
-                message: 'Usuario registrado correctamente (sin permisos asignados)',
-                data: {
-                    user: {
-                        ...newUser,
-                        roles: [],
-                    },
-                    token,
-                },
+                message: 'Usuario registrado correctamente',
+                data: { user: { ...newUser, roles: [] }, token },
             });
         } catch (error) {
             console.error('Error en registro:', error);
@@ -1653,20 +1661,13 @@ volumes:
         }
     };
 
-    // 2. INICIO DE SESIÓN (LOGIN)
     const login = async (req, res) => {
         try {
             const { email, password } = req.body;
 
             const user = await prisma.user.findUnique({
                 where: { email },
-                include: {
-                    roles: {
-                        include: {
-                            role: true,
-                        },
-                    },
-                },
+                include: { roles: { include: { role: true } } },
             });
 
             if (!user || !user.isActive) {
@@ -1676,33 +1677,24 @@ volumes:
                             action: 'LOGIN_FAILED',
                             entity: 'Auth',
                             ipAddress: getClientIp(req),
-                            details: JSON.stringify({ email, reason: 'Usuario no encontrado', ip: req.ip }),
+                            details: JSON.stringify({ email, reason: 'Usuario no encontrado' }),
                         },
                     });
                 }
-
-                return res.status(401).json({
-                    status: 'fail',
-                    message: 'Credenciales inválidas o cuenta desactivada',
-                });
+                return res.status(401).json({ status: 'fail', message: 'Credenciales inválidas o cuenta desactivada' });
             }
 
             const isPasswordValid = await bcrypt.compare(password, user.password);
-
             if (!isPasswordValid) {
                 await prisma.auditLog.create({
                     data: {
                         action: 'LOGIN_FAILED',
                         entity: 'Auth',
                         ipAddress: getClientIp(req),
-                        details: JSON.stringify({ email, reason: 'Contraseña incorrecta', ip: req.ip }),
+                        details: JSON.stringify({ email, reason: 'Contraseña incorrecta' }),
                     },
                 });
-
-                return res.status(401).json({
-                    status: 'fail',
-                    message: 'Credenciales inválidas',
-                });
+                return res.status(401).json({ status: 'fail', message: 'Credenciales inválidas' });
             }
 
             const userRoles = user.roles.map((ur) => ur.role.name);
@@ -1723,13 +1715,7 @@ volumes:
                 status: 'success',
                 message: 'Inicio de sesión exitoso',
                 data: {
-                    user: {
-                        id: user.id,
-                        email: user.email,
-                        name: user.name,
-                        avatarUrl: user.avatarUrl, // <-- AGREGADO AQUI
-                        roles: userRoles,
-                    },
+                    user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, roles: userRoles },
                     token,
                 },
             });
@@ -1739,7 +1725,6 @@ volumes:
         }
     };
 
-    // 3. OBTENER USUARIO ACTUAL (VERIFICAR SESIÓN)
     const getMe = async (req, res) => {
         try {
             const user = await prisma.user.findUnique({
@@ -1750,37 +1735,17 @@ volumes:
                     name: true,
                     avatarUrl: true,
                     createdAt: true,
-                    roles: {
-                        select: {
-                            role: {
-                                select: { name: true },
-                            },
-                        },
-                    },
+                    roles: { select: { role: { select: { name: true } } } },
                 },
             });
 
-            if (!user) {
-                return res.status(404).json({
-                    status: 'fail',
-                    message: 'Usuario no encontrado',
-                });
-            }
+            if (!user) return res.status(404).json({ status: 'fail', message: 'Usuario no encontrado' });
 
             const userRoles = user.roles.map((ur) => ur.role.name);
 
             return res.status(200).json({
                 status: 'success',
-                data: {
-                    user: {
-                        id: user.id,
-                        email: user.email,
-                        name: user.name,
-                        avatarUrl: user.avatarUrl, // <-- AGREGADO AQUI
-                        roles: userRoles,
-                        createdAt: user.createdAt,
-                    },
-                },
+                data: { user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, roles: userRoles, createdAt: user.createdAt } },
             });
         } catch (error) {
             console.error('Error en getMe:', error);
@@ -1788,7 +1753,6 @@ volumes:
         }
     };
 
-    // 4. CIERRE DE SESIÓN (LOGOUT)
     const logout = async (req, res) => {
         try {
             if (req.user?.id) {
@@ -1803,18 +1767,14 @@ volumes:
                     },
                 });
             }
-
-            return res.status(200).json({
-                status: 'success',
-                message: 'Sesión cerrada correctamente',
-            });
+            return res.status(200).json({ status: 'success', message: 'Sesión cerrada correctamente' });
         } catch (error) {
             console.error('Error en logout:', error);
             return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
         }
     };
 
-    module.exports = { register, login, getMe, logout };    
+    module.exports = { register, login, getMe, logout };   
     ```
 2. `backend/src/controllers/profile.controller.js`: Gestión de perfil de usuario autenticado:
     ```js
@@ -2017,7 +1977,7 @@ volumes:
 
     module.exports = { uploadAvatar, deleteAvatar, updateProfile };    
     ```
-3. `backend/src/controllers/roles.controller.js`: Administración de roles y permisos:
+3. `backend/src/controllers/role.controller.js`: Administración de roles y permisos:
     ```js
     const prisma = require('../config/prisma');
 
@@ -2190,27 +2150,44 @@ volumes:
         deleteRole
     };    
     ```
-4. `backend/src/controllers/admin.controller.js`: Funcionalidades administrativas:
+4. `backend/src/controllers/user.controller.js`: Administación de usuarios:
     ```js
     const bcrypt = require('bcryptjs');
+    const path = require('path');
+    const { PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+    const { s3Client, ensureBucketExists } = require('../config/s3');
     const prisma = require('../config/prisma');
 
-    // Listar usuarios con búsqueda, paginación y ordenamiento
+    // Helper interno para S3
+    const deleteExistingS3File = async (publicUrl) => {
+        if (!publicUrl) return;
+        try {
+            const bucketName = process.env.S3_BUCKET_NAME || 'app-uploads';
+            const s3PublicBaseUrl = `${process.env.S3_PUBLIC_URL}/`;
+            if (publicUrl.startsWith(s3PublicBaseUrl)) {
+                const key = publicUrl.replace(s3PublicBaseUrl, '');
+                await s3Client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+            }
+        } catch (err) {
+            console.warn('⚠️ No se pudo eliminar la imagen anterior en S3:', err.message);
+        }
+    };
+
+    // Listar usuarios (búsqueda + paginación + ordenamiento)
     const getUsers = async (req, res) => {
         try {
             const { search = '', page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
             const skip = (parseInt(page) - 1) * parseInt(limit);
 
             const where = search
-            ? {
-                OR: [
-                    { name: { contains: search, mode: 'insensitive' } },
-                    { email: { contains: search, mode: 'insensitive' } },
-                ],
-            }
-            : {};
+                ? {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { email: { contains: search, mode: 'insensitive' } },
+                    ],
+                }
+                : {};
 
-            // Validar campos permitidos para evitar ordenamientos inválidos
             const allowedSortFields = ['name', 'email', 'createdAt'];
             const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
             const validSortOrder = ['asc', 'desc'].includes(sortOrder.toLowerCase()) ? sortOrder.toLowerCase() : 'desc';
@@ -2221,10 +2198,7 @@ volumes:
                     where,
                     skip,
                     take: parseInt(limit),
-                    orderBy: [
-                        { [validSortBy]: validSortOrder },
-                        { id: 'asc' } // Criterio secundario para desempate
-                    ],
+                    orderBy: [{ [validSortBy]: validSortOrder }, { id: 'asc' }],
                     select: {
                         id: true,
                         name: true,
@@ -2232,16 +2206,11 @@ volumes:
                         avatarUrl: true,
                         isActive: true,
                         createdAt: true,
-                        roles: {
-                            select: {
-                                role: { select: { name: true } },
-                            },
-                        },
+                        roles: { select: { role: { select: { name: true } } } },
                     },
                 }),
             ]);
 
-            // Formatear la estructura de respuesta de roles...
             const formattedUsers = users.map((u) => ({
                 ...u,
                 roles: u.roles.map((r) => r.role.name),
@@ -2264,41 +2233,7 @@ volumes:
         }
     };
 
-    // Asignar / Cambiar Roles de un usuario
-    const updateUserRoles = async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { roles } = req.body; // Ejemplo: ["ADMIN", "USER"] o []
-
-            // 1. Eliminar asignaciones de roles actuales
-            await prisma.userRole.deleteMany({ where: { userId: id } });
-
-            // 2. Obtener IDs de los nuevos roles solicitados
-            if (roles && roles.length > 0) {
-                const dbRoles = await prisma.role.findMany({
-                    where: { name: { in: roles } },
-                });
-
-                // 3. Crear nuevas relaciones
-                const userRolesData = dbRoles.map((role) => ({
-                    userId: id,
-                    roleId: role.id,
-                }));
-
-                await prisma.userRole.createMany({ data: userRolesData });
-            }
-
-            return res.status(200).json({
-                status: 'success',
-                message: 'Roles actualizados correctamente',
-            });
-        } catch (error) {
-            console.error('Error al actualizar roles:', error);
-            return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
-        }
-    };
-
-    // CREAR USUARIO (ADMIN)
+    // Crear usuario
     const createUser = async (req, res) => {
         try {
             const { name, email, password, role = 'USER' } = req.body;
@@ -2308,7 +2243,6 @@ volumes:
                 return res.status(400).json({ status: 'fail', message: 'El correo electrónico ya existe' });
             }
 
-            // Buscar el rol solicitado (por defecto USER)
             const roleObj = await prisma.role.findUnique({ where: { name: role } });
             if (!roleObj) {
                 return res.status(400).json({ status: 'fail', message: `El rol ${role} no existe` });
@@ -2334,60 +2268,29 @@ volumes:
         }
     };
 
-    // ELIMINAR USUARIO (CRUD Completo)
-    const deleteUser = async (req, res) => {
-        try {
-            const { id } = req.params;
-
-            // Evitar que un Admin se elimine a sí mismo por accidente
-            if (req.user.id === id) {
-                return res.status(400).json({ status: 'fail', message: 'No puedes eliminar tu propia cuenta' });
-            }
-
-            // Eliminar relaciones de roles primero (o usar onDelete: Cascade en Prisma)
-            await prisma.userRole.deleteMany({ where: { userId: id } });
-            await prisma.user.delete({ where: { id } });
-
-            return res.status(200).json({ status: 'success', message: 'Usuario eliminado correctamente' });
-        } catch (error) {
-            console.error('Error al eliminar usuario:', error);
-            return res.status(500).json({ status: 'error', message: 'Error al eliminar el usuario' });
-        }
-    };
-
-    // Actualizar información del usuario (Nombre, Email y Contraseña opcional)
+    // Actualizar usuario por ID
     const updateUser = async (req, res) => {
         try {
             const { id } = req.params;
             const { name, email, password } = req.body;
 
-            // Validar que el usuario exista
             const existingUser = await prisma.user.findUnique({ where: { id } });
             if (!existingUser) {
-                return res.status(404).json({
-                    status: 'fail',
-                    message: 'Usuario no encontrado',
-                });
+                return res.status(404).json({ status: 'fail', message: 'Usuario no encontrado' });
             }
 
-            // Si se intenta cambiar el email, verificar que no esté registrado por otro usuario
             if (email && email !== existingUser.email) {
                 const emailTaken = await prisma.user.findUnique({ where: { email } });
                 if (emailTaken) {
-                    return res.status(400).json({
-                        status: 'fail',
-                        message: 'El correo electrónico ya está en uso por otro usuario',
-                    });
+                    return res.status(400).json({ status: 'fail', message: 'El correo electrónico ya está en uso' });
                 }
             }
 
-            // Construir el objeto con los campos a actualizar
             const updateData = {
                 name: name || existingUser.name,
                 email: email || existingUser.email,
             };
 
-            // Si se envía una contraseña nueva no vacía, la encriptamos e incluimos en el update
             if (password && password.trim() !== '') {
                 const salt = await bcrypt.genSalt(10);
                 updateData.password = await bcrypt.hash(password, salt);
@@ -2403,25 +2306,14 @@ volumes:
                     avatarUrl: true,
                     isActive: true,
                     createdAt: true,
-                    updatedAt: true,
-                    roles: {
-                        select: {
-                            role: { select: { name: true } },
-                        },
-                    },
+                    roles: { select: { role: { select: { name: true } } } },
                 },
             });
 
-            // Formatear salida de roles
-            const formattedUser = {
-                ...updatedUser,
-                roles: updatedUser.roles.map((r) => r.role.name),
-            };
-
             return res.status(200).json({
                 status: 'success',
-                message: 'Perfil de usuario actualizado correctamente',
-                data: { user: formattedUser },
+                message: 'Usuario actualizado correctamente',
+                data: { user: { ...updatedUser, roles: updatedUser.roles.map((r) => r.role.name) } },
             });
         } catch (error) {
             console.error('Error al actualizar usuario:', error);
@@ -2429,7 +2321,152 @@ volumes:
         }
     };
 
-    module.exports = { getUsers, updateUserRoles, updateUser, createUser, deleteUser };    
+    // Asignar roles a un usuario
+    const updateUserRoles = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { roles } = req.body;
+
+            await prisma.userRole.deleteMany({ where: { userId: id } });
+
+            if (roles && roles.length > 0) {
+                const dbRoles = await prisma.role.findMany({ where: { name: { in: roles } } });
+                const userRolesData = dbRoles.map((role) => ({ userId: id, roleId: role.id }));
+                await prisma.userRole.createMany({ data: userRolesData });
+            }
+
+            return res.status(200).json({ status: 'success', message: 'Roles actualizados correctamente' });
+        } catch (error) {
+            console.error('Error al actualizar roles de usuario:', error);
+            return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+        }
+    };
+
+    // Eliminar usuario
+    const deleteUser = async (req, res) => {
+        try {
+            const { id } = req.params;
+            if (req.user.id === id) {
+                return res.status(400).json({ status: 'fail', message: 'No puedes eliminar tu propia cuenta' });
+            }
+
+            await prisma.userRole.deleteMany({ where: { userId: id } });
+            await prisma.user.delete({ where: { id } });
+
+            return res.status(200).json({ status: 'success', message: 'Usuario eliminado correctamente' });
+        } catch (error) {
+            console.error('Error al eliminar usuario:', error);
+            return res.status(500).json({ status: 'error', message: 'Error al eliminar el usuario' });
+        }
+    };
+
+    // Actualizar perfil del usuario autenticado (/me)
+    const updateProfile = async (req, res) => {
+        try {
+            const userId = req.user.id;
+            const { name, currentPassword, newPassword } = req.body;
+
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            if (!user) return res.status(404).json({ status: 'fail', message: 'Usuario no encontrado' });
+
+            const updateData = {};
+            if (name && name.trim() !== '') updateData.name = name.trim();
+
+            if (newPassword) {
+                if (!currentPassword) {
+                    return res.status(400).json({ status: 'fail', message: 'Debes proporcionar la contraseña actual.' });
+                }
+                const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+                if (!isPasswordValid) {
+                    return res.status(400).json({ status: 'fail', message: 'La contraseña actual es incorrecta.' });
+                }
+                updateData.password = await bcrypt.hash(newPassword, 10);
+            }
+
+            const updatedUser = await prisma.user.update({
+                where: { id: userId },
+                data: updateData,
+                select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
+            });
+
+            return res.status(200).json({ status: 'success', message: 'Perfil actualizado correctamente', data: { user: updatedUser } });
+        } catch (error) {
+            console.error('Error en updateProfile:', error);
+            return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+        }
+    };
+
+    // Subir Avatar
+    const uploadAvatar = async (req, res) => {
+        try {
+            const userId = req.user.id;
+            if (!req.file) return res.status(400).json({ status: 'fail', message: 'No se ha adjuntado ninguna imagen' });
+
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            if (!user) return res.status(404).json({ status: 'fail', message: 'Usuario no encontrado' });
+
+            const bucketName = process.env.S3_BUCKET_NAME || 'app-uploads';
+            await ensureBucketExists(bucketName);
+
+            if (user.avatarUrl) await deleteExistingS3File(user.avatarUrl);
+
+            const fileExt = path.extname(req.file.originalname);
+            const fileName = `avatars/user_${userId}_${Date.now()}${fileExt}`;
+
+            await s3Client.send(new PutObjectCommand({
+                Bucket: bucketName,
+                Key: fileName,
+                Body: req.file.buffer,
+                ContentType: req.file.mimetype,
+            }));
+
+            const publicUrl = `${process.env.S3_PUBLIC_URL}/${fileName}`;
+
+            const updatedUser = await prisma.user.update({
+                where: { id: userId },
+                data: { avatarUrl: publicUrl },
+                select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
+            });
+
+            return res.status(200).json({ status: 'success', message: 'Avatar actualizado', data: { user: updatedUser } });
+        } catch (error) {
+            console.error('Error en uploadAvatar:', error);
+            return res.status(500).json({ status: 'error', message: 'Error al procesar la imagen' });
+        }
+    };
+
+    // Eliminar Avatar
+    const deleteAvatar = async (req, res) => {
+        try {
+            const userId = req.user.id;
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            if (!user) return res.status(404).json({ status: 'fail', message: 'Usuario no encontrado' });
+
+            if (user.avatarUrl) await deleteExistingS3File(user.avatarUrl);
+
+            const updatedUser = await prisma.user.update({
+                where: { id: userId },
+                data: { avatarUrl: null },
+                select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true },
+            });
+
+            return res.status(200).json({ status: 'success', message: 'Avatar eliminado', data: { user: updatedUser } });
+        } catch (error) {
+            console.error('Error en deleteAvatar:', error);
+            return res.status(500).json({ status: 'error', message: 'Error al eliminar el avatar' });
+        }
+    };
+
+    module.exports = {
+        getUsers,
+        createUser,
+        updateUser,
+        updateUserRoles,
+        deleteUser,
+        updateProfile,
+        uploadAvatar,
+        deleteAvatar,
+    };      
     ```
 5. `backend/src/controllers/audit.controller.js`: Consulta de registros de auditoría del sistema:
     ```js
@@ -2540,63 +2577,51 @@ volumes:
     ```js
     const express = require('express');
     const { body } = require('express-validator');
+    const router = express.Router();
     const { register, login, getMe, logout } = require('../controllers/auth.controller');
     const { authenticateJWT } = require('../middlewares/auth.middleware');
     const validate = require('../middlewares/validate.middleware');
-    const { uploadAvatar, deleteAvatar, updateProfile } = require('../controllers/profile.controller');
-    const upload = require('../middlewares/upload.middleware');
 
-    const router = express.Router();
-
-    // Reglas de validación para Registro
     const registerValidation = [
-        body('email').isEmail().withMessage('Debe proporcionar un correo electrónico válido'),
-        body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+        body('email').isEmail().withMessage('Correo electrónico inválido'),
+        body('password').isLength({ min: 6 }).withMessage('Mínimo 6 caracteres'),
         body('firstName').notEmpty().withMessage('El nombre es obligatorio'),
         body('lastName').notEmpty().withMessage('El apellido es obligatorio'),
         validate,
     ];
 
-    // Reglas de validación para Login
     const loginValidation = [
-        body('email').isEmail().withMessage('Debe proporcionar un correo electrónico válido'),
+        body('email').isEmail().withMessage('Correo electrónico inválido'),
         body('password').notEmpty().withMessage('La contraseña es obligatoria'),
         validate,
     ];
 
-    // Definición de Endpoints
     router.post('/register', registerValidation, register);
     router.post('/login', loginValidation, login);
-    router.get('/me', authenticateJWT, getMe);  // Endpoint protegido para verificar estado de sesión de usuario logueado
+    router.get('/me', authenticateJWT, getMe);
     router.post('/logout', authenticateJWT, logout);
-    router.post('/avatar', authenticateJWT, upload.single('avatar'), uploadAvatar);
-    router.delete('/avatar', authenticateJWT, deleteAvatar);
-    router.put('/profile', authenticateJWT, updateProfile);
 
-    module.exports = router;    
+    module.exports = router;   
     ```
-2. `backend/src/routes/admin.routes.js`: Rutas protegidas para administración (/api/v1/admin/*):
+2. `backend/src/routes/user.routes.js`: Rutas admimistración de usuarios (/api/v1/user/*):
     ```js
     const express = require('express');
     const { body } = require('express-validator');
     const router = express.Router();
-    const rolesController = require('../controllers/roles.controller');
-
-    // Importar el nuevo controlador de auditoría (CommonJS)
-    const { getAuditLogs } = require('../controllers/audit.controller');
-
-    // Importar los middlewares exportados desde auth.middleware.js
-    const { authenticateJWT, authorizeRoles } = require('../middlewares/auth.middleware');
+    const userController = require('../controllers/user.controller');
+    const { authenticateJWT, checkPermission, authorizeRoles } = require('../middlewares/auth.middleware');
     const validate = require('../middlewares/validate.middleware');
+    const upload = require('../middlewares/upload.middleware');
 
-    // Importar controladores de administración
-    const { getUsers,  updateUserRoles, createUser, updateUser, deleteUser } = require('../controllers/admin.controller');
-
-    // Proteger todas las rutas de este router
+    // Todas las rutas de usuario requieren estar autenticado
     router.use(authenticateJWT);
-    router.use(authorizeRoles('SUPER_ADMIN'));
 
-    // Validaciones para creación
+    // Endpoints del Perfil Propio (/api/v1/users/profile, /api/v1/users/avatar)
+    router.put('/profile', userController.updateProfile);
+    router.post('/avatar', upload.single('avatar'), userController.uploadAvatar);
+    router.delete('/avatar', userController.deleteAvatar);
+
+    // Endpoints Administrativos de Usuarios
     const createUserValidation = [
         body('name').notEmpty().withMessage('El nombre es obligatorio'),
         body('email').isEmail().withMessage('Correo electrónico inválido'),
@@ -2604,24 +2629,60 @@ volumes:
         validate,
     ];
 
-    // Rutas Users | Endpoints
-    router.get('/users', getUsers);
-    router.put('/users/:id', updateUser);
-    router.put('/users/:id/roles', updateUserRoles);
-    router.post('/users', createUserValidation, createUser);
-    router.delete('/users/:id', deleteUser);
-
-    // CRUD de Roles
-    router.get('/roles', rolesController.getRoles);
-    router.get('/permissions', rolesController.getPermissions);
-    router.post('/roles', rolesController.createRole);
-    router.put('/roles/:id', rolesController.updateRole);
-    router.delete('/roles/:id', rolesController.deleteRole);
-
-    // Ruta de Auditoría y Logs
-    router.get('/audit-logs', getAuditLogs);
+    router.get('/', checkPermission('users:read'), userController.getUsers);
+    router.post('/', checkPermission('users:create'), createUserValidation, userController.createUser);
+    router.put('/:id', checkPermission('users:update'), userController.updateUser);
+    router.put('/:id/roles', authorizeRoles('SUPER_ADMIN'), userController.updateUserRoles);
+    router.delete('/:id', checkPermission('users:delete'), userController.deleteUser);
 
     module.exports = router;    
+    ```
+3. `backend/src/routes/role.routes.js`: Rutas administración de roles (/api/v1/role/*):
+    ```js
+    const express = require('express');
+    const router = express.Router();
+    const roleController = require('../controllers/role.controller');
+    const { authenticateJWT, checkPermission } = require('../middlewares/auth.middleware');
+
+    router.use(authenticateJWT);
+
+    router.get('/', checkPermission('roles:read'), roleController.getRoles);
+    router.get('/permissions', checkPermission('roles:read'), roleController.getPermissions);
+    router.post('/', checkPermission('roles:create'), roleController.createRole);
+    router.put('/:id', checkPermission('roles:update'), roleController.updateRole);
+    router.delete('/:id', checkPermission('roles:delete'), roleController.deleteRole);
+
+    module.exports = router;
+    ```
+4. `backend/src/routes/audit.routes.js`: Rutas asociadas a las auditorias (/api/v1/audit/*):
+    ```js
+    const express = require('express');
+    const router = express.Router();
+    const { getAuditLogs } = require('../controllers/audit.controller');
+    const { authenticateJWT, authorizeRoles } = require('../middlewares/auth.middleware');
+
+    router.use(authenticateJWT);
+    router.get('/', authorizeRoles('SUPER_ADMIN'), getAuditLogs);
+
+    module.exports = router;
+    ```
+5. `backend/src/routes/index.js`: Router central que registra todos los módulos:
+    ```js
+    const express = require('express');
+    const router = express.Router();
+
+    const authRoutes = require('./auth.routes');
+    const userRoutes = require('./user.routes');
+    const roleRoutes = require('./role.routes');
+    const auditRoutes = require('./audit.routes');
+
+    // Definición limpia de módulos
+    router.use('/auth', authRoutes);
+    router.use('/users', userRoutes);
+    router.use('/roles', roleRoutes);
+    router.use('/audit-logs', auditRoutes);
+
+    module.exports = router;
     ```
 
 ### 🌱 Paso 9: Seeders y Scripts de Datos (`src/seeders/` & `src/`)
@@ -2814,11 +2875,11 @@ volumes:
     const { errorHandler } = require('./middlewares/error.middleware');
 
     // Rutas
-    const authRoutes = require('./routes/auth.routes');
-    const adminRoutes = require('./routes/admin.routes');
+    const routes = require('./routes');
 
     const app = express();
-    const PORT = process.env.PORT || 4000;
+    const PORT = process.env.PORT || 3000;
+    const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
     // Middlewares Globales
     const allowedOrigins = [
@@ -2837,6 +2898,7 @@ volumes:
         },
         credentials: true
     }));
+
     app.use(express.json());
 
     // Contexto de auditoría global para envolver la petición HTTP
@@ -2844,24 +2906,22 @@ volumes:
 
     // Ruta raíz informativa
     app.get('/', (req, res) => {
-        res.send('API REST de FamilyTree2026 ejecutándose. Visita /api/v1/health para estado.');
+        res.send('API REST de Boilerplate-Node-2026 ejecutándose. Visita /api/v1/health para estado.');
     });
 
     // Ruta de comprobación de estado (Health Check)
     app.get('/api/v1/health', (req, res) => {
         res.status(200).json({
             status: 'success',
-            message: 'API FamilyTree2026 operativa',
+            message: 'API Boilerplate-Node-2026 operativa',
             environment: process.env.NODE_ENV,
             timestamp: new Date().toISOString(),
         });
     });
 
     // Registrar Rutas de la API
-    app.use('/api/v1/auth', authRoutes);
-    app.use('/api/v1/admin', adminRoutes);
+    app.use('/api/v1', routes);
 
-    /* Inicio nuevo */
     // --- MANEJO DE ERRORES GLOBALES (Debe ser el último app.use) ---
     app.use(errorHandler);
 
@@ -2873,13 +2933,24 @@ volumes:
     process.on('uncaughtException', (error) => {
         console.error('🔥 [CRITICAL] Excepción no controlada (uncaughtException):', error);
     });
-    /* Fin nuevo */
 
-    // Inicialización del Servidor
-    app.listen(PORT, () => {
-        console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
+    // Inicialización del Servidor (Asignado a constante server)
+    const server = app.listen(PORT, () => {
+        console.log(`🚀 Servidor ejecutándose en ${APP_URL}`);
         console.log(`📌 Entorno: ${process.env.NODE_ENV || 'development'}`);
-    });    
+    });
+
+    // Cierre Limpio (Graceful Shutdown)
+    const gracefulShutdown = (signal) => {
+        console.log(`\nRecibida señal ${signal}. Cerrando servidor limpiamente...`);
+        server.close(() => {
+            console.log('Servidor Express cerrado. Puerto liberado.');
+            process.exit(0);
+        });
+    };
+
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     ```
     + Funciones:
         + Carga de variables de entorno (dotenv).
@@ -2988,10 +3059,533 @@ volumes:
         DATABASE_URL="postgresql://postgres.<Project ID>:<Password>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" node src/seeders/superadmin.seeder.js
         ```
 
+## 📋 Resumen de Endpoints
+| Módulo    | Método   | Endpoint                    | Permiso / Rol requerido   |
+| --------- | -------- | --------------------------- | ------------------------- |
+| **XXXX**  | `GET`    | `/api/v1/health`            | Público                   |-
+| **Auth**  | `POST`   | `/api/v1/auth/register`     | Público                   |-
+| **Auth**  | `POST`   | `/api/v1/auth/login`        | Público                   |-
+| **Auth**  | `GET`    | `/api/v1/auth/me`           | Autenticado               |-
+| **Auth**  | `POST`   | `/api/v1/auth/logout`       | Autenticado               |-
+| **Users** | `PUT`    | `/api/v1/users/profile`     | Autenticado (Propietario) |-
+| **Users** | `POST`   | `/api/v1/users/avatar`      | Autenticado (Propietario) |R
+| **Users** | `DELETE` | `/api/v1/users/avatar`      | Autenticado (Propietario) |R
+| **Users** | `GET`    | `/api/v1/users`             | `users:read`              |-
+| **Users** | `POST`   | `/api/v1/users`             | `users:create`            |-
+| **Users** | `PUT`    | `/api/v1/users/:id`         | `users:update`            |-
+| **Users** | `PUT`    | `/api/v1/users/:id/roles`   | Rol `SUPER_ADMIN`         |-
+| **Users** | `DELETE` | `/api/v1/users/:id`         | `users:delete`            |-
+| **Roles** | `GET`    | `/api/v1/roles`             | `roles:read`              |-
+| **Roles** | `GET`    | `/api/v1/roles/permissions` | `roles:read`              |-
+| **Roles** | `POST`   | `/api/v1/roles`             | `roles:create`            |-
+| **Roles** | `PUT`    | `/api/v1/roles/:id`         | `roles:update`            |-
+| **Roles** | `DELETE` | `/api/v1/roles/:id`         | `roles:delete`            |-
+| **Audit** | `GET`    | `/api/v1/audit-logs`        | Rol `SUPER_ADMIN`         |-
+
+
+| Módulo    | Método   | Endpoint                    | Permiso / Rol requerido   |
+| --------- | -------- | --------------------------- | ------------------------- |
+| **Auth**  | `POST`   | `/api/v1/auth/logout`       | Autenticado               |
+| **Users** | `POST`   | `/api/v1/users/avatar`      | Autenticado (Propietario) |
+| **Users** | `DELETE` | `/api/v1/users/avatar`      | Autenticado (Propietario) |
+| **Users** | `POST`   | `/api/v1/users`             | `users:create`            |
+| **Users** | `PUT`    | `/api/v1/users/:id`         | `users:update`            |
+| **Roles** | `GET`    | `/api/v1/roles/permissions` | `roles:read`              |
+
+## ✅ Pruebas de Endpoints
+### 🚀 Health Check (Público)
+1. Ejecutar:
+    ```bash
+    curl -i -X GET http://localhost:3000/api/v1/health
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 135
+        ETag: W/"87-oMMFBNMzQBBLrTxQ0BxtfZkaXSc"
+        Date: Fri, 11 Sep 2026 14:28:25 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"API Boilerplate-Node-2026 operativa","environment":"development","timestamp":"2026-09-11T14:28:25.699Z"}
+        ```
+
+### 🚀 Autenticación (Registro y Login)
+1. Registro de Usuario (POST `/api/v1/auth/register`):
+    ```bash
+    curl -i -X POST http://localhost:3000/api/v1/auth/register \
+        -H "Content-Type: application/json" \
+        -d '{
+            "email": "test@example.com",
+            "password": "Password123!",
+            "firstName": "Pedro",
+            "lastName": "Bazó"
+        }'
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 201 Created
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 490
+        ETag: W/"1ea-Ziyuyh4huSnt7Lm+rOd0shjwLHo"
+        Date: Fri, 11 Sep 2026 14:33:04 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Usuario registrado correctamente","data":{"user":{"id":"9ec12865-9968-4148-9f23-427c062b61ad","email":"test@example.com","name":"Pedro Bazó","avatarUrl":null,"createdAt":"2026-09-11T14:33:04.929Z","roles":[]},"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjllYzEyODY1LTk5NjgtNDE0OC05ZjIzLTQyN2MwNjJiNjFhZCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsInJvbGVzIjpbXSwiaWF0IjoxNzg5MTM3MTg0LCJleHAiOjE3ODk3NDE5ODR9.hJZx_Kzt4ctC9DXDoAXHkD7nrSkBTOHGOS32UJD56js"}}bazop@PetrixIesus:~/projects/boilerplate-node-2026$ 
+        ```
+2. Login (POST `/api/v1/auth/login`):
+    ```bash
+    curl -i -X POST http://localhost:3000/api/v1/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{
+            "email": "test@example.com",
+            "password": "Password123!"
+        }'
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 444
+        ETag: W/"1bc-JFL4uAd6y0t1MbhmwuowzSCZ5qY"
+        Date: Fri, 11 Sep 2026 14:35:58 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Inicio de sesión exitoso","data":{"user":{"id":"9ec12865-9968-4148-9f23-427c062b61ad","email":"test@example.com","name":"Pedro Bazó","avatarUrl":null,"roles":[]},"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjllYzEyODY1LTk5NjgtNDE0OC05ZjIzLTQyN2MwNjJiNjFhZCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsInJvbGVzIjpbXSwiaWF0IjoxNzg5MTM3MzU4LCJleHAiOjE3ODk3NDIxNTh9.63emy0B8wPbLhjjb2PMuitlQ1YldKfSkD_Mctsg31JQ"}}
+        ```
+3. Logout (POST `/api/v1/auth/logout`):
+    ```bash
+    curl -i -X POST http://localhost:3000/api/v1/auth/logout \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 62
+        ETag: W/"3e-JaiL2mK4U1hpoEFpxtcTgglXi2w"
+        Date: Sat, 12 Sep 2026 09:56:13 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Sesión cerrada correctamente"}        
+        ```
+
+
+### 🚀 Módulo de Usuario Actual y Perfil
+1. Guardar token:
+    ```bash
+    TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjllYzEyODY1LTk5NjgtNDE0OC05ZjIzLTQyN2MwNjJiNjFhZCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsInJvbGVzIjpbXSwiaWF0IjoxNzg5MTM3MzU4LCJleHAiOjE3ODk3NDIxNTh9.63emy0B8wPbLhjjb2PMuitlQ1YldKfSkD_Mctsg31JQ"
+    ```
+2. Obtener Usuario Autenticado (GET `/api/v1/auth/me`):
+    ```bash
+    curl -i -X GET http://localhost:3000/api/v1/auth/me \
+        -H "Authorization: Bearer $TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 197
+        ETag: W/"c5-bLjFlUieGmW2j4AgO9AAQRgMhB8"
+        Date: Fri, 11 Sep 2026 14:46:26 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","data":{"user":{"id":"9ec12865-9968-4148-9f23-427c062b61ad","email":"test@example.com","name":"Pedro Bazó","avatarUrl":null,"roles":[],"createdAt":"2026-09-11T14:33:04.929Z"}}}
+        ```
+3. Actualizar Perfil Propio (PUT `/api/v1/users/profile`):
+    ```bash
+    curl -i -X PUT http://localhost:3000/api/v1/users/profile \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "name": "Pedro Bazó Updated"
+        }'    
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 239
+        ETag: W/"ef-+h5Ev2dALvVipCh4DzgXbZ7Mbp4"
+        Date: Fri, 11 Sep 2026 14:48:53 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Perfil actualizado correctamente","data":{"user":{"id":"9ec12865-9968-4148-9f23-427c062b61ad","name":"Pedro Bazó Updated","email":"test@example.com","avatarUrl":null,"createdAt":"2026-09-11T14:33:04.929Z"}}}
+        ```
+4. Subir Avatar (POST `/api/v1/users/avatar`):
+    ```bash
+    curl -i -X POST http://localhost:3000/api/v1/users/avatar \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -F "avatar=@/home/bazop/projects/boilerplate-node-2026/temporal/img/img03.png"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 317
+        ETag: W/"13d-QAeaRs0qRyanTdMMTUbhx6UQ+Os"
+        Date: Sat, 12 Sep 2026 10:02:11 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Avatar actualizado","data":{"user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","name":"Super Admin","email":"admin@boilerplate.com","avatarUrl":"http://minio:9000/app-uploads/avatars/user_bc29c571-acd1-4f15-9412-62cfd78c832e_1789207331804.png","createdAt":"2026-09-10T19:44:08.864Z"}}}
+        ```
+5. Eliminar Avatar (DELETE `/api/v1/users/avatar`):
+    ```bash
+    curl -i -X DELETE http://localhost:3000/api/v1/users/avatar \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 220
+        ETag: W/"dc-l0CNaHN1DDNQ6G/Ec3V2oKceorg"
+        Date: Sat, 12 Sep 2026 10:06:45 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Avatar eliminado","data":{"user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","name":"Super Admin","email":"admin@boilerplate.com","avatarUrl":null,"createdAt":"2026-09-10T19:44:08.864Z"}}}
+        ```
+
+### 🚀 Módulo de Gestión de Usuarios y Permisos
+1. Intento de Lectura de Usuarios Sin Permisos (GET `/api/v1/users`):
+    ```bash
+    curl -i -X GET http://localhost:3000/api/v1/users \
+        -H "Authorization: Bearer $TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 403 Forbidden
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 100
+        ETag: W/"64-vHCjCX/9IVbhi+hGyQqJAftVu0c"
+        Date: Fri, 11 Sep 2026 14:52:18 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"fail","message":"No tienes el permiso necesario (users:read) para realizar esta acción"}
+        ```
+2. Intento de Acceso a Auditoría Sin Rol (GET `/api/v1/audit-logs`):
+    ```bash
+    curl -i -X GET http://localhost:3000/api/v1/audit-logs \
+        -H "Authorization: Bearer $TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 403 Forbidden
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 90
+        ETag: W/"5a-KT9oi/x5iO4UaZkH7LH3zrb/hAk"
+        Date: Fri, 11 Sep 2026 14:53:46 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"fail","message":"No tienes los permisos requeridos para ejecutar esta acción"}bazop@PetrixIesus:~/projects/boilerplate-node-2026$ 
+        ```
+
+### 🚀 Autenticación como Super Admin y Pruebas Administrativas
+1. Login con Super Admin (POST `/api/v1/auth/login`):
+    ```bash
+    curl -i -X POST http://localhost:3000/api/v1/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{
+            "email": "admin@boilerplate.com",
+            "password": "tu_password_super_seguro"
+        }'
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 486
+        ETag: W/"1e6-KR/OwvXav4Pyut+i4kI+dq7E0Q0"
+        Date: Fri, 11 Sep 2026 15:00:56 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Inicio de sesión exitoso","data":{"user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","email":"admin@boilerplate.com","name":"Super Admin","avatarUrl":null,"roles":["SUPER_ADMIN"]},"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJjMjljNTcxLWFjZDEtNGYxNS05NDEyLTYyY2ZkNzhjODMyZSIsImVtYWlsIjoiYWRtaW5AYm9pbGVycGxhdGUuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwiaWF0IjoxNzg5MTM4ODU2LCJleHAiOjE3ODk3NDM2NTZ9.4pH0s-JCausWXv5wJw0UEkm7G9JCf1MQfo4ieiTTqcA"}}
+        ```
+2. Guardar token del SUPER_ADMIN:
+    ```bash
+    ADMIN_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJjMjljNTcxLWFjZDEtNGYxNS05NDEyLTYyY2ZkNzhjODMyZSIsImVtYWlsIjoiYWRtaW5AYm9pbGVycGxhdGUuY29tIiwicm9sZXMiOlsiU1VQRVJfQURNSU4iXSwiaWF0IjoxNzg5MTM4ODU2LCJleHAiOjE3ODk3NDM2NTZ9.4pH0s-JCausWXv5wJw0UEkm7G9JCf1MQfo4ieiTTqcA"
+    ```
+3. Intento de Lectura de Usuarios Con Permisos (GET `/api/v1/users`):
+    ```bash
+    curl -i -X GET http://localhost:3000/api/v1/users \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 2124
+        ETag: W/"84c-4COdtHNi+vR/CwG30Cd7wJwWlUc"
+        Date: Fri, 11 Sep 2026 15:05:18 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","data":{"users":[{"id":"9ec12865-9968-4148-9f23-427c062b61ad","name":"Pedro Bazó Updated","email":"test@example.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-11T14:33:04.929Z","roles":[]},{"id":"14f33bf7-e8c4-488d-bef0-dbc2f828402c","name":"Emilio Piña Sisneros","email":"emilio.pinasisneros@hotmail.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]},{"id":"15a22d36-af2a-4d56-9a84-6bf31b5c455b","name":"María Corrales Ulibarri","email":"maria_corralesulibarri@hotmail.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]},{"id":"21ecd189-f322-40a5-94be-e05563066538","name":"Rosario Negrón Alejandro","email":"rosario.negronalejandro63@yahoo.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]},{"id":"31caa5d2-6a4e-482f-bf76-bcf8ca44beae","name":"Manuel Reyes Paz","email":"manuel_reyespaz@hotmail.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]},{"id":"4ad334ff-1069-4ef3-a973-5a6ea89c6ec5","name":"Lilia Godoy Sedillo","email":"lilia.godoysedillo12@gmail.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]},{"id":"6ba4cc7d-c615-4bc2-ac7a-ef1c0683ed44","name":"Rodrigo Cervantes Bernal","email":"rodrigo_cervantesbernal@hotmail.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]},{"id":"70698dcc-a52d-424e-8ff1-9efde9814979","name":"Gonzalo Vallejo Domínguez","email":"gonzalo.vallejodominguez42@hotmail.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]},{"id":"71901a46-1793-4cfb-8b54-9f81a4dd12dd","name":"Antonia Alcalá Santana","email":"antonia.alcalasantana56@gmail.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]},{"id":"7fd8ca82-10ad-4acb-a4c4-7843cdf5fad7","name":"Sancho Aguayo Delgadillo","email":"sancho_aguayodelgadillo@hotmail.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-10T19:44:37.296Z","roles":[]}],"pagination":{"total":27,"page":1,"totalPages":3}}}
+        ```
+4. Intento de Acceso a Auditoría Con Rol (GET `/api/v1/audit-logs`):
+    ```bash
+    curl -i -X GET http://localhost:3000/api/v1/audit-logs \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 3647
+        ETag: W/"e3f-g14LSGLcunhIohSZBX2dPNfrBHo"
+        Date: Fri, 11 Sep 2026 15:07:12 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","data":{"logs":[{"id":"18792b52-1562-40c3-8f89-9872693e817b","userId":"bc29c571-acd1-4f15-9412-62cfd78c832e","action":"LOGIN_SUCCESS","entity":"Auth","entityId":"bc29c571-acd1-4f15-9412-62cfd78c832e","details":"{\"ip\":\"::ffff:172.19.0.1\",\"userAgent\":\"curl/8.5.0\"}","ipAddress":"::ffff:172.19.0.1","createdAt":"2026-09-11T15:00:56.656Z","user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","name":"Super Admin","email":"admin@boilerplate.com"}},{"id":"4a2a5918-33cb-4ff3-98e4-d0585e3d9a97","userId":"9ec12865-9968-4148-9f23-427c062b61ad","action":"UPDATE_USER","entity":"User","entityId":"9ec12865-9968-4148-9f23-427c062b61ad","details":"{\"name\":\"Pedro Bazó Updated\"}","ipAddress":"127.0.0.1","createdAt":"2026-09-11T14:48:53.522Z","user":{"id":"9ec12865-9968-4148-9f23-427c062b61ad","name":"Pedro Bazó Updated","email":"test@example.com"}},{"id":"214e95ff-d682-4edf-8b11-bb96a09cab87","userId":"9ec12865-9968-4148-9f23-427c062b61ad","action":"LOGIN_SUCCESS","entity":"Auth","entityId":"9ec12865-9968-4148-9f23-427c062b61ad","details":"{\"ip\":\"::ffff:172.19.0.1\",\"userAgent\":\"curl/8.5.0\"}","ipAddress":"::ffff:172.19.0.1","createdAt":"2026-09-11T14:35:58.517Z","user":{"id":"9ec12865-9968-4148-9f23-427c062b61ad","name":"Pedro Bazó Updated","email":"test@example.com"}},{"id":"dc1eb351-2ace-4de2-9c0e-fdfa3b0425f9","userId":null,"action":"CREATE_USER","entity":"User","entityId":"9ec12865-9968-4148-9f23-427c062b61ad","details":"{\"email\":\"test@example.com\",\"password\":\"[PROTECTED]\",\"name\":\"Pedro Bazó\"}","ipAddress":"127.0.0.1","createdAt":"2026-09-11T14:33:04.943Z","user":null},{"id":"2e293d04-4fc5-4236-accb-8ea33de95c6e","userId":"bc29c571-acd1-4f15-9412-62cfd78c832e","action":"LOGIN_SUCCESS","entity":"Auth","entityId":"bc29c571-acd1-4f15-9412-62cfd78c832e","details":"{\"ip\":\"::ffff:172.19.0.1\",\"userAgent\":\"curl/8.5.0\"}","ipAddress":"::ffff:172.19.0.1","createdAt":"2026-09-11T11:17:57.856Z","user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","name":"Super Admin","email":"admin@boilerplate.com"}},{"id":"6054581f-ec57-45f0-be98-fc2c9a29aa86","userId":null,"action":"LOGIN_FAILED","entity":"Auth","entityId":null,"details":"{\"email\":\"admin@boilerplate.com\",\"reason\":\"Contraseña incorrecta\",\"ip\":\"::ffff:172.19.0.1\"}","ipAddress":"::ffff:172.19.0.1","createdAt":"2026-09-11T11:14:35.640Z","user":null},{"id":"b240b81c-76be-44c3-a481-a9c20a6e5c01","userId":"bc29c571-acd1-4f15-9412-62cfd78c832e","action":"LOGIN","entity":"Auth","entityId":"bc29c571-acd1-4f15-9412-62cfd78c832e","details":"{\"message\":\"Inicio de sesión exitoso\"}","ipAddress":"127.0.0.1","createdAt":"2026-09-10T19:45:14.435Z","user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","name":"Super Admin","email":"admin@boilerplate.com"}},{"id":"9ba5cd18-1972-48e6-bf2e-c940cebdf7a2","userId":"bc29c571-acd1-4f15-9412-62cfd78c832e","action":"UPDATE","entity":"User","entityId":"bc29c571-acd1-4f15-9412-62cfd78c832e","details":"{\"field\":\"email\",\"old\":\"old@test.com\",\"new\":\"admin@boilerplate.com\"}","ipAddress":"127.0.0.1","createdAt":"2026-09-10T19:45:14.435Z","user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","name":"Super Admin","email":"admin@boilerplate.com"}},{"id":"0e1df34c-fe80-49f0-8daa-6cbe8b451bc9","userId":"bc29c571-acd1-4f15-9412-62cfd78c832e","action":"CREATE","entity":"Person","entityId":"1","details":"{\"name\":\"Juan Pérez\",\"role\":\"Padre\"}","ipAddress":"127.0.0.1","createdAt":"2026-09-10T19:45:14.435Z","user":{"id":"bc29c571-acd1-4f15-9412-62cfd78c832e","name":"Super Admin","email":"admin@boilerplate.com"}}],"pagination":{"total":9,"page":1,"totalPages":1}}}
+        ```
+5. Crear Usuario Admin (POST `/api/v1/users`):
+    ```bash
+    curl -i -X POST http://localhost:3000/api/v1/users \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "email": "nuevo.usuario@example.com",
+            "password": "Password123!",
+            "name": "Carlos Gómez"
+        }'
+    ```
+    + Output:
+        ```bash
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 180
+        ETag: W/"b4-vYvuxiteRQ1SAiG2U2YnEPUTJjE"
+        Date: Sat, 12 Sep 2026 09:29:40 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","data":{"user":{"id":"47372aff-6ada-4220-a01e-cb9ec281de29","email":"nuevo.usuario@example.com","name":"Carlos Gómez","createdAt":"2026-09-12T09:29:40.219Z"}}}
+        ```
+6. Actualizar Usuario (PUT `/api/v1/users/:id`):
+    ```bash
+    curl -i -X PUT http://localhost:3000/api/v1/users/47372aff-6ada-4220-a01e-cb9ec281de29 \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "name": "Carlos Gómez Editado",
+            "isActive": true
+        }'
+    ```
+    + Output:
+        ```bash
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 284
+        ETag: W/"11c-YKLWFCgSequAQ4PoiWp/zEENhMY"
+        Date: Sat, 12 Sep 2026 09:37:57 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Usuario actualizado correctamente","data":{"user":{"id":"47372aff-6ada-4220-a01e-cb9ec281de29","name":"Carlos Gómez Editado","email":"nuevo.usuario@example.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-12T09:29:40.219Z","roles":["USER"]}}}
+        ```
+
+### 🚀 Módulo de Gestión de Roles y Permisos
+1. Consultar Roles Existentes (GET `/api/v1/roles`):
+    ```bash
+    curl -i -X GET http://localhost:3000/api/v1/roles \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 577
+        ETag: W/"241-xSvZ1d0OWFMkMeGknKjDIQPAWHc"
+        Date: Fri, 11 Sep 2026 15:12:32 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","data":{"roles":[{"id":"2701bb42-a714-4b26-8062-792723b455fc","name":"ADMIN","description":"Administrador de contenido y usuarios","userCount":0,"permissions":[],"createdAt":"2026-09-10T19:44:08.753Z"},{"id":"a4c6a0e4-c473-4102-a4ee-ee2325170bfd","name":"SUPER_ADMIN","description":"Acceso total y gestión del sistema","userCount":1,"permissions":[],"createdAt":"2026-09-10T19:44:08.661Z"},{"id":"eda3eeb3-108f-4465-9490-d3fc773abe35","name":"USER","description":"Usuario estándar","userCount":0,"permissions":[],"createdAt":"2026-09-10T19:44:08.765Z"}]}
+        ```
+2. Crear un Nuevo Rol (POST `/api/v1/roles`):
+    ```bash
+    curl -i -X POST http://localhost:3000/api/v1/roles \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "name": "EDITOR",
+            "description": "Rol con permisos de edición de contenido"
+        }'
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 201 Created
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 270
+        ETag: W/"10e-29mvH3/Bg6KB7ekdBWeyqAaeUaA"
+        Date: Fri, 11 Sep 2026 15:13:54 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Rol creado exitosamente","data":{"role":{"id":"6351d2d9-f0bd-4ef0-be4e-f1b91215d2b4","name":"EDITOR","description":"Rol con permisos de edición de contenido","createdAt":"2026-09-11T15:13:54.158Z","updatedAt":"2026-09-11T15:13:54.158Z"}}}bazop@PetrixIesus:~/projects/boilerplate-node-2026$ 
+        ```
+3. Consultar Permisos Existentes (GET `/api/v1/roles/permissions`):
+    ```bash
+    curl -i -X GET http://localhost:3000/api/v1/roles/permissions \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output (REPETIR):
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 46
+        ETag: W/"2e-UdOzrZS4A35oyYj2U7KNzb4+pqA"
+        Date: Sat, 12 Sep 2026 09:23:38 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","data":{"permissions":[]}}        
+        ```
+
+### 🚀 Asignación de Roles a un Usuario y Limpieza
+1. Asignar el nuevo rol EDITOR al usuario de prueba (PUT `/api/v1/users/:id/roles`):
+    ```bash
+    curl -i -X PUT http://localhost:3000/api/v1/users/9ec12865-9968-4148-9f23-427c062b61ad/roles \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "roles": ["USER", "EDITOR"]
+        }'
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 65
+        ETag: W/"41-pe0mynh+sz1rYl3PdbcIF+I9324"
+        Date: Fri, 11 Sep 2026 18:38:10 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Roles actualizados correctamente"}
+        ```
+2. Eliminar el Rol de Prueba (DELETE `/api/v1/roles/:id`):
+    ```bash
+    curl -i -X DELETE http://localhost:3000/api/v1/roles/6351d2d9-f0bd-4ef0-be4e-f1b91215d2b4 \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 60
+        ETag: W/"3c-L6eA4rBc4UKuCPVzwRH4ZHQbBF8"
+        Date: Fri, 11 Sep 2026 18:44:55 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Rol eliminado correctamente"}
+        ```
+3. Eliminar Usuario de Prueba (DELETE `/api/v1/users/:id`):
+    ```bash
+    curl -i -X DELETE http://localhost:3000/api/v1/users/9ec12865-9968-4148-9f23-427c062b61ad \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 200 OK
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 64
+        ETag: W/"40-m85pJrkJ/TZLobmd+w1fnn6BWZo"
+        Date: Fri, 11 Sep 2026 18:47:47 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Usuario eliminado correctamente"}
+        ```
+
+
+3. mmmmm:
+    ```bash
+    ```
+    + Output:
+        ```bash
+        
+        ```
+
 
 ## --------------------------------------------------------
 
-
+pendiente probar endpoints
+establecer politicas de seguridad en tablas de base de datos de supabase
+revisar la seguridad del backend
 
 
 

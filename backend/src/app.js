@@ -8,11 +8,11 @@ const { setAuditUser } = require('./middlewares/auditContext.middleware');
 const { errorHandler } = require('./middlewares/error.middleware');
 
 // Rutas
-const authRoutes = require('./routes/auth.routes');
-const adminRoutes = require('./routes/admin.routes');
+const routes = require('./routes');
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
+const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
 // Middlewares Globales
 const allowedOrigins = [
@@ -31,6 +31,7 @@ app.use(cors({
     },
     credentials: true
 }));
+
 app.use(express.json());
 
 // Contexto de auditoría global para envolver la petición HTTP
@@ -38,24 +39,22 @@ app.use(setAuditUser);
 
 // Ruta raíz informativa
 app.get('/', (req, res) => {
-    res.send('API REST de FamilyTree2026 ejecutándose. Visita /api/v1/health para estado.');
+    res.send('API REST de Boilerplate-Node-2026 ejecutándose. Visita /api/v1/health para estado.');
 });
 
 // Ruta de comprobación de estado (Health Check)
 app.get('/api/v1/health', (req, res) => {
     res.status(200).json({
         status: 'success',
-        message: 'API FamilyTree2026 operativa',
+        message: 'API Boilerplate-Node-2026 operativa',
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString(),
     });
 });
 
 // Registrar Rutas de la API
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1', routes);
 
-/* Inicio nuevo */
 // --- MANEJO DE ERRORES GLOBALES (Debe ser el último app.use) ---
 app.use(errorHandler);
 
@@ -67,10 +66,21 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (error) => {
     console.error('🔥 [CRITICAL] Excepción no controlada (uncaughtException):', error);
 });
-/* Fin nuevo */
 
-// Inicialización del Servidor
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
+// Inicialización del Servidor (Asignado a constante server)
+const server = app.listen(PORT, () => {
+    console.log(`🚀 Servidor ejecutándose en ${APP_URL}`);
     console.log(`📌 Entorno: ${process.env.NODE_ENV || 'development'}`);
 });
+
+// Cierre Limpio (Graceful Shutdown)
+const gracefulShutdown = (signal) => {
+    console.log(`\nRecibida señal ${signal}. Cerrando servidor limpiamente...`);
+    server.close(() => {
+        console.log('Servidor Express cerrado. Puerto liberado.');
+        process.exit(0);
+    });
+};
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

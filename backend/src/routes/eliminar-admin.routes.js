@@ -1,17 +1,11 @@
 const express = require('express');
 const { body } = require('express-validator');
 const router = express.Router();
-const rolesController = require('../controllers/roles.controller');
-
-// Importar el nuevo controlador de auditoría (CommonJS)
+const rolesController = require('../controllers/role.controller');
 const { getAuditLogs } = require('../controllers/audit.controller');
-
-// Importar los middlewares exportados desde auth.middleware.js
+const { getUsers,  updateUserRoles, createUser, updateUser, deleteUser } = require('../controllers/admin.controller');
 const { authenticateJWT, authorizeRoles } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
-
-// Importar controladores de administración
-const { getUsers,  updateUserRoles, createUser, updateUser, deleteUser } = require('../controllers/admin.controller');
 
 // Proteger todas las rutas de este router
 router.use(authenticateJWT);

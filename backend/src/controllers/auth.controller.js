@@ -5,17 +5,12 @@ const { getClientIp } = require('../utils/request.utils');
 
 const generateToken = (user, roles = []) => {
     return jwt.sign(
-        {
-            id: user.id,
-            email: user.email,
-            roles: roles,
-        },
+        { id: user.id, email: user.email, roles },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 };
 
-// 1. REGISTRO DE USUARIO (Sin roles por defecto)
 const register = async (req, res) => {
     try {
         const { email, password, firstName, lastName } = req.body;
@@ -23,42 +18,23 @@ const register = async (req, res) => {
 
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'El correo electrónico ya está registrado',
-            });
+            return res.status(400).json({ status: 'fail', message: 'El correo electrónico ya está registrado' });
         }
 
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
         const newUser = await prisma.user.create({
-            data: {
-                email,
-                password: passwordHash,
-                name: fullName,
-            },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                avatarUrl: true,
-                createdAt: true,
-            },
+            data: { email, password: passwordHash, name: fullName },
+            select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true },
         });
 
         const token = generateToken(newUser, []);
 
         return res.status(201).json({
             status: 'success',
-            message: 'Usuario registrado correctamente (sin permisos asignados)',
-            data: {
-                user: {
-                    ...newUser,
-                    roles: [],
-                },
-                token,
-            },
+            message: 'Usuario registrado correctamente',
+            data: { user: { ...newUser, roles: [] }, token },
         });
     } catch (error) {
         console.error('Error en registro:', error);
@@ -66,20 +42,13 @@ const register = async (req, res) => {
     }
 };
 
-// 2. INICIO DE SESIÓN (LOGIN)
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
         const user = await prisma.user.findUnique({
             where: { email },
-            include: {
-                roles: {
-                    include: {
-                        role: true,
-                    },
-                },
-            },
+            include: { roles: { include: { role: true } } },
         });
 
         if (!user || !user.isActive) {
@@ -89,33 +58,24 @@ const login = async (req, res) => {
                         action: 'LOGIN_FAILED',
                         entity: 'Auth',
                         ipAddress: getClientIp(req),
-                        details: JSON.stringify({ email, reason: 'Usuario no encontrado', ip: req.ip }),
+                        details: JSON.stringify({ email, reason: 'Usuario no encontrado' }),
                     },
                 });
             }
-
-            return res.status(401).json({
-                status: 'fail',
-                message: 'Credenciales inválidas o cuenta desactivada',
-            });
+            return res.status(401).json({ status: 'fail', message: 'Credenciales inválidas o cuenta desactivada' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
-
         if (!isPasswordValid) {
             await prisma.auditLog.create({
                 data: {
                     action: 'LOGIN_FAILED',
                     entity: 'Auth',
                     ipAddress: getClientIp(req),
-                    details: JSON.stringify({ email, reason: 'Contraseña incorrecta', ip: req.ip }),
+                    details: JSON.stringify({ email, reason: 'Contraseña incorrecta' }),
                 },
             });
-
-            return res.status(401).json({
-                status: 'fail',
-                message: 'Credenciales inválidas',
-            });
+            return res.status(401).json({ status: 'fail', message: 'Credenciales inválidas' });
         }
 
         const userRoles = user.roles.map((ur) => ur.role.name);
@@ -136,13 +96,7 @@ const login = async (req, res) => {
             status: 'success',
             message: 'Inicio de sesión exitoso',
             data: {
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    avatarUrl: user.avatarUrl, // <-- AGREGADO AQUI
-                    roles: userRoles,
-                },
+                user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, roles: userRoles },
                 token,
             },
         });
@@ -152,7 +106,6 @@ const login = async (req, res) => {
     }
 };
 
-// 3. OBTENER USUARIO ACTUAL (VERIFICAR SESIÓN)
 const getMe = async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
@@ -163,37 +116,17 @@ const getMe = async (req, res) => {
                 name: true,
                 avatarUrl: true,
                 createdAt: true,
-                roles: {
-                    select: {
-                        role: {
-                            select: { name: true },
-                        },
-                    },
-                },
+                roles: { select: { role: { select: { name: true } } } },
             },
         });
 
-        if (!user) {
-            return res.status(404).json({
-                status: 'fail',
-                message: 'Usuario no encontrado',
-            });
-        }
+        if (!user) return res.status(404).json({ status: 'fail', message: 'Usuario no encontrado' });
 
         const userRoles = user.roles.map((ur) => ur.role.name);
 
         return res.status(200).json({
             status: 'success',
-            data: {
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    avatarUrl: user.avatarUrl, // <-- AGREGADO AQUI
-                    roles: userRoles,
-                    createdAt: user.createdAt,
-                },
-            },
+            data: { user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, roles: userRoles, createdAt: user.createdAt } },
         });
     } catch (error) {
         console.error('Error en getMe:', error);
@@ -201,7 +134,6 @@ const getMe = async (req, res) => {
     }
 };
 
-// 4. CIERRE DE SESIÓN (LOGOUT)
 const logout = async (req, res) => {
     try {
         if (req.user?.id) {
@@ -216,11 +148,7 @@ const logout = async (req, res) => {
                 },
             });
         }
-
-        return res.status(200).json({
-            status: 'success',
-            message: 'Sesión cerrada correctamente',
-        });
+        return res.status(200).json({ status: 'success', message: 'Sesión cerrada correctamente' });
     } catch (error) {
         console.error('Error en logout:', error);
         return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
