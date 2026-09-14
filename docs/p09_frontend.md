@@ -339,8 +339,11 @@
         },
 
         async uploadAvatar(formData) {
-            // Dejar que Axios construya el multipart boundary
-            const response = await api.post('/users/avatar', formData);
+            const response = await api.post('/users/avatar', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
             return response.data;
         },
 
