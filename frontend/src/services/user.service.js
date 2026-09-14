@@ -8,9 +8,8 @@ export const userService = {
     },
 
     async uploadAvatar(formData) {
-        const response = await api.post('/users/avatar', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        // Dejar que Axios construya el multipart boundary
+        const response = await api.post('/users/avatar', formData);
         return response.data;
     },
 
@@ -48,7 +47,9 @@ export const userService = {
     // --- Operaciones Administrativas de Avatar por ID ---
     async uploadUserAvatarById(userId, formData) {
         const response = await api.post(`/users/${userId}/avatar`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
         });
         return response.data;
     },
@@ -56,5 +57,5 @@ export const userService = {
     async deleteUserAvatarById(userId) {
         const response = await api.delete(`/users/${userId}/avatar`);
         return response.data;
-    }
+    }    
 };

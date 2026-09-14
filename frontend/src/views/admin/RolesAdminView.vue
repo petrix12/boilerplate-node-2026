@@ -178,7 +178,7 @@
 <script setup>
     import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
     import { ref, computed, onMounted } from 'vue';
-    import { roleService } from '@/services'; // 👈 Importamos únicamente roleService
+    import { roleService } from '@/services';
     import Swal from 'sweetalert2';
 
     const roles = ref([]);

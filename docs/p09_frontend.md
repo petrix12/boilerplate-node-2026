@@ -339,9 +339,8 @@
         },
 
         async uploadAvatar(formData) {
-            const response = await api.post('/users/avatar', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            // Dejar que Axios construya el multipart boundary
+            const response = await api.post('/users/avatar', formData);
             return response.data;
         },
 
@@ -379,7 +378,9 @@
         // --- Operaciones Administrativas de Avatar por ID ---
         async uploadUserAvatarById(userId, formData) {
             const response = await api.post(`/users/${userId}/avatar`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
             });
             return response.data;
         },
@@ -387,8 +388,8 @@
         async deleteUserAvatarById(userId) {
             const response = await api.delete(`/users/${userId}/avatar`);
             return response.data;
-        }
-    };    
+        }    
+    }; 
     ```
     + Gestión de perfil del usuario firmado y operaciones CRUD/Avatar de administración de usuarios (mapea directo a `/users` en Express).
 3. Crear servicio `frontend/src/services/role.service.js`:
@@ -442,55 +443,6 @@
     export { roleService } from './role.service';
     export { auditService } from './audit.service';
     ```
-
-
-6. mmmmm------------------------------------------
-
-
-
-3. Crear archivo `frontend/src/services/admin.service.js`:
-    ```js
-    import api from '@/api/axios';
-
-    export const adminService = {
-        // Listar usuarios con búsqueda y paginación
-        async getUsers(params = {}) {
-            const response = await api.get('/users', { params });
-            return response.data;
-        },
-
-        // Crear un nuevo usuario
-        async createUser(userData) {
-            const response = await api.post('/users', userData);
-            return response.data;
-        },
-
-        // Actualizar datos de usuario
-        async updateUser(userId, userData) {
-            const response = await api.put(`/users/${userId}`, userData);
-            return response.data;
-        },
-
-        // Actualizar roles asignados
-        async updateUserRoles(userId, roles) {
-            const response = await api.put(`/users/${userId}/roles`, { roles });
-            return response.data;
-        },
-
-        // Eliminar usuario de la plataforma
-        async deleteUser(userId) {
-            const response = await api.delete(`/users/${userId}`);
-            return response.data;
-        },
-
-        // Consultar los logs de auditoría
-        async getAuditLogs(params = {}) {
-            const response = await api.get('/audit-logs', { params });
-            return response.data;
-        }
-    };
-    ```
-
 
 
 ### 🎨 Vistas de Autenticación y Dashboard (`src/views/`)
@@ -1810,25 +1762,32 @@
 
                                 <!-- Foto de Perfil -->
                                 <div class="mb-4 flex items-center space-x-4">
-                                    <div class="relative w-16 h-16 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center border border-slate-200 dark:border-slate-600">
+                                    <div class="relative w-16 h-16 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center border border-slate-200 dark:border-slate-600 shrink-0">
                                         <img 
                                             v-if="userForm.avatarUrl" 
                                             :src="userForm.avatarUrl" 
                                             :alt="userForm.name"
-                                            class="w-full h-full object-cover" />
+                                            class="w-full h-full object-cover" 
+                                        />
                                         <span v-else class="text-xl font-bold text-emerald-500 dark:text-emerald-400">
                                             {{ userForm.name ? userForm.name.charAt(0).toUpperCase() : 'U' }}
                                         </span>
+
+                                        <!-- Overlay de Carga durante la Subida -->
+                                        <div v-if="uploadingAvatar" class="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                            <span class="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
+                                        </div>
                                     </div>
 
                                     <div class="flex flex-col space-y-2">
                                         <label class="cursor-pointer px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-xs text-slate-700 dark:text-slate-200 font-medium rounded-lg border border-slate-300 dark:border-slate-600 transition-colors inline-block text-center">
-                                            <span>Subir imagen</span>
+                                            <span>{{ uploadingAvatar ? 'Subiendo...' : 'Subir imagen' }}</span>
                                             <input 
                                                 ref="fileInputRef" 
                                                 type="file" 
                                                 accept="image/*" 
                                                 class="hidden" 
+                                                :disabled="uploadingAvatar"
                                                 @change="handleAvatarChange" 
                                             />
                                         </label>
@@ -1836,8 +1795,9 @@
                                         <button 
                                             v-if="userForm.avatarUrl" 
                                             type="button" 
+                                            :disabled="uploadingAvatar"
                                             @click="removeAvatar"
-                                            class="text-xs text-red-500 hover:text-red-400 text-left transition-colors"
+                                            class="text-xs text-red-500 hover:text-red-400 text-left transition-colors disabled:opacity-50"
                                         >
                                             Eliminar imagen
                                         </button>
@@ -1855,7 +1815,7 @@
                                     </button>
                                     <button
                                         type="submit"
-                                        :disabled="saving"
+                                        :disabled="saving || uploadingAvatar"
                                         class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors"
                                     >
                                         {{ saving ? 'Guardando...' : (targetUser ? 'Guardar Cambios' : 'Crear Usuario') }}
@@ -1863,7 +1823,7 @@
                                 </div>
                             </form>
                         </div>
-                    </div>        
+                    </div>     
                 </div>
             </div>
         </template>
@@ -1872,7 +1832,7 @@
             import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, ChevronLeftIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
             import Swal from 'sweetalert2';
             import { ref, onMounted } from 'vue';
-            import { adminService } from '../../services/admin.service';
+            import { userService } from '@/services';
 
             // --- ESTADOS GENERALES Y TABLA ---
             const users = ref([]);
@@ -1891,33 +1851,84 @@
             const isUserModalOpen = ref(false);
             const targetUser = ref(null);
             const fileInputRef = ref(null);
+            const uploadingAvatar = ref(false);
+
             const userForm = ref({
-                id: null,
                 name: '',
                 email: '',
                 password: '',
                 avatarUrl: null,
-                avatarFile: null // Archivo binario para subir
+                avatarFile: null
             });
 
-            // Manejar la selección del archivo de imagen
-            const handleAvatarChange = (event) => {
+            // Manejar cambio/subida de imagen
+            const handleAvatarChange = async (event) => {
                 const file = event.target.files[0];
-                if (file) {
+                if (!file) return;
+
+                if (targetUser.value) {
+                    uploadingAvatar.value = true;
+                    try {
+                        // Asegurar que file sea una instancia válida de Blob/File
+                        const formData = new FormData();
+                        formData.append('avatar', file, file.name);
+
+                        const res = await userService.uploadUserAvatarById(targetUser.value.id, formData);
+                        
+                        const updatedAvatar = res.data?.user?.avatarUrl || URL.createObjectURL(file);
+                        userForm.value.avatarUrl = updatedAvatar;
+                        targetUser.value.avatarUrl = updatedAvatar;
+                        targetUser.value.avatar = updatedAvatar;
+                    } catch (err) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: err.response?.data?.message || 'Error al subir la imagen',
+                            icon: 'error',
+                            background: '#1e293b',
+                            color: '#f8fafc'
+                        });
+                    } finally {
+                        uploadingAvatar.value = false;
+                    }
+                } else {
                     userForm.value.avatarFile = file;
                     userForm.value.avatarUrl = URL.createObjectURL(file);
                 }
             };
             
             // Eliminar foto de perfil
-            const removeAvatar = () => {
-                userForm.value.avatarFile = null;
-                userForm.value.avatarUrl = null;
-                // Resetea el input HTML para permitir volver a seleccionar el mismo archivo si se desea
+            const removeAvatar = async () => {
+                if (targetUser.value) {
+                    // MODO EDICIÓN: Invoca directamente el nuevo endpoint DELETE /api/v1/users/:id/avatar
+                    uploadingAvatar.value = true;
+                    try {
+                        await userService.deleteUserAvatarById(targetUser.value.id);
+                        
+                        userForm.value.avatarUrl = null;
+                        userForm.value.avatarFile = null;
+                        targetUser.value.avatarUrl = null;
+                        targetUser.value.avatar = null;
+                    } catch (err) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: err.response?.data?.message || 'Error al eliminar la imagen',
+                            icon: 'error',
+                            background: '#1e293b',
+                            color: '#f8fafc'
+                        });
+                    } finally {
+                        uploadingAvatar.value = false;
+                    }
+                } else {
+                    // MODO CREACIÓN: Limpia los campos locales
+                    userForm.value.avatarFile = null;
+                    userForm.value.avatarUrl = null;
+                }
+
                 if (fileInputRef.value) {
                     fileInputRef.value.value = '';
                 }
-            };        
+            };      
 
             // --- LÓGICA DE CARGA Y BÚSQUEDA ---
             // Estados de ordenamiento
@@ -1939,7 +1950,7 @@
             const fetchUsers = async (page = 1) => {
                 loading.value = true;
                 try {
-                    const res = await adminService.getUsers({
+                    const res = await userService.getUsers({
                         search: searchQuery.value,
                         page,
                         limit: 10,
@@ -1976,7 +1987,7 @@
                 if (!selectedUser.value) return;
                 saving.value = true;
                 try {
-                    await adminService.updateUserRoles(selectedUser.value.id, modalRoles.value);
+                    await userService.updateUserRoles(selectedUser.value.id, modalRoles.value);
                     selectedUser.value.roles = [...modalRoles.value];
                     selectedUser.value = null;
                 } catch (err) {
@@ -1990,41 +2001,63 @@
             const openUserModal = (user = null) => {
                 targetUser.value = user;
                 if (user) {
-                    // Edición
                     userForm.value = { 
                         name: user.name, 
                         email: user.email, 
-                        avatarUrl: user.avatarUrl || null,
+                        avatarUrl: user.avatarUrl || user.avatar || null,
+                        avatarFile: null,
                         password: '' 
                     };
                 } else {
-                    // Creación
-                    userForm.value = { name: '', email: '', avatarUrl: null, password: '' };
+                    userForm.value = { name: '', email: '', password: '', avatarUrl: null, avatarFile: null };
                 }
                 isUserModalOpen.value = true;
             };
 
+            // Guardar datos del usuario (Submit)
             const saveUserData = async () => {
                 saving.value = true;
                 try {
                     if (targetUser.value) {
-                        // Actualización (si la password viene vacía, el backend no la actualiza)
-                        const payload = { ...userForm.value };
-                        if (!payload.password) delete payload.password;
+                        // Edición de datos básicos
+                        const payload = { 
+                            name: userForm.value.name, 
+                            email: userForm.value.email 
+                        };
+                        if (userForm.value.password) payload.password = userForm.value.password;
 
-                        const res = await adminService.updateUser(targetUser.value.id, payload);
+                        const res = await userService.updateUser(targetUser.value.id, payload);
                         
-                        // Actualiza en vivo la lista local
                         targetUser.value.name = res.data.user.name;
                         targetUser.value.email = res.data.user.email;
                     } else {
-                        // Creación de nuevo usuario
-                        await adminService.createUser(userForm.value);
-                        await fetchUsers(1); // Recarga la primera página
+                        // 1. Crear nuevo usuario
+                        const res = await userService.createUser({
+                            name: userForm.value.name,
+                            email: userForm.value.email,
+                            password: userForm.value.password
+                        });
+
+                        const newUserId = res.data.user.id;
+
+                        // 2. Si seleccionó un avatar en la creación, subirlo ahora con el nuevo ID
+                        if (userForm.value.avatarFile && newUserId) {
+                            const formData = new FormData();
+                            formData.append('avatar', userForm.value.avatarFile);
+                            await userService.uploadUserAvatarById(newUserId, formData);
+                        }
+
+                        await fetchUsers(1);
                     }
                     isUserModalOpen.value = false;
                 } catch (err) {
-                    alert(err.response?.data?.message || 'Error al procesar la solicitud');
+                    Swal.fire({
+                        title: 'Error',
+                        text: err.response?.data?.message || 'Error al procesar la solicitud',
+                        icon: 'error',
+                        background: '#1e293b',
+                        color: '#f8fafc'
+                    });
                 } finally {
                     saving.value = false;
                 }
@@ -2052,7 +2085,7 @@
 
                 if (result.isConfirmed) {
                     try {
-                        await adminService.deleteUser(user.id);
+                        await userService.deleteUser(user.id);
                         
                         // Notificación flotante de éxito
                         Swal.fire({
@@ -2103,12 +2136,12 @@
                     month: 'short',
                     year: 'numeric',
                 });
-            };
+            };    
 
             onMounted(() => {
                 fetchUsers();
             });   
-        </script>        
+        </script>    
         ```
 12. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
     + Crea el componente `RolesAdminView.vue` para la interfaz de gestión de roles y asignación de permisos:
