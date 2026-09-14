@@ -296,7 +296,159 @@
     ```
 
 ### ⚡ Establecer los servicios (`src/services/`)
-1. Crear servicio `frontend/src/services/admin.service.js`:
+1. Crear servicio `frontend/src/services/auth.service.js`
+    ```js
+    import api from '@/api/axios';
+
+    export const authService = {
+        // Registrar un nuevo usuario público
+        async register(credentials) {
+            const response = await api.post('/auth/register', credentials);
+            return response.data;
+        },
+
+        // Iniciar sesión
+        async login(credentials) {
+            const response = await api.post('/auth/login', credentials);
+            return response.data;
+        },
+
+        // Obtener perfil autenticado actual
+        async getMe() {
+            const response = await api.get('/auth/me');
+            return response.data;
+        },
+
+        // Cerrar sesión
+        async logout() {
+            const response = await api.post('/auth/logout');
+            return response.data;
+        }
+    };    
+    ```
+    + Maneja únicamente la autenticación y la sesión del usuario actual.
+2. Crear servicio `frontend/src/services/user.service.js`:
+    ```js
+    import api from '@/api/axios';
+
+    export const userService = {
+        // --- Perfil propio ---
+        async updateProfile(profileData) {
+            const response = await api.put('/users/profile', profileData);
+            return response.data;
+        },
+
+        async uploadAvatar(formData) {
+            const response = await api.post('/users/avatar', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return response.data;
+        },
+
+        async deleteAvatar() {
+            const response = await api.delete('/users/avatar');
+            return response.data;
+        },
+
+        // --- Endpoints Administrativos de Usuarios ---
+        async getUsers(params = {}) {
+            const response = await api.get('/users', { params });
+            return response.data;
+        },
+
+        async createUser(userData) {
+            const response = await api.post('/users', userData);
+            return response.data;
+        },
+
+        async updateUser(userId, userData) {
+            const response = await api.put(`/users/${userId}`, userData);
+            return response.data;
+        },
+
+        async updateUserRoles(userId, roles) {
+            const response = await api.put(`/users/${userId}/roles`, { roles });
+            return response.data;
+        },
+
+        async deleteUser(userId) {
+            const response = await api.delete(`/users/${userId}`);
+            return response.data;
+        },
+
+        // --- Operaciones Administrativas de Avatar por ID ---
+        async uploadUserAvatarById(userId, formData) {
+            const response = await api.post(`/users/${userId}/avatar`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return response.data;
+        },
+
+        async deleteUserAvatarById(userId) {
+            const response = await api.delete(`/users/${userId}/avatar`);
+            return response.data;
+        }
+    };    
+    ```
+    + Gestión de perfil del usuario firmado y operaciones CRUD/Avatar de administración de usuarios (mapea directo a `/users` en Express).
+3. Crear servicio `frontend/src/services/role.service.js`:
+    ```js
+    import api from '@/api/axios';
+
+    export const roleService = {
+        async getRoles() {
+            const response = await api.get('/roles');
+            return response.data;
+        },
+
+        async getPermissions() {
+            const response = await api.get('/roles/permissions');
+            return response.data;
+        },
+
+        async createRole(roleData) {
+            const response = await api.post('/roles', roleData);
+            return response.data;
+        },
+
+        async updateRole(roleId, roleData) {
+            const response = await api.put(`/roles/${roleId}`, roleData);
+            return response.data;
+        },
+
+        async deleteRole(roleId) {
+            const response = await api.delete(`/roles/${roleId}`);
+            return response.data;
+        }
+    };    
+    ```
+    + Gestión de roles y permisos (mapea directo a `/roles` en Express).
+4. Crear servicio `frontend/src/services/audit.service.js`:
+    ```js
+    import api from '@/api/axios';
+
+    export const auditService = {
+        async getAuditLogs(params = {}) {
+            const response = await api.get('/audit-logs', { params });
+            return response.data;
+        }
+    };
+    ```
+    + Gestión exclusiva de registros de auditoría (mapea directo a `/audit-logs` en Express)
+5. Crear archivo unificador `frontend/src/services/index.js` (Patrón Barrel Export):
+    ```js
+    export { authService } from './auth.service';
+    export { userService } from './user.service';
+    export { roleService } from './role.service';
+    export { auditService } from './audit.service';
+    ```
+
+
+6. mmmmm------------------------------------------
+
+
+
+3. Crear archivo `frontend/src/services/admin.service.js`:
     ```js
     import api from '@/api/axios';
 
@@ -338,37 +490,7 @@
         }
     };
     ```
-2. Crear servicio `frontend/src/services/roles.service.js`:
-    ```js
-    import api from '@/api/axios';
 
-    export const rolesService = {
-        async getRoles() {
-            const response = await api.get('/api/v1/roles');
-            return response.data;
-        },
-
-        async getPermissions() {
-            const response = await api.get('/api/v1/roles/permissions');
-            return response.data;
-        },
-
-        async createRole(roleData) {
-            const response = await api.post('/api/v1/roles', roleData);
-            return response.data;
-        },
-
-        async updateRole(roleId, roleData) {
-            const response = await api.put(`/api/v1/roles/${roleId}`, roleData);
-            return response.data;
-        },
-
-        async deleteRole(roleId) {
-            const response = await api.delete(`/api/v1/roles/${roleId}`);
-            return response.data;
-        }
-    };
-    ```
 
 
 ### 🎨 Vistas de Autenticación y Dashboard (`src/views/`)
@@ -422,7 +544,7 @@
                                 class="w-14 h-14 object-contain mb-3 transition-transform group-hover:scale-105" 
                             />
                             <span v-else class="text-4xl mb-2">🌳</span>
-                            <span class="font-bold text-xl text-emerald-400">{{ $appName }}</span>
+                            <span class="font-bold text-center text-xl text-emerald-400">{{ $appName }}</span>
                         </router-link>
                     </div>
 
@@ -521,7 +643,7 @@
                                 class="w-14 h-14 object-contain mb-3 transition-transform group-hover:scale-105" 
                             />
                             <span v-else class="text-4xl mb-2">🌳</span>
-                            <span class="font-bold text-xl text-emerald-400">{{ $appName }}</span>
+                            <span class="font-bold text-center text-xl text-emerald-400">{{ $appName }}</span>
                         </router-link>
                     </div>
 
@@ -967,9 +1089,9 @@
         ```vue
         <script setup>
         import { ref, watch } from 'vue';
-        import { useAuthStore } from '../stores/auth.store';
+        import { useAuthStore } from '@/stores/auth.store';
+        import { userService } from '@/services';
         import { UserIcon, KeyIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
-        import axios from 'axios';
         import Swal from 'sweetalert2';
 
         const authStore = useAuthStore();
@@ -1072,29 +1194,20 @@
             }
 
             saving.value = true;
-            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
-            const authHeaders = {
-                headers: { Authorization: `Bearer ${authStore.token}` }
-            };
 
             try {
                 let updatedUserData = null;
 
-                // 1. Subir Avatar
+                // 1. Subir Avatar vía userService
                 if (profileForm.value.avatarFile) {
                     const formData = new FormData();
                     formData.append('avatar', profileForm.value.avatarFile);
 
-                    const avatarRes = await axios.post(`${baseUrl}/auth/avatar`, formData, {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                            'Authorization': `Bearer ${authStore.token}`
-                        }
-                    });
-                    updatedUserData = avatarRes.data.data?.user || avatarRes.data.user;
+                    const avatarRes = await userService.uploadAvatar(formData);
+                    updatedUserData = avatarRes.data?.user || avatarRes.user;
                 }
 
-                // 2. Actualizar Datos de Perfil (Nombre y/o Contraseña)
+                // 2. Actualizar Datos de Perfil (Nombre y/o Contraseña) vía userService
                 if (nameChanged || passwordProvided) {
                     const profilePayload = {
                         name: profileForm.value.name,
@@ -1104,8 +1217,8 @@
                         })
                     };
 
-                    const profileRes = await axios.put(`${baseUrl}/auth/profile`, profilePayload, authHeaders);
-                    updatedUserData = profileRes.data.data?.user || profileRes.data.user;
+                    const profileRes = await userService.updateProfile(profilePayload);
+                    updatedUserData = profileRes.data?.user || profileRes.user;
                 }
 
                 // 3. Actualizar Store de Pinia
@@ -1162,14 +1275,10 @@
             if (!confirmResult.isConfirmed) return;
 
             saving.value = true;
-            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
 
             try {
-                const response = await axios.delete(`${baseUrl}/auth/avatar`, {
-                    headers: { Authorization: `Bearer ${authStore.token}` }
-                });
-
-                const updatedUser = response.data.data?.user || response.data.user;
+                const response = await userService.deleteAvatar();
+                const updatedUser = response.data?.user || response.user;
 
                 if (typeof authStore.setUser === 'function') {
                     authStore.setUser(updatedUser);
@@ -1247,7 +1356,6 @@
                                         <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleAvatarChange" />
                                     </label>
 
-                                    <!-- Cancelar selección local antes de subir -->
                                     <button 
                                         v-if="profileForm.avatarFile" 
                                         type="button" 
@@ -1257,7 +1365,6 @@
                                         Cancelar Selección
                                     </button>
 
-                                    <!-- Eliminar permanentemente de S3/BD -->
                                     <button 
                                         v-else-if="authStore.user?.avatarUrl" 
                                         type="button" 
@@ -1328,7 +1435,7 @@
                         <button 
                             type="submit" 
                             :disabled="saving" 
-                            class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors shadow-lg flex items-center gap-2"
+                            class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors shadow-lg flex items-center gap-2 cursor-pointer"
                         >
                             <span v-if="saving" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
                             <span>{{ saving ? 'Guardando...' : 'Guardar Cambios' }}</span>
@@ -1336,7 +1443,7 @@
                     </div>
                 </form>
             </div>
-        </template>  
+        </template>
         ```
 9. Limpiar `App.vue`:
     + Abre `frontend/src/App.vue` y reemplaza todo su contenido con esto:
@@ -2186,7 +2293,7 @@
         <script setup>
             import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
             import { ref, computed, onMounted } from 'vue';
-            import { rolesService } from '@/services/roles.service';
+            import { roleService } from '@/services'; // 👈 Importamos únicamente roleService
             import Swal from 'sweetalert2';
 
             const roles = ref([]);
@@ -2213,23 +2320,31 @@
             const loadData = async () => {
                 try {
                     const [rolesRes, permsRes] = await Promise.all([
-                        rolesService.getRoles(),
-                        rolesService.getPermissions()
+                        roleService.getRoles(),
+                        roleService.getPermissions() // 👈 Usamos roleService.getPermissions()
                     ]);
-                    roles.value = rolesRes.data.roles;
-                    availablePermissions.value = permsRes.data.permissions;
+                    roles.value = rolesRes.data?.roles || rolesRes.roles || [];
+                    availablePermissions.value = permsRes.data?.permissions || permsRes.permissions || [];
                 } catch (err) {
                     console.error('Error al cargar datos:', err);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'No se pudieron cargar los roles y permisos.',
+                        icon: 'error',
+                        background: '#1e293b',
+                        color: '#f8fafc'
+                    });
                 }
             };
 
             const openModal = (role = null) => {
                 targetRole.value = role;
                 if (role) {
+                    const rolePerms = Array.isArray(role.permissions) ? role.permissions : [];
                     form.value = {
                         name: role.name,
                         description: role.description || '',
-                        permissions: [...role.permissions]
+                        permissions: rolePerms.map(p => typeof p === 'object' ? p.action : p)
                     };
                 } else {
                     form.value = { name: '', description: '', permissions: [] };
@@ -2241,9 +2356,9 @@
                 saving.value = true;
                 try {
                     if (targetRole.value) {
-                        await rolesService.updateRole(targetRole.value.id, form.value);
+                        await roleService.updateRole(targetRole.value.id, form.value);
                     } else {
-                        await rolesService.createRole(form.value);
+                        await roleService.createRole(form.value);
                     }
                     isModalOpen.value = false;
                     await loadData();
@@ -2286,7 +2401,7 @@
 
                 if (result.isConfirmed) {
                     try {
-                        await rolesService.deleteRole(role.id);
+                        await roleService.deleteRole(role.id);
                         await loadData();
                     } catch (err) {
                         Swal.fire({
@@ -2311,7 +2426,7 @@
             onMounted(() => {
                 loadData();
             });
-        </script>        
+        </script>     
         ```
 13. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
     ```vue
@@ -2328,14 +2443,16 @@
                         <span>Volver al Panel Admin</span>
                     </router-link>
                 </div>
+
                 <!-- Header -->
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <p class="text-sm text-slate-500 dark:text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
+                        <h1 class="text-2xl font-bold text-white">Auditoría del Sistema</h1>
+                        <p class="text-sm text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
                     </div>
                     <button 
                         @click="fetchLogs" 
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-800 hover:bg-yellow-700 text-white rounded-xl text-sm font-medium transition-colors w-fit"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-800 hover:bg-yellow-700 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer"
                     >
                         <span>Refrescar</span>
                     </button>
@@ -2396,7 +2513,6 @@
                         <table class="w-full text-left text-sm">
                             <thead>
                                 <tr class="border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none">
-                                    <!-- Fecha / Hora -->
                                     <th @click="handleSort('createdAt')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
                                         <div class="flex items-center space-x-1">
                                             <span>Fecha / Hora</span>
@@ -2407,7 +2523,6 @@
                                         </div>
                                     </th>
 
-                                    <!-- Usuario -->
                                     <th @click="handleSort('user')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
                                         <div class="flex items-center space-x-1">
                                             <span>Usuario</span>
@@ -2418,7 +2533,6 @@
                                         </div>
                                     </th>
 
-                                    <!-- Acción -->
                                     <th @click="handleSort('action')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
                                         <div class="flex items-center space-x-1">
                                             <span>Acción</span>
@@ -2429,7 +2543,6 @@
                                         </div>
                                     </th>
 
-                                    <!-- Entidad -->
                                     <th @click="handleSort('entity')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
                                         <div class="flex items-center space-x-1">
                                             <span>Entidad</span>
@@ -2440,13 +2553,10 @@
                                         </div>
                                     </th>
 
-                                    <!-- IP (Sin ordenamiento dinámico) -->
                                     <th class="py-3 px-4 text-left">IP</th>
-
-                                    <!-- Detalles -->
                                     <th class="py-3 px-4 text-right">Detalles</th>
                                 </tr>
-                            </thead>                   
+                            </thead>                  
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
                                 <tr v-if="loading">
                                     <td colspan="6" class="text-center py-8 text-slate-400">Cargando registros...</td>
@@ -2474,7 +2584,7 @@
                                         <button 
                                             v-if="log.details" 
                                             @click="openDetailsModal(log)" 
-                                            class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                                            class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium cursor-pointer"
                                         >
                                             Ver JSON
                                         </button>
@@ -2494,20 +2604,21 @@
                             <button 
                                 :disabled="pagination.page <= 1" 
                                 @click="changePage(pagination.page - 1)" 
-                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40"
+                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                             >
                                 Anterior
                             </button>
                             <button 
                                 :disabled="pagination.page >= pagination.totalPages" 
                                 @click="changePage(pagination.page + 1)" 
-                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40"
+                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                             >
                                 Siguiente
                             </button>
                         </div>
                     </div>
                 </div>
+
                 <!-- Modal de Detalles JSON -->
                 <div v-if="selectedLogModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
                     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
@@ -2533,9 +2644,9 @@
     </template>
 
     <script setup>
-        import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
         import { ref, onMounted, onUnmounted } from 'vue';
-        import { adminService } from '@/services/admin.service';
+        import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+        import { auditService } from '@/services';
         import flatpickr from 'flatpickr';
         import 'flatpickr/dist/flatpickr.css';
         import 'flatpickr/dist/themes/dark.css';
@@ -2559,6 +2670,7 @@
 
         const pagination = ref({
             page: 1,
+            limit: 15,
             total: 0,
             totalPages: 1,
         });
@@ -2577,28 +2689,27 @@
         };
 
         const fetchLogs = async (page = 1) => {
-            // Si 'page' es un evento DOM o no es un número válido, forzamos página 1
             const targetPage = (typeof page === 'number' && !isNaN(page)) ? page : 1;
             
             pagination.value.page = targetPage;
             loading.value = true;
 
             try {
-                const response = await adminService.getAuditLogs({
+                const response = await auditService.getAuditLogs({
                     page: pagination.value.page,
-                    limit: pagination.value.limit || 15,
+                    limit: pagination.value.limit,
                     search: filters.value.search,
                     entity: filters.value.entity,
-                    action: filters.value.action,
                     startDate: filters.value.startDate,
                     endDate: filters.value.endDate,
                     sortBy: sortBy.value,
                     sortOrder: sortOrder.value
                 });
 
-                const resData = response.data?.data || response.data || {};
+                // Extrae la data directo del payload estandarizado del backend
+                const resData = response.data || response;
                 logs.value = resData.logs || [];
-                pagination.value = resData.pagination || { page: 1, total: 0, totalPages: 1 };
+                pagination.value = resData.pagination || { page: 1, limit: 15, total: 0, totalPages: 1 };
             } catch (err) {
                 console.error('Error al cargar logs:', err);
                 logs.value = [];
@@ -2611,16 +2722,12 @@
         const debounceSearch = () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
-                pagination.value.page = 1;
-                fetchLogs();
+                fetchLogs(1);
             }, 400);
         };
 
         const changePage = (newPage) => {
-            // Validar límites antes de hacer la petición
             if (newPage < 1 || newPage > pagination.value.totalPages) return;
-            
-            // Pasar 'newPage' directamente a fetchLogs
             fetchLogs(newPage);
         };    
 
@@ -2631,9 +2738,9 @@
         const getEntityBadgeClass = (entity) => {
             switch (entity) {
                 case 'User': return 'bg-blue-500/10 text-emerald-500 border-emerald-500/20';
-                case 'Role': return 'bg-emerald-500/10 text-purple-500 border-purple-500/20';
-                case 'Auth': return 'bg-amber-500/10 text-blue-500 border-blue-500/20';
-                default: return 'bg-yellow-500/10 text-yellow-400 border-slate-500/20';
+                case 'Role': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+                case 'Auth': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
             }
         };
 
@@ -2648,11 +2755,9 @@
         const formatJsonDetails = (details) => {
             if (!details) return '';
             try {
-                // Si viene como String, lo parseamos a Objeto. Si ya es Objeto, lo dejamos igual.
                 const parsed = typeof details === 'string' ? JSON.parse(details) : details;
                 return JSON.stringify(parsed, null, 2);
             } catch (e) {
-                // Si no es un JSON válido, retornamos el texto tal cual
                 return details;
             }
         };
@@ -2672,8 +2777,7 @@
                 ...commonConfig,
                 onChange: (selectedDates, dateStr) => {
                     filters.value.startDate = dateStr;
-                    pagination.value.page = 1;
-                    fetchLogs();
+                    fetchLogs(1);
                 },
             });
 
@@ -2681,8 +2785,7 @@
                 ...commonConfig,
                 onChange: (selectedDates, dateStr) => {
                     filters.value.endDate = dateStr;
-                    pagination.value.page = 1;
-                    fetchLogs();
+                    fetchLogs(1);
                 },
             });
         });
@@ -2691,7 +2794,7 @@
             if (fpStart) fpStart.destroy();
             if (fpEnd) fpEnd.destroy();
         });
-    </script>    
+    </script>   
     ```
 14. Crear Vista 404:
     + Crea el archivo `frontend/src/views/NotFoundView.vue`:

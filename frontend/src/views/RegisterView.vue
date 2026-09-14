@@ -44,7 +44,7 @@
                         class="w-14 h-14 object-contain mb-3 transition-transform group-hover:scale-105" 
                     />
                     <span v-else class="text-4xl mb-2">🌳</span>
-                    <span class="font-bold text-xl text-emerald-400">{{ $appName }}</span>
+                    <span class="font-bold text-center text-xl text-emerald-400">{{ $appName }}</span>
                 </router-link>
             </div>
 

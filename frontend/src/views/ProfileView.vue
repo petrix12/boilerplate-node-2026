@@ -1,8 +1,8 @@
 <script setup>
 import { ref, watch } from 'vue';
-import { useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '@/stores/auth.store';
+import { userService } from '@/services';
 import { UserIcon, KeyIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const authStore = useAuthStore();
@@ -105,29 +105,20 @@ const updateProfile = async () => {
     }
 
     saving.value = true;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
-    const authHeaders = {
-        headers: { Authorization: `Bearer ${authStore.token}` }
-    };
 
     try {
         let updatedUserData = null;
 
-        // 1. Subir Avatar
+        // 1. Subir Avatar vía userService
         if (profileForm.value.avatarFile) {
             const formData = new FormData();
             formData.append('avatar', profileForm.value.avatarFile);
 
-            const avatarRes = await axios.post(`${baseUrl}/auth/avatar`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${authStore.token}`
-                }
-            });
-            updatedUserData = avatarRes.data.data?.user || avatarRes.data.user;
+            const avatarRes = await userService.uploadAvatar(formData);
+            updatedUserData = avatarRes.data?.user || avatarRes.user;
         }
 
-        // 2. Actualizar Datos de Perfil (Nombre y/o Contraseña)
+        // 2. Actualizar Datos de Perfil (Nombre y/o Contraseña) vía userService
         if (nameChanged || passwordProvided) {
             const profilePayload = {
                 name: profileForm.value.name,
@@ -137,8 +128,8 @@ const updateProfile = async () => {
                 })
             };
 
-            const profileRes = await axios.put(`${baseUrl}/auth/profile`, profilePayload, authHeaders);
-            updatedUserData = profileRes.data.data?.user || profileRes.data.user;
+            const profileRes = await userService.updateProfile(profilePayload);
+            updatedUserData = profileRes.data?.user || profileRes.user;
         }
 
         // 3. Actualizar Store de Pinia
@@ -195,14 +186,10 @@ const removeCurrentAvatar = async () => {
     if (!confirmResult.isConfirmed) return;
 
     saving.value = true;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
 
     try {
-        const response = await axios.delete(`${baseUrl}/auth/avatar`, {
-            headers: { Authorization: `Bearer ${authStore.token}` }
-        });
-
-        const updatedUser = response.data.data?.user || response.data.user;
+        const response = await userService.deleteAvatar();
+        const updatedUser = response.data?.user || response.user;
 
         if (typeof authStore.setUser === 'function') {
             authStore.setUser(updatedUser);
@@ -280,7 +267,6 @@ const removeCurrentAvatar = async () => {
                                 <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleAvatarChange" />
                             </label>
 
-                            <!-- Cancelar selección local antes de subir -->
                             <button 
                                 v-if="profileForm.avatarFile" 
                                 type="button" 
@@ -290,7 +276,6 @@ const removeCurrentAvatar = async () => {
                                 Cancelar Selección
                             </button>
 
-                            <!-- Eliminar permanentemente de S3/BD -->
                             <button 
                                 v-else-if="authStore.user?.avatarUrl" 
                                 type="button" 
@@ -361,7 +346,7 @@ const removeCurrentAvatar = async () => {
                 <button 
                     type="submit" 
                     :disabled="saving" 
-                    class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors shadow-lg flex items-center gap-2"
+                    class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors shadow-lg flex items-center gap-2 cursor-pointer"
                 >
                     <span v-if="saving" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
                     <span>{{ saving ? 'Guardando...' : 'Guardar Cambios' }}</span>

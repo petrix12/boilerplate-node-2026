@@ -55,7 +55,7 @@
     S3_SECRET_ACCESS_KEY="minio_password123"
     S3_BUCKET_NAME="app-uploads"
     S3_FORCE_PATH_STYLE="true" # Obligatorio para MinIO y Supabase S3
-    S3_PUBLIC_URL="http://minio:9000/app-uploads"
+    S3_PUBLIC_URL="http://localhost:9000/app-uploads"
     # ==========================================
     # - - - PRODUCCIÓN - - -
     # ==========================================

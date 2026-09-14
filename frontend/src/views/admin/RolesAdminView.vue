@@ -178,7 +178,7 @@
 <script setup>
     import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
     import { ref, computed, onMounted } from 'vue';
-    import { rolesService } from '@/services/roles.service';
+    import { roleService } from '@/services'; // 👈 Importamos únicamente roleService
     import Swal from 'sweetalert2';
 
     const roles = ref([]);
@@ -205,23 +205,31 @@
     const loadData = async () => {
         try {
             const [rolesRes, permsRes] = await Promise.all([
-                rolesService.getRoles(),
-                rolesService.getPermissions()
+                roleService.getRoles(),
+                roleService.getPermissions() // 👈 Usamos roleService.getPermissions()
             ]);
-            roles.value = rolesRes.data.roles;
-            availablePermissions.value = permsRes.data.permissions;
+            roles.value = rolesRes.data?.roles || rolesRes.roles || [];
+            availablePermissions.value = permsRes.data?.permissions || permsRes.permissions || [];
         } catch (err) {
             console.error('Error al cargar datos:', err);
+            Swal.fire({
+                title: 'Error',
+                text: 'No se pudieron cargar los roles y permisos.',
+                icon: 'error',
+                background: '#1e293b',
+                color: '#f8fafc'
+            });
         }
     };
 
     const openModal = (role = null) => {
         targetRole.value = role;
         if (role) {
+            const rolePerms = Array.isArray(role.permissions) ? role.permissions : [];
             form.value = {
                 name: role.name,
                 description: role.description || '',
-                permissions: [...role.permissions]
+                permissions: rolePerms.map(p => typeof p === 'object' ? p.action : p)
             };
         } else {
             form.value = { name: '', description: '', permissions: [] };
@@ -233,9 +241,9 @@
         saving.value = true;
         try {
             if (targetRole.value) {
-                await rolesService.updateRole(targetRole.value.id, form.value);
+                await roleService.updateRole(targetRole.value.id, form.value);
             } else {
-                await rolesService.createRole(form.value);
+                await roleService.createRole(form.value);
             }
             isModalOpen.value = false;
             await loadData();
@@ -278,7 +286,7 @@
 
         if (result.isConfirmed) {
             try {
-                await rolesService.deleteRole(role.id);
+                await roleService.deleteRole(role.id);
                 await loadData();
             } catch (err) {
                 Swal.fire({

@@ -11,14 +11,16 @@
                     <span>Volver al Panel Admin</span>
                 </router-link>
             </div>
+
             <!-- Header -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
+                    <h1 class="text-2xl font-bold text-white">Auditoría del Sistema</h1>
+                    <p class="text-sm text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
                 </div>
                 <button 
                     @click="fetchLogs" 
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-800 hover:bg-yellow-700 text-white rounded-xl text-sm font-medium transition-colors w-fit"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-800 hover:bg-yellow-700 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer"
                 >
                     <span>Refrescar</span>
                 </button>
@@ -79,7 +81,6 @@
                     <table class="w-full text-left text-sm">
                         <thead>
                             <tr class="border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none">
-                                <!-- Fecha / Hora -->
                                 <th @click="handleSort('createdAt')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
                                     <div class="flex items-center space-x-1">
                                         <span>Fecha / Hora</span>
@@ -90,7 +91,6 @@
                                     </div>
                                 </th>
 
-                                <!-- Usuario -->
                                 <th @click="handleSort('user')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
                                     <div class="flex items-center space-x-1">
                                         <span>Usuario</span>
@@ -101,7 +101,6 @@
                                     </div>
                                 </th>
 
-                                <!-- Acción -->
                                 <th @click="handleSort('action')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
                                     <div class="flex items-center space-x-1">
                                         <span>Acción</span>
@@ -112,7 +111,6 @@
                                     </div>
                                 </th>
 
-                                <!-- Entidad -->
                                 <th @click="handleSort('entity')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
                                     <div class="flex items-center space-x-1">
                                         <span>Entidad</span>
@@ -123,13 +121,10 @@
                                     </div>
                                 </th>
 
-                                <!-- IP (Sin ordenamiento dinámico) -->
                                 <th class="py-3 px-4 text-left">IP</th>
-
-                                <!-- Detalles -->
                                 <th class="py-3 px-4 text-right">Detalles</th>
                             </tr>
-                        </thead>                   
+                        </thead>                  
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
                             <tr v-if="loading">
                                 <td colspan="6" class="text-center py-8 text-slate-400">Cargando registros...</td>
@@ -157,7 +152,7 @@
                                     <button 
                                         v-if="log.details" 
                                         @click="openDetailsModal(log)" 
-                                        class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                                        class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium cursor-pointer"
                                     >
                                         Ver JSON
                                     </button>
@@ -177,20 +172,21 @@
                         <button 
                             :disabled="pagination.page <= 1" 
                             @click="changePage(pagination.page - 1)" 
-                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40"
+                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                         >
                             Anterior
                         </button>
                         <button 
                             :disabled="pagination.page >= pagination.totalPages" 
                             @click="changePage(pagination.page + 1)" 
-                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40"
+                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                         >
                             Siguiente
                         </button>
                     </div>
                 </div>
             </div>
+
             <!-- Modal de Detalles JSON -->
             <div v-if="selectedLogModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
@@ -216,9 +212,9 @@
 </template>
 
 <script setup>
-    import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
     import { ref, onMounted, onUnmounted } from 'vue';
-    import { adminService } from '@/services/admin.service';
+    import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+    import { auditService } from '@/services';
     import flatpickr from 'flatpickr';
     import 'flatpickr/dist/flatpickr.css';
     import 'flatpickr/dist/themes/dark.css';
@@ -242,6 +238,7 @@
 
     const pagination = ref({
         page: 1,
+        limit: 15,
         total: 0,
         totalPages: 1,
     });
@@ -260,28 +257,27 @@
     };
 
     const fetchLogs = async (page = 1) => {
-        // Si 'page' es un evento DOM o no es un número válido, forzamos página 1
         const targetPage = (typeof page === 'number' && !isNaN(page)) ? page : 1;
         
         pagination.value.page = targetPage;
         loading.value = true;
 
         try {
-            const response = await adminService.getAuditLogs({
+            const response = await auditService.getAuditLogs({
                 page: pagination.value.page,
-                limit: pagination.value.limit || 15,
+                limit: pagination.value.limit,
                 search: filters.value.search,
                 entity: filters.value.entity,
-                action: filters.value.action,
                 startDate: filters.value.startDate,
                 endDate: filters.value.endDate,
                 sortBy: sortBy.value,
                 sortOrder: sortOrder.value
             });
 
-            const resData = response.data?.data || response.data || {};
+            // Extrae la data directo del payload estandarizado del backend
+            const resData = response.data || response;
             logs.value = resData.logs || [];
-            pagination.value = resData.pagination || { page: 1, total: 0, totalPages: 1 };
+            pagination.value = resData.pagination || { page: 1, limit: 15, total: 0, totalPages: 1 };
         } catch (err) {
             console.error('Error al cargar logs:', err);
             logs.value = [];
@@ -294,16 +290,12 @@
     const debounceSearch = () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
-            pagination.value.page = 1;
-            fetchLogs();
+            fetchLogs(1);
         }, 400);
     };
 
     const changePage = (newPage) => {
-        // Validar límites antes de hacer la petición
         if (newPage < 1 || newPage > pagination.value.totalPages) return;
-        
-        // Pasar 'newPage' directamente a fetchLogs
         fetchLogs(newPage);
     };    
 
@@ -314,9 +306,9 @@
     const getEntityBadgeClass = (entity) => {
         switch (entity) {
             case 'User': return 'bg-blue-500/10 text-emerald-500 border-emerald-500/20';
-            case 'Role': return 'bg-emerald-500/10 text-purple-500 border-purple-500/20';
-            case 'Auth': return 'bg-amber-500/10 text-blue-500 border-blue-500/20';
-            default: return 'bg-yellow-500/10 text-yellow-400 border-slate-500/20';
+            case 'Role': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+            case 'Auth': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+            default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
         }
     };
 
@@ -331,11 +323,9 @@
     const formatJsonDetails = (details) => {
         if (!details) return '';
         try {
-            // Si viene como String, lo parseamos a Objeto. Si ya es Objeto, lo dejamos igual.
             const parsed = typeof details === 'string' ? JSON.parse(details) : details;
             return JSON.stringify(parsed, null, 2);
         } catch (e) {
-            // Si no es un JSON válido, retornamos el texto tal cual
             return details;
         }
     };
@@ -355,8 +345,7 @@
             ...commonConfig,
             onChange: (selectedDates, dateStr) => {
                 filters.value.startDate = dateStr;
-                pagination.value.page = 1;
-                fetchLogs();
+                fetchLogs(1);
             },
         });
 
@@ -364,8 +353,7 @@
             ...commonConfig,
             onChange: (selectedDates, dateStr) => {
                 filters.value.endDate = dateStr;
-                pagination.value.page = 1;
-                fetchLogs();
+                fetchLogs(1);
             },
         });
     });

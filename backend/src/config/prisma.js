@@ -1,12 +1,9 @@
 const { PrismaClient } = require('@prisma/client');
-const { PrismaPg } = require('@prisma/adapter-pg');
-const { Pool } = require('pg');
 const { auditStorage } = require('../middlewares/auditContext.middleware');
 require('dotenv').config();
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prismaRaw = new PrismaClient({ adapter });
+// Inicialización estándar y nativa de Prisma Client
+const prismaRaw = new PrismaClient();
 
 const prisma = prismaRaw.$extends({
     query: {

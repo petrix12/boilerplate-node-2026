@@ -158,14 +158,11 @@
 1. `backend/src/config/prisma.js`: Instancia singleton de @prisma/client para ser reutilizada en la aplicación.
     ```js
     const { PrismaClient } = require('@prisma/client');
-    const { PrismaPg } = require('@prisma/adapter-pg');
-    const { Pool } = require('pg');
     const { auditStorage } = require('../middlewares/auditContext.middleware');
     require('dotenv').config();
 
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const adapter = new PrismaPg(pool);
-    const prismaRaw = new PrismaClient({ adapter });
+    // Inicialización estándar y nativa de Prisma Client
+    const prismaRaw = new PrismaClient();
 
     const prisma = prismaRaw.$extends({
         query: {
@@ -215,7 +212,7 @@
     });
 
     module.exports = prisma;
-    module.exports.prismaRaw = prismaRaw;    
+    module.exports.prismaRaw = prismaRaw;  
     ```
 2. `backend/src/config/s3.js`: Cliente para AWS S3 / MinIO:
     ```js
