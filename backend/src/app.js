@@ -16,18 +16,24 @@ const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
 // Middlewares Globales
 const allowedOrigins = [
-    process.env.FRONTEND_URL_PROD,
+    process.env.FRONTEND_URL,
     process.env.FRONTEND_URL_LOCAL_VITE,
     process.env.FRONTEND_URL_LOCAL_VUE_CLI,
 ].filter(Boolean);
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('No permitido por CORS'));
+        // 1. En entorno de desarrollo permitimos cualquier petición para facilitar las pruebas
+        if (process.env.NODE_ENV === 'development') {
+            return callback(null, true);
         }
+
+        // 2. En producción o staging se valida estrictamente contra allowedOrigins
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        callback(new Error('No permitido por CORS'));
     },
     credentials: true
 }));
