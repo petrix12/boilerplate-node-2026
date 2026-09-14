@@ -81,7 +81,7 @@
                         @error="handleLogoError"
                         class="w-8 h-8 object-contain" 
                     />
-                    <span class="font-bold text-slate-100 hidden sm:inline text-lg">Starter App</span>
+                    <span class="font-bold text-slate-100 hidden sm:inline text-lg">{{ $appName }}</span>
                 </router-link>
 
                 <span class="text-slate-600 font-light text-xl">/</span>
