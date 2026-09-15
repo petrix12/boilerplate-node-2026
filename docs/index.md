@@ -104,7 +104,6 @@
 
 ## Tares
 ### Pendientes
-+ [ ] Refactorizar para acceder a las vistas administrativas con permisos y no con roles.
 + [ ] Recuperar credenciales (¿Olvidó su password?).
 + [ ] Establecer politicas de seguridad en tablas de base de datos de supabase.
 + [ ] Login con redes sociales.
@@ -125,3 +124,4 @@
 + [x] Refactorización de rutas y controladores en el backend.
 + [x] Adecuar la aplicación para que sea mas general, por ejemplo cambiar familytree2026-backend por backend, adaptar la vista del home, etc.
 + [x] CRUD avatars en User Admin.
++ [x] Refactorizar para acceder a las vistas administrativas con permisos y no con roles.
