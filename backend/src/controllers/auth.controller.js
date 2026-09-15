@@ -3,9 +3,9 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 const { getClientIp } = require('../utils/request.utils');
 
-const generateToken = (user, roles = []) => {
+const generateToken = (user, roles = [], permissions = []) => {
     return jwt.sign(
-        { id: user.id, email: user.email, roles },
+        { id: user.id, email: user.email, roles, permissions },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
@@ -48,7 +48,19 @@ const login = async (req, res) => {
 
         const user = await prisma.user.findUnique({
             where: { email },
-            include: { roles: { include: { role: true } } },
+            include: { 
+                roles: { 
+                    include: { 
+                        role: { 
+                            include: { 
+                                permissions: { 
+                                    include: { permission: true } 
+                                } 
+                            } 
+                        } 
+                    } 
+                } 
+            },
         });
 
         if (!user || !user.isActive) {
@@ -79,7 +91,21 @@ const login = async (req, res) => {
         }
 
         const userRoles = user.roles.map((ur) => ur.role.name);
-        const token = generateToken(user, userRoles);
+
+        // Extraer lista plana de permisos sin duplicados
+        const permissionsSet = new Set();
+        user.roles.forEach((ur) => {
+            if (ur.role && ur.role.permissions) {
+                ur.role.permissions.forEach((rp) => {
+                    if (rp.permission && rp.permission.action) {
+                        permissionsSet.add(rp.permission.action);
+                    }
+                });
+            }
+        });
+        const userPermissions = Array.from(permissionsSet);
+
+        const token = generateToken(user, userRoles, userPermissions);
 
         await prisma.auditLog.create({
             data: {
@@ -96,7 +122,14 @@ const login = async (req, res) => {
             status: 'success',
             message: 'Inicio de sesión exitoso',
             data: {
-                user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, roles: userRoles },
+                user: { 
+                    id: user.id, 
+                    email: user.email, 
+                    name: user.name, 
+                    avatarUrl: user.avatarUrl, 
+                    roles: userRoles, 
+                    permissions: userPermissions 
+                },
                 token,
             },
         });
@@ -110,23 +143,50 @@ const getMe = async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                avatarUrl: true,
-                createdAt: true,
-                roles: { select: { role: { select: { name: true } } } },
-            },
+            include: {
+                roles: {
+                    include: {
+                        role: {
+                            include: {
+                                permissions: {
+                                    include: { permission: true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         if (!user) return res.status(404).json({ status: 'fail', message: 'Usuario no encontrado' });
 
         const userRoles = user.roles.map((ur) => ur.role.name);
 
+        const permissionsSet = new Set();
+        user.roles.forEach((ur) => {
+            if (ur.role && ur.role.permissions) {
+                ur.role.permissions.forEach((rp) => {
+                    if (rp.permission && rp.permission.action) {
+                        permissionsSet.add(rp.permission.action);
+                    }
+                });
+            }
+        });
+        const userPermissions = Array.from(permissionsSet);
+
         return res.status(200).json({
             status: 'success',
-            data: { user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, roles: userRoles, createdAt: user.createdAt } },
+            data: { 
+                user: { 
+                    id: user.id, 
+                    email: user.email, 
+                    name: user.name, 
+                    avatarUrl: user.avatarUrl, 
+                    roles: userRoles, 
+                    permissions: userPermissions,
+                    createdAt: user.createdAt 
+                } 
+            },
         });
     } catch (error) {
         console.error('Error en getMe:', error);

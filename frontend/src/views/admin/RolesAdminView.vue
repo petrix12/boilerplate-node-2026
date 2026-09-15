@@ -20,6 +20,7 @@
                     </p>
                 </div>
                 <button 
+                    v-if="authStore.hasPermission('roles:create')"
                     @click="openModal()"
                     class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30"
                 >
@@ -70,16 +71,19 @@
                             <!-- Columna Acciones en la tabla -->
                             <td class="px-6 py-4 whitespace-nowrap text-right">
                                 <div class="flex items-center justify-end gap-2">
+                                    <!-- Editar rol -->
                                     <button 
+                                        v-if="authStore.hasPermission('roles:update')"
                                         @click="openModal(role)"
                                         class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
-                                        title="Editar rol"
+                                        :title="role.name === 'SUPER_ADMIN' ? 'Ver detalles del rol' : 'Editar rol'"
                                     >
                                         <PencilIcon class="w-4 h-4" />
                                     </button>
                                     
+                                    <!-- Eliminar rol (Se oculta explicitamente para SUPER_ADMIN) -->
                                     <button 
-                                        v-if="role.name !== 'SUPER_ADMIN'"
+                                        v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
                                         @click="confirmDelete(role)"
                                         class="p-2 text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors"
                                         title="Eliminar rol"
@@ -161,10 +165,19 @@
                             </div>
                         </div>
 
-                        <!-- Footer con Botones (Fijo abajo) -->
+                        <!-- Footer con Botones -->
                         <div class="flex justify-end space-x-3 p-4 sm:p-6 border-t border-slate-700 bg-slate-800/90 shrink-0">
-                            <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white">Cancelar</button>
-                            <button type="submit" :disabled="saving" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20">
+                            <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white">
+                                {{ targetRole?.name === 'SUPER_ADMIN' ? 'Cerrar' : 'Cancelar' }}
+                            </button>
+                            
+                            <!-- Ocultamos o deshabilitamos el botón guardar si es SUPER_ADMIN -->
+                            <button 
+                                v-if="targetRole?.name !== 'SUPER_ADMIN'"
+                                type="submit" 
+                                :disabled="saving" 
+                                class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20"
+                            >
                                 {{ saving ? 'Guardando...' : 'Guardar Rol' }}
                             </button>
                         </div>
@@ -180,6 +193,10 @@
     import { ref, computed, onMounted } from 'vue';
     import { roleService } from '@/services';
     import Swal from 'sweetalert2';
+    import { useAuthStore } from '@/stores/auth.store';
+
+    // Instancia del store para acceder a los getters
+    const authStore = useAuthStore();
 
     const roles = ref([]);
     const availablePermissions = ref([]);
@@ -271,6 +288,18 @@
     };
 
     const confirmDelete = async (role) => {
+        // Protección a nivel de lógica JS
+        if (role.name === 'SUPER_ADMIN') {
+            Swal.fire({
+                title: 'Acción No Permitida',
+                text: 'El rol SUPER_ADMIN es un rol de sistema y no puede ser eliminado.',
+                icon: 'error',
+                background: '#1e293b',
+                color: '#f8fafc'
+            });
+            return;
+        }
+
         const result = await Swal.fire({
             title: '¿Eliminar Rol?',
             html: `Estás a punto de eliminar el rol <strong>${role.name}</strong>.`,
@@ -304,7 +333,8 @@
         switch (name) {
             case 'SUPER_ADMIN': return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
             case 'ADMIN': return 'bg-blue-900/40 text-blue-300 border-blue-500/30';
-            default: return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
+            case 'USER': return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
+            default: return 'bg-yellow-900/40 text-yellow-300 border-yellow-500/30';
         }
     };
 

@@ -12,6 +12,47 @@ export const useAuthStore = defineStore('auth', {
     getters: {
         isAuthenticated: (state) => !!state.token && !!state.user,
         userRoles: (state) => state.user?.roles || [],
+
+        // Devuelve la lista de permisos en formato de strings
+        userPermissions: (state) => {
+            if (!state.user) return [];
+
+            // Si el backend envía el array plano de acciones ['read:users', 'write:users']
+            if (Array.isArray(state.user.permissions)) {
+                return state.user.permissions;
+            }
+
+            // Fallback por si en alguna vista la propiedad 'roles' viene con objetos completos
+            if (Array.isArray(state.user.roles)) {
+                const permissionsFromRoles = state.user.roles.flatMap((role) => {
+                    if (typeof role === 'object' && Array.isArray(role.permissions)) {
+                        return role.permissions.map((p) => (typeof p === 'object' ? p.action || p.name : p));
+                    }
+                    return [];
+                });
+                return [...new Set(permissionsFromRoles)];
+            }
+
+            return [];
+        },
+
+        // Retorna una función evaluadora utilizando 'this' para acceder al getter anterior
+        hasPermission() {
+            return (permission) => {
+                if (!this.user) return false;
+
+                // Normaliza roles (soporta array de strings o array de objetos)
+                const roles = Array.isArray(this.user.roles)
+                    ? this.user.roles.map((r) => (typeof r === 'object' ? r.name : r))
+                    : [];
+
+                // Bypass global para SUPER_ADMIN
+                if (roles.includes('SUPER_ADMIN')) return true;
+
+                // Comprueba la existencia del permiso usando el getter corregido
+                return this.userPermissions.includes(permission);
+            };
+        },
     },
 
     actions: {

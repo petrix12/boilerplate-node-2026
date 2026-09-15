@@ -17,6 +17,7 @@
                     <p class="text-slate-400 text-sm mt-1">Administra los permisos y accesos de la plataforma en tiempo real.</p>                
                 </div>
                 <button
+                    v-if="authStore.hasPermission('users:create')"
                     @click="openUserModal(null)"
                     class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-emerald-600/30"
                 >
@@ -132,7 +133,9 @@
                                 <!-- Acciones -->
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="inline-flex items-center justify-end space-x-2">
+                                        <!-- Editar Usuario: requiere users:update -->
                                         <button
+                                            v-if="authStore.hasPermission('users:update')"
                                             @click="openUserModal(user)"
                                             title="Editar datos del usuario"
                                             class="h-9 w-9 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all"
@@ -140,7 +143,9 @@
                                             <PencilSquareIcon class="w-4 h-4" />
                                         </button>
 
+                                        <!-- Eliminar Usuario: requiere users:delete -->
                                         <button
+                                            v-if="authStore.hasPermission('users:delete')"
                                             @click="confirmDeleteUser(user)"
                                             title="Eliminar usuario"
                                             class="h-9 w-9 inline-flex items-center justify-center bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white rounded-lg transition-all"
@@ -148,7 +153,9 @@
                                             <TrashIcon class="w-4 h-4" />
                                         </button>
 
+                                        <!-- Editar Roles: requiere roles:update -->
                                         <button
+                                            v-if="authStore.hasPermission('roles:update')"
                                             @click="openRoleModal(user)"
                                             title="Editar Roles"
                                             class="h-9 px-3 inline-flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-500 dark:hover:text-white rounded-lg transition-all"
@@ -343,7 +350,11 @@
     import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, ChevronLeftIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
     import Swal from 'sweetalert2';
     import { ref, onMounted } from 'vue';
-    import { userService } from '@/services';
+    import { userService, roleService } from '@/services';
+    import { useAuthStore } from '@/stores/auth.store';
+
+    // Instancia del store para acceder a los getters
+    const authStore = useAuthStore();
 
     // --- ESTADOS GENERALES Y TABLA ---
     const users = ref([]);
@@ -356,7 +367,7 @@
     // --- ESTADOS PARA EDICIÓN DE ROLES ---
     const selectedUser = ref(null);
     const modalRoles = ref([]);
-    const availableRoles = ['SUPER_ADMIN', 'ADMIN', 'USER'];
+    const availableRoles = ref([]);
 
     // --- ESTADOS PARA CREACIÓN / EDICIÓN COMPLETA DE USUARIO ---
     const isUserModalOpen = ref(false);
@@ -635,8 +646,10 @@
                 return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
             case 'ADMIN':
                 return 'bg-blue-900/40 text-blue-300 border-blue-500/30';
-            default:
+            case 'USER':
                 return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
+            default:
+                return 'bg-yellow-900/40 text-yellow-300 border-yellow-500/30';
         }
     };
 
@@ -647,9 +660,21 @@
             month: 'short',
             year: 'numeric',
         });
+    };
+    
+    const fetchAvailableRoles = async () => {
+        try {
+            const res = await roleService.getRoles();
+            // Mapeamos para obtener únicamente los nombres en string
+            const rolesData = res.data.roles || res.data;
+            availableRoles.value = rolesData.map((r) => (typeof r === 'object' ? r.name : r));
+        } catch (err) {
+            console.error('Error al cargar roles disponibles:', err);
+        }
     };    
 
     onMounted(() => {
         fetchUsers();
+        fetchAvailableRoles();
     });   
 </script>

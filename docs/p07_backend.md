@@ -618,9 +618,9 @@
     const prisma = require('../config/prisma');
     const { getClientIp } = require('../utils/request.utils');
 
-    const generateToken = (user, roles = []) => {
+    const generateToken = (user, roles = [], permissions = []) => {
         return jwt.sign(
-            { id: user.id, email: user.email, roles },
+            { id: user.id, email: user.email, roles, permissions },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
@@ -663,7 +663,19 @@
 
             const user = await prisma.user.findUnique({
                 where: { email },
-                include: { roles: { include: { role: true } } },
+                include: { 
+                    roles: { 
+                        include: { 
+                            role: { 
+                                include: { 
+                                    permissions: { 
+                                        include: { permission: true } 
+                                    } 
+                                } 
+                            } 
+                        } 
+                    } 
+                },
             });
 
             if (!user || !user.isActive) {
@@ -694,7 +706,21 @@
             }
 
             const userRoles = user.roles.map((ur) => ur.role.name);
-            const token = generateToken(user, userRoles);
+
+            // Extraer lista plana de permisos sin duplicados
+            const permissionsSet = new Set();
+            user.roles.forEach((ur) => {
+                if (ur.role && ur.role.permissions) {
+                    ur.role.permissions.forEach((rp) => {
+                        if (rp.permission && rp.permission.action) {
+                            permissionsSet.add(rp.permission.action);
+                        }
+                    });
+                }
+            });
+            const userPermissions = Array.from(permissionsSet);
+
+            const token = generateToken(user, userRoles, userPermissions);
 
             await prisma.auditLog.create({
                 data: {
@@ -711,7 +737,14 @@
                 status: 'success',
                 message: 'Inicio de sesión exitoso',
                 data: {
-                    user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, roles: userRoles },
+                    user: { 
+                        id: user.id, 
+                        email: user.email, 
+                        name: user.name, 
+                        avatarUrl: user.avatarUrl, 
+                        roles: userRoles, 
+                        permissions: userPermissions 
+                    },
                     token,
                 },
             });
@@ -725,23 +758,50 @@
         try {
             const user = await prisma.user.findUnique({
                 where: { id: req.user.id },
-                select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    avatarUrl: true,
-                    createdAt: true,
-                    roles: { select: { role: { select: { name: true } } } },
-                },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: {
+                                        include: { permission: true }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             });
 
             if (!user) return res.status(404).json({ status: 'fail', message: 'Usuario no encontrado' });
 
             const userRoles = user.roles.map((ur) => ur.role.name);
 
+            const permissionsSet = new Set();
+            user.roles.forEach((ur) => {
+                if (ur.role && ur.role.permissions) {
+                    ur.role.permissions.forEach((rp) => {
+                        if (rp.permission && rp.permission.action) {
+                            permissionsSet.add(rp.permission.action);
+                        }
+                    });
+                }
+            });
+            const userPermissions = Array.from(permissionsSet);
+
             return res.status(200).json({
                 status: 'success',
-                data: { user: { id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, roles: userRoles, createdAt: user.createdAt } },
+                data: { 
+                    user: { 
+                        id: user.id, 
+                        email: user.email, 
+                        name: user.name, 
+                        avatarUrl: user.avatarUrl, 
+                        roles: userRoles, 
+                        permissions: userPermissions,
+                        createdAt: user.createdAt 
+                    } 
+                },
             });
         } catch (error) {
             console.error('Error en getMe:', error);
@@ -770,7 +830,7 @@
         }
     };
 
-    module.exports = { register, login, getMe, logout };   
+    module.exports = { register, login, getMe, logout };  
     ```
 2. `backend/src/controllers/profile.controller.js`: Gestión de perfil de usuario autenticado:
     ```js
@@ -1746,10 +1806,12 @@
     const express = require('express');
     const router = express.Router();
     const { getAuditLogs } = require('../controllers/audit.controller');
-    const { authenticateJWT, authorizeRoles } = require('../middlewares/auth.middleware');
+    const { authenticateJWT, checkPermission } = require('../middlewares/auth.middleware');
 
     router.use(authenticateJWT);
-    router.get('/', authorizeRoles('SUPER_ADMIN'), getAuditLogs);
+
+    // Permite el acceso a cualquiera que posea el permiso audit:read
+    router.get('/', checkPermission('audit:read'), getAuditLogs);
 
     module.exports = router;
     ```

@@ -104,6 +104,47 @@
             getters: {
                 isAuthenticated: (state) => !!state.token && !!state.user,
                 userRoles: (state) => state.user?.roles || [],
+
+                // Devuelve la lista de permisos en formato de strings
+                userPermissions: (state) => {
+                    if (!state.user) return [];
+
+                    // Si el backend envía el array plano de acciones ['read:users', 'write:users']
+                    if (Array.isArray(state.user.permissions)) {
+                        return state.user.permissions;
+                    }
+
+                    // Fallback por si en alguna vista la propiedad 'roles' viene con objetos completos
+                    if (Array.isArray(state.user.roles)) {
+                        const permissionsFromRoles = state.user.roles.flatMap((role) => {
+                            if (typeof role === 'object' && Array.isArray(role.permissions)) {
+                                return role.permissions.map((p) => (typeof p === 'object' ? p.action || p.name : p));
+                            }
+                            return [];
+                        });
+                        return [...new Set(permissionsFromRoles)];
+                    }
+
+                    return [];
+                },
+
+                // Retorna una función evaluadora utilizando 'this' para acceder al getter anterior
+                hasPermission() {
+                    return (permission) => {
+                        if (!this.user) return false;
+
+                        // Normaliza roles (soporta array de strings o array de objetos)
+                        const roles = Array.isArray(this.user.roles)
+                            ? this.user.roles.map((r) => (typeof r === 'object' ? r.name : r))
+                            : [];
+
+                        // Bypass global para SUPER_ADMIN
+                        if (roles.includes('SUPER_ADMIN')) return true;
+
+                        // Comprueba la existencia del permiso usando el getter corregido
+                        return this.userPermissions.includes(permission);
+                    };
+                },
             },
 
             actions: {
@@ -217,29 +258,30 @@
                             path: '/admin', 
                             name: 'admin-dashboard', 
                             component: () => import('@/views/admin/AdminDashboardView.vue'), 
-                            meta: { title: 'Panel de Administración', requiresRole: 'SUPER_ADMIN' } 
+                            meta: { title: 'Panel de Administración', requiresPermission: 'admin:access' } 
                         },
                         {
                             path: 'admin/users',
                             name: 'admin-users',
                             component: () => import('@/views/admin/UsersAdminView.vue'),
-                            meta: { title: 'Gestión de Usuarios', requiresRole: 'SUPER_ADMIN' }
+                            meta: { title: 'Gestión de Usuarios', requiresPermission: 'users:read' }
                         },
                         { 
                             path: '/admin/roles', 
                             name: 'admin-roles', 
                             component: () => import('@/views/admin/RolesAdminView.vue'), 
-                            meta: { title: 'Roles y Permisos', requiresRole: 'SUPER_ADMIN' } 
+                            meta: { title: 'Roles y Permisos', requiresPermission: 'roles:read' } 
                         },
                         { 
                             path: '/admin/audit-logs', 
                             name: 'admin-audit-logs', 
                             component: () => import('@/views/admin/AuditLogsView.vue'), 
-                            meta: { title: 'Registros de Auditoría', requiresRole: 'SUPER_ADMIN' } 
+                            meta: { title: 'Registros de Auditoría', requiresPermission: 'audit:read' } 
                         },               
                     ]
-                },
-                { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFoundView.vue') },  
+                },                
+                { path: '/403', name: 'forbidden', component: () => import('@/views/errors/ForbiddenView.vue'), meta: { requiresAuth: true } },
+                { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/errors/NotFoundView.vue') },
             ],
         });
 
@@ -247,25 +289,35 @@
         router.beforeEach(async (to) => {
             const authStore = useAuthStore();
 
+            // Cargar perfil si hay token activo
             if (authStore.token && !authStore.user) {
                 await authStore.fetchUser();
             }
 
             const isAuthenticated = authStore.isAuthenticated;
 
+            // 1. Verificar si la ruta requiere autenticación
             if (to.meta.requiresAuth && !isAuthenticated) {
                 return { name: 'login' };
             }
 
+            // 2. Verificar rutas solo para invitados (Login/Register)
             if (to.meta.requiresGuest && isAuthenticated) {
                 return { name: 'dashboard' };
             }
 
-            // Validación de Rol para rutas de administración
+            // 3. Validación de Permisos (Redirige a 403 Forbidden)
+            if (to.meta.requiresPermission) {
+                if (!authStore.hasPermission(to.meta.requiresPermission)) {
+                    return { name: 'forbidden' };
+                }
+            }
+
+            // 4. Validación de Roles (Redirige a 403 Forbidden)
             if (to.meta.requiresRole) {
-                const userRoles = authStore.user?.roles || [];
-                    if (!userRoles.includes(to.meta.requiresRole)) {
-                    return { name: 'dashboard' }; // Redirige al dashboard si no posee el rol
+                const userRoles = authStore.userRoles;
+                if (!userRoles.includes('SUPER_ADMIN') && !userRoles.includes(to.meta.requiresRole)) {
+                    return { name: 'forbidden' };
                 }
             }
 
@@ -960,7 +1012,7 @@
 
                                 <!-- Item 2: Alternar entre Admin y Dashboard de forma profesional -->
                                 <router-link 
-                                    v-if="authStore.userRoles.includes('SUPER_ADMIN') && !isAdminArea" 
+                                    v-if="authStore.hasPermission('admin:access') && !isAdminArea"
                                     to="/admin" 
                                     @click="isDropdownOpen = false"
                                     class="flex items-center space-x-2.5 px-4 py-2.5 text-sm hover:bg-slate-700/50 text-purple-400 transition-colors"
@@ -1509,6 +1561,7 @@
                             <p class="text-slate-400 text-sm mt-1">Administra los permisos y accesos de la plataforma en tiempo real.</p>                
                         </div>
                         <button
+                            v-if="authStore.hasPermission('users:create')"
                             @click="openUserModal(null)"
                             class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-emerald-600/30"
                         >
@@ -1624,7 +1677,9 @@
                                         <!-- Acciones -->
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div class="inline-flex items-center justify-end space-x-2">
+                                                <!-- Editar Usuario: requiere users:update -->
                                                 <button
+                                                    v-if="authStore.hasPermission('users:update')"
                                                     @click="openUserModal(user)"
                                                     title="Editar datos del usuario"
                                                     class="h-9 w-9 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all"
@@ -1632,7 +1687,9 @@
                                                     <PencilSquareIcon class="w-4 h-4" />
                                                 </button>
 
+                                                <!-- Eliminar Usuario: requiere users:delete -->
                                                 <button
+                                                    v-if="authStore.hasPermission('users:delete')"
                                                     @click="confirmDeleteUser(user)"
                                                     title="Eliminar usuario"
                                                     class="h-9 w-9 inline-flex items-center justify-center bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white rounded-lg transition-all"
@@ -1640,7 +1697,9 @@
                                                     <TrashIcon class="w-4 h-4" />
                                                 </button>
 
+                                                <!-- Editar Roles: requiere roles:update -->
                                                 <button
+                                                    v-if="authStore.hasPermission('roles:update')"
                                                     @click="openRoleModal(user)"
                                                     title="Editar Roles"
                                                     class="h-9 px-3 inline-flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-500 dark:hover:text-white rounded-lg transition-all"
@@ -1835,7 +1894,11 @@
             import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, ChevronLeftIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
             import Swal from 'sweetalert2';
             import { ref, onMounted } from 'vue';
-            import { userService } from '@/services';
+            import { userService, roleService } from '@/services';
+            import { useAuthStore } from '@/stores/auth.store';
+
+            // Instancia del store para acceder a los getters
+            const authStore = useAuthStore();
 
             // --- ESTADOS GENERALES Y TABLA ---
             const users = ref([]);
@@ -1848,7 +1911,7 @@
             // --- ESTADOS PARA EDICIÓN DE ROLES ---
             const selectedUser = ref(null);
             const modalRoles = ref([]);
-            const availableRoles = ['SUPER_ADMIN', 'ADMIN', 'USER'];
+            const availableRoles = ref([]);
 
             // --- ESTADOS PARA CREACIÓN / EDICIÓN COMPLETA DE USUARIO ---
             const isUserModalOpen = ref(false);
@@ -2127,8 +2190,10 @@
                         return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
                     case 'ADMIN':
                         return 'bg-blue-900/40 text-blue-300 border-blue-500/30';
-                    default:
+                    case 'USER':
                         return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
+                    default:
+                        return 'bg-yellow-900/40 text-yellow-300 border-yellow-500/30';
                 }
             };
 
@@ -2139,12 +2204,24 @@
                     month: 'short',
                     year: 'numeric',
                 });
+            };
+            
+            const fetchAvailableRoles = async () => {
+                try {
+                    const res = await roleService.getRoles();
+                    // Mapeamos para obtener únicamente los nombres en string
+                    const rolesData = res.data.roles || res.data;
+                    availableRoles.value = rolesData.map((r) => (typeof r === 'object' ? r.name : r));
+                } catch (err) {
+                    console.error('Error al cargar roles disponibles:', err);
+                }
             };    
 
             onMounted(() => {
                 fetchUsers();
+                fetchAvailableRoles();
             });   
-        </script>    
+        </script>
         ```
 12. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
     + Crea el componente `RolesAdminView.vue` para la interfaz de gestión de roles y asignación de permisos:
@@ -2171,6 +2248,7 @@
                             </p>
                         </div>
                         <button 
+                            v-if="authStore.hasPermission('roles:create')"
                             @click="openModal()"
                             class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30"
                         >
@@ -2221,16 +2299,19 @@
                                     <!-- Columna Acciones en la tabla -->
                                     <td class="px-6 py-4 whitespace-nowrap text-right">
                                         <div class="flex items-center justify-end gap-2">
+                                            <!-- Editar rol -->
                                             <button 
+                                                v-if="authStore.hasPermission('roles:update')"
                                                 @click="openModal(role)"
                                                 class="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
-                                                title="Editar rol"
+                                                :title="role.name === 'SUPER_ADMIN' ? 'Ver detalles del rol' : 'Editar rol'"
                                             >
                                                 <PencilIcon class="w-4 h-4" />
                                             </button>
                                             
+                                            <!-- Eliminar rol (Se oculta explicitamente para SUPER_ADMIN) -->
                                             <button 
-                                                v-if="role.name !== 'SUPER_ADMIN'"
+                                                v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
                                                 @click="confirmDelete(role)"
                                                 class="p-2 text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors"
                                                 title="Eliminar rol"
@@ -2312,10 +2393,19 @@
                                     </div>
                                 </div>
 
-                                <!-- Footer con Botones (Fijo abajo) -->
+                                <!-- Footer con Botones -->
                                 <div class="flex justify-end space-x-3 p-4 sm:p-6 border-t border-slate-700 bg-slate-800/90 shrink-0">
-                                    <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white">Cancelar</button>
-                                    <button type="submit" :disabled="saving" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20">
+                                    <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white">
+                                        {{ targetRole?.name === 'SUPER_ADMIN' ? 'Cerrar' : 'Cancelar' }}
+                                    </button>
+                                    
+                                    <!-- Ocultamos o deshabilitamos el botón guardar si es SUPER_ADMIN -->
+                                    <button 
+                                        v-if="targetRole?.name !== 'SUPER_ADMIN'"
+                                        type="submit" 
+                                        :disabled="saving" 
+                                        class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20"
+                                    >
                                         {{ saving ? 'Guardando...' : 'Guardar Rol' }}
                                     </button>
                                 </div>
@@ -2329,8 +2419,12 @@
         <script setup>
             import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
             import { ref, computed, onMounted } from 'vue';
-            import { roleService } from '@/services'; // 👈 Importamos únicamente roleService
+            import { roleService } from '@/services';
             import Swal from 'sweetalert2';
+            import { useAuthStore } from '@/stores/auth.store';
+
+            // Instancia del store para acceder a los getters
+            const authStore = useAuthStore();
 
             const roles = ref([]);
             const availablePermissions = ref([]);
@@ -2422,6 +2516,18 @@
             };
 
             const confirmDelete = async (role) => {
+                // Protección a nivel de lógica JS
+                if (role.name === 'SUPER_ADMIN') {
+                    Swal.fire({
+                        title: 'Acción No Permitida',
+                        text: 'El rol SUPER_ADMIN es un rol de sistema y no puede ser eliminado.',
+                        icon: 'error',
+                        background: '#1e293b',
+                        color: '#f8fafc'
+                    });
+                    return;
+                }
+
                 const result = await Swal.fire({
                     title: '¿Eliminar Rol?',
                     html: `Estás a punto de eliminar el rol <strong>${role.name}</strong>.`,
@@ -2455,14 +2561,15 @@
                 switch (name) {
                     case 'SUPER_ADMIN': return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
                     case 'ADMIN': return 'bg-blue-900/40 text-blue-300 border-blue-500/30';
-                    default: return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
+                    case 'USER': return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
+                    default: return 'bg-yellow-900/40 text-yellow-300 border-yellow-500/30';
                 }
             };
 
             onMounted(() => {
                 loadData();
             });
-        </script>     
+        </script>
         ```
 13. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
     ```vue
@@ -2830,10 +2937,10 @@
             if (fpStart) fpStart.destroy();
             if (fpEnd) fpEnd.destroy();
         });
-    </script>   
+    </script>
     ```
-14. Crear Vista 404:
-    + Crea el archivo `frontend/src/views/NotFoundView.vue`:
+14. Crear Vista 404 (not-found):
+    + Crea el archivo `frontend/src/views/errors/NotFoundView.vue`:
         ```vue
         <template>
             <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-4 text-center">
@@ -2851,5 +2958,36 @@
             </div>
         </template>        
         ```
+15. Crear Vista 403 (forbidden):
+    + Crea el archivo `frontend/src/views/errors/ForbiddenView.vue`:
+        ```vue
+        <template>
+            <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-4 text-center">
+                <!-- Ícono decorativo o código HTTP -->
+                <h1 class="text-8xl font-black text-rose-500 mb-2">403</h1>
+                <h2 class="text-2xl font-bold mb-4">Acceso Restringido</h2>
+                <p class="text-slate-400 mb-6 max-w-md">
+                    No tienes los permisos necesarios para acceder a esta página. Si crees que se trata de un error, por favor contacta con el administrador del sistema.
+                </p>
+                
+                <div class="flex gap-4">
+                    <router-link
+                        to="/dashboard"
+                        class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 font-medium transition-colors"
+                    >
+                        Ir al Dashboard
+                    </router-link>
+                    
+                    <router-link
+                        to="/"
+                        class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-medium transition-colors"
+                    >
+                        Ir al Inicio
+                    </router-link>
+                </div>
+            </div>
+        </template>       
+        ```
+
 ---
 [🔙](index.md)

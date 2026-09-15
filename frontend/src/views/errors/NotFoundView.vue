@@ -9,7 +9,7 @@
             to="/"
             class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-emerald-400 font-medium transition-colors"
         >
-            Volver al Inicio
+            Ir al Inicio
         </router-link>
     </div>
 </template>

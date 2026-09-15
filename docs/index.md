@@ -92,24 +92,36 @@
         docker compose logs -f --tail=50
         ```
     + Resetear base de datos
-        ```
+        ```bash
         docker compose exec backend npx prisma migrate reset --force
         # o en su forma definida en el package.json
         docker compose exec backend npm run db:reset
         ```
+    + Evitar el inicio de un contenedor:
+        ```bash
+        docker update --restart=no nombre_contenedor
+        ```
 
 ## Tares
 ### Pendientes
-+ [ ] CRUD avatars en User Admin.
++ [ ] Refactorizar para acceder a las vistas administrativas con permisos y no con roles.
++ [ ] Recuperar credenciales (¿Olvidó su password?).
++ [ ] Establecer politicas de seguridad en tablas de base de datos de supabase.
 + [ ] Login con redes sociales.
++ [ ] Multi-idiomas.
++ [ ] Drag and Drop para gestionar archivos.
 + [ ] Solicitar autenticación de email.
-+ [ ] Sección de suscripción (Con planes)
-+ [ ] Multi-idiomas
-+ [ ] Drag and Drop para gestionar archivos
-+ [ ] Establecer politicas de seguridad en tablas de base de datos de supabase
-+ [ ] Revisar la seguridad del backend
++ [ ] Diagnóstico de la aplicación con IA.
++ [ ] Revisar la seguridad del backend.
++ [ ] Seguridad y Hardening HTTP (Backend): helmet para configurar cabeceras HTTP seguras. | 
++ [ ] Seguridad y Hardening HTTP (Backend): express-rate-limit para prevención de ataques de fuerza bruta en rutas críticas (/login, /register, /forgot-password).
++ [ ] Seguridad y Hardening HTTP (Backend): Desinfección de entrada contra inyecciones SQL / XSS y sanitización de payloads JSON.
++ [ ] Documentación & CI/CD (Swagger, .env.example, pruebas unitarias básicas).
++ [ ] Incluir ruta de documentación.
+
 
 ### Terminadas
 + [x] Dockerización.
 + [x] Refactorización de rutas y controladores en el backend.
 + [x] Adecuar la aplicación para que sea mas general, por ejemplo cambiar familytree2026-backend por backend, adaptar la vista del home, etc.
++ [x] CRUD avatars en User Admin.

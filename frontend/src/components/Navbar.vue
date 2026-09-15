@@ -144,7 +144,7 @@
 
                         <!-- Item 2: Alternar entre Admin y Dashboard de forma profesional -->
                         <router-link 
-                            v-if="authStore.userRoles.includes('SUPER_ADMIN') && !isAdminArea" 
+                            v-if="authStore.hasPermission('admin:access') && !isAdminArea"
                             to="/admin" 
                             @click="isDropdownOpen = false"
                             class="flex items-center space-x-2.5 px-4 py-2.5 text-sm hover:bg-slate-700/50 text-purple-400 transition-colors"

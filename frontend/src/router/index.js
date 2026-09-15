@@ -29,29 +29,30 @@ const router = createRouter({
                     path: '/admin', 
                     name: 'admin-dashboard', 
                     component: () => import('@/views/admin/AdminDashboardView.vue'), 
-                    meta: { title: 'Panel de Administración', requiresRole: 'SUPER_ADMIN' } 
+                    meta: { title: 'Panel de Administración', requiresPermission: 'admin:access' } 
                 },
                 {
                     path: 'admin/users',
                     name: 'admin-users',
                     component: () => import('@/views/admin/UsersAdminView.vue'),
-                    meta: { title: 'Gestión de Usuarios', requiresRole: 'SUPER_ADMIN' }
+                    meta: { title: 'Gestión de Usuarios', requiresPermission: 'users:read' }
                 },
                 { 
                     path: '/admin/roles', 
                     name: 'admin-roles', 
                     component: () => import('@/views/admin/RolesAdminView.vue'), 
-                    meta: { title: 'Roles y Permisos', requiresRole: 'SUPER_ADMIN' } 
+                    meta: { title: 'Roles y Permisos', requiresPermission: 'roles:read' } 
                 },
                 { 
                     path: '/admin/audit-logs', 
                     name: 'admin-audit-logs', 
                     component: () => import('@/views/admin/AuditLogsView.vue'), 
-                    meta: { title: 'Registros de Auditoría', requiresRole: 'SUPER_ADMIN' } 
+                    meta: { title: 'Registros de Auditoría', requiresPermission: 'audit:read' } 
                 },               
             ]
-        },
-        { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFoundView.vue') },  
+        },                
+        { path: '/403', name: 'forbidden', component: () => import('@/views/errors/ForbiddenView.vue'), meta: { requiresAuth: true } },
+        { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/errors/NotFoundView.vue') },
     ],
 });
 
@@ -59,25 +60,35 @@ const router = createRouter({
 router.beforeEach(async (to) => {
     const authStore = useAuthStore();
 
+    // Cargar perfil si hay token activo
     if (authStore.token && !authStore.user) {
         await authStore.fetchUser();
     }
 
     const isAuthenticated = authStore.isAuthenticated;
 
+    // 1. Verificar si la ruta requiere autenticación
     if (to.meta.requiresAuth && !isAuthenticated) {
         return { name: 'login' };
     }
 
+    // 2. Verificar rutas solo para invitados (Login/Register)
     if (to.meta.requiresGuest && isAuthenticated) {
         return { name: 'dashboard' };
     }
 
-    // Validación de Rol para rutas de administración
+    // 3. Validación de Permisos (Redirige a 403 Forbidden)
+    if (to.meta.requiresPermission) {
+        if (!authStore.hasPermission(to.meta.requiresPermission)) {
+            return { name: 'forbidden' };
+        }
+    }
+
+    // 4. Validación de Roles (Redirige a 403 Forbidden)
     if (to.meta.requiresRole) {
-        const userRoles = authStore.user?.roles || [];
-            if (!userRoles.includes(to.meta.requiresRole)) {
-            return { name: 'dashboard' }; // Redirige al dashboard si no posee el rol
+        const userRoles = authStore.userRoles;
+        if (!userRoles.includes('SUPER_ADMIN') && !userRoles.includes(to.meta.requiresRole)) {
+            return { name: 'forbidden' };
         }
     }
 
