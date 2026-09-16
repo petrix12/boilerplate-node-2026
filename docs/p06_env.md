@@ -12,12 +12,15 @@
     # ==========================================
     PORT=3000
     APP_URL=http://localhost:3000
+    APP_INFRASTRUCTURE=Entorno de desarrollo local (Node.js nativo)
     NODE_ENV=development
+
     # ==========================================
     # - - - PRODUCCIÓN - - -
     # ==========================================
     # PORT=10000
-    # APP_URL=https://tu-proyecto.onrender.com
+    # APP_URL=https://boilerplate-node-2026.onrender.com
+    # APP_INFRASTRUCTURE=Servidor VPS Linux nativo gestionado mediante PM2 / Systemd
     # NODE_ENV=production
 
     # ===================================================================================================

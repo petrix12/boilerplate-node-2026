@@ -16,11 +16,18 @@ const aiService = {
         // 1. Recopilar datos estructurados del agregador
         const rawData = await diagnosticAggregatorService.getSystemDiagnosticData();
 
+        // Inyectamos la infraestructura real declarada por entorno para evitar alucinaciones del LLM
+        rawData.environment = process.env.NODE_ENV || 'development';
+        rawData.infrastructure = process.env.APP_INFRASTRUCTURE || 'Servidor Node.js nativo genérico';
+
         // 2. Construir el prompt de sistema y usuario
         const systemPrompt = `
             Eres un Arquitecto de Software Senior y Especialista en DevOps y Ciberseguridad. 
             Tu objetivo es analizar los datos de diagnóstico y auditoría de una aplicación web (Node.js, Express, PostgreSQL, Vue 3) y emitir un informe técnico claro, profesional y directo en formato JSON estrictamente válido.
             
+            REGLA CRÍTICA DE INFRAESTRUCTURA:
+            - Debes respetar estrictamente el campo "infrastructure" proporcionado en los datos de entrada (por ejemplo, si indica VPS Linux, PM2, systemd, etc., NO menciones Docker ni Kubernetes a menos que se indique explícitamente ahí). No inventes tecnologías de despliegue que no aparezcan en el contexto.
+
             Debes evaluar:
             - Estado del backend.
             - Estado del frontend.
