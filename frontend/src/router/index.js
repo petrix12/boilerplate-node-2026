@@ -48,7 +48,13 @@ const router = createRouter({
                     name: 'admin-audit-logs', 
                     component: () => import('@/views/admin/AuditLogsView.vue'), 
                     meta: { title: 'Registros de Auditoría', requiresPermission: 'audit:read' } 
-                },               
+                },
+                {
+                    path: '/admin/system-diagnostic',
+                    name: 'SystemDiagnostic',
+                    component: () => import('@/views/admin/SystemDiagnosticView.vue'),
+                    meta: { title: 'Diagnóstico del Sistema', requiresAuth: true, requiresPermission: 'system:logs:read' }
+                }                
             ]
         },                
         { path: '/403', name: 'forbidden', component: () => import('@/views/errors/ForbiddenView.vue'), meta: { requiresAuth: true } },

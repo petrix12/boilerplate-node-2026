@@ -145,6 +145,9 @@
                         return this.userPermissions.includes(permission);
                     };
                 },
+
+                // Indica si la funcionalidad de diagnóstico por IA está activa según la respuesta del backend
+                aiDiagnosticActive: (state) => !!state.user?.aiDiagnostic,
             },
 
             actions: {
@@ -158,7 +161,10 @@
                         const data = response.data?.data || response.data;
                         
                         this.token = data.token;
-                        this.user = data.user;
+                        this.user = {
+                            ...data.user,
+                            ...(data.features || {})
+                        };
                         localStorage.setItem('token', data.token);
 
                         return response.data;
@@ -198,7 +204,11 @@
                     this.loading = true;
                     try {
                         const response = await api.get('/auth/me');
-                        this.user = response.data.data.user;
+                        const { user, features } = response.data.data;
+                        this.user = {
+                            ...user,
+                            ...(features || {})
+                        };
                     } catch (err) {
                         console.error('Sesión expirada o token inválido:', err);
                         this.logout();
@@ -224,7 +234,50 @@
             },
         });
         ```
-4. Configuración de Vue Router con Guards (`src/router/index.js`)
+4. Store de Diagnóstico por IA con Pinia (`src/stores/diagnostic.store.js`)
+    + Crea o reemplaza el archivo en `frontend/src/stores/diagnostic.store.js`:
+        ```js
+        import { defineStore } from 'pinia';
+        import { ref } from 'vue';
+        import { diagnosticService } from '@/services/diagnostic.service';
+
+        export const useDiagnosticStore = defineStore('diagnostic', () => {
+            const report = ref(null);
+            const timestamp = ref(null);
+            const loading = ref(false);
+            const error = ref(null);
+
+            const fetchDiagnostic = async (forced = false) => {
+                // Si ya tenemos un reporte y no se fuerza la recarga, evitamos la llamada
+                if (report.value && !forced) {
+                    return;
+                }
+
+                loading.value = true;
+                error.value = null;
+
+                try {
+                    const response = await diagnosticService.getSystemDiagnostic();
+                    report.value = response.data;
+                    timestamp.value = new Date().toISOString(); // Guardamos la fecha y hora exacta
+                } catch (err) {
+                    error.value = err.response?.data?.message || 'Error al conectar con el servicio de diagnóstico.';
+                    throw err; // Opcional: relanzar para que la vista lo maneje si es necesario
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            return {
+                report,
+                timestamp,
+                loading,
+                error,
+                fetchDiagnostic
+            };
+        });        
+        ```
+5. Configuración de Vue Router con Guards (`src/router/index.js`)
     + Abre o crea el archivo `frontend/src/router/index.js` y reemplaza su contenido:
         ```js
         import { createRouter, createWebHistory } from 'vue-router';
@@ -326,7 +379,7 @@
 
         export default router;
         ```
-5. Configurar `frontend/src/main.js`:
+6. Configurar `frontend/src/main.js`:
     ```js
     import './assets/main.css'
 
@@ -483,20 +536,32 @@
     ```js
     import api from '@/api/axios';
 
-    export const auditService = {
-        async getAuditLogs(params = {}) {
-            const response = await api.get('/audit-logs', { params });
+    export const diagnosticService = {
+        async getSystemDiagnostic() {
+            const response = await api.get('/diagnostics/system');
             return response.data;
         }
     };
     ```
     + Gestión exclusiva de registros de auditoría (mapea directo a `/audit-logs` en Express)
-5. Crear archivo unificador `frontend/src/services/index.js` (Patrón Barrel Export):
+5. Crear servico `frontend/src/services/diagnostic.service.js`:
+    ```js
+    import api from '@/api/axios';
+
+    export const diagnosticService = {
+        async getSystemDiagnostic() {
+            const response = await api.get('/diagnostics/system');
+            return response.data;
+        }
+    };    
+    ```
+6. Crear archivo unificador `frontend/src/services/index.js` (Patrón Barrel Export):
     ```js
     export { authService } from './auth.service';
     export { userService } from './user.service';
     export { roleService } from './role.service';
     export { auditService } from './audit.service';
+    export { diagnosticService } from './diagnostic.service';
     ```
 
 
@@ -1528,7 +1593,23 @@
                         </div>
                         <h2 class="text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors">Auditoría / Logs</h2>
                         <p class="text-slate-400 text-xs mt-1">Historial de cambios críticos y acciones de los administradores.</p>
-                    </router-link>            
+                    </router-link>
+
+                    <!-- Módulo: Diagnóstico del Sistema por IA -->
+                    <router-link 
+                        v-if="isAiActive"
+                        to="/admin/system-diagnostic"
+                        class="group p-6 bg-slate-800/60 border border-slate-700/60 hover:border-indigo-500/50 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/5"
+                    >
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
+                                <CpuChipIcon class="w-6 h-6" />
+                            </div>
+                            <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">IA Activa</span>
+                        </div>
+                        <h2 class="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">Diagnóstico del Sistema por IA</h2>
+                        <p class="text-slate-400 text-xs mt-1">Análisis inteligente del estado, salud y seguridad global.</p>
+                    </router-link>             
 
                 </div>
             </div>
@@ -1536,7 +1617,12 @@
     </template>
 
     <script setup>
-        import { ChevronLeftIcon, UsersIcon, ShieldCheckIcon, DocumentChartBarIcon } from '@heroicons/vue/24/outline';
+        import { computed } from 'vue';
+        import { useAuthStore } from '@/stores/auth.store';
+        import { ChevronLeftIcon, UsersIcon, ShieldCheckIcon, DocumentChartBarIcon, CpuChipIcon } from '@heroicons/vue/24/outline';
+
+        const authStore = useAuthStore();
+        const isAiActive = computed(() => authStore.aiDiagnosticActive);
     </script>
     ```
 11. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
@@ -2939,7 +3025,11 @@
         });
     </script>
     ```
-14. Crear Vista 404 (not-found):
+14. Creamos la vista `frontend/src/views/SystemDiagnosticView.vue`:
+    ```vue
+    
+    ```
+15. Crear Vista 404 (not-found):
     + Crea el archivo `frontend/src/views/errors/NotFoundView.vue`:
         ```vue
         <template>
@@ -2958,7 +3048,7 @@
             </div>
         </template>        
         ```
-15. Crear Vista 403 (forbidden):
+16. Crear Vista 403 (forbidden):
     + Crea el archivo `frontend/src/views/errors/ForbiddenView.vue`:
         ```vue
         <template>

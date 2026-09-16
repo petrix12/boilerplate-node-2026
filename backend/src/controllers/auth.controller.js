@@ -174,6 +174,9 @@ const getMe = async (req, res) => {
         });
         const userPermissions = Array.from(permissionsSet);
 
+        // Evaluar si la IA está habilitada comprobando la variable de entorno
+        const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';        
+
         return res.status(200).json({
             status: 'success',
             data: { 
@@ -185,7 +188,10 @@ const getMe = async (req, res) => {
                     roles: userRoles, 
                     permissions: userPermissions,
                     createdAt: user.createdAt 
-                } 
+                },
+                features: {
+                    aiDiagnostic: isAiEnabled
+                }
             },
         });
     } catch (error) {

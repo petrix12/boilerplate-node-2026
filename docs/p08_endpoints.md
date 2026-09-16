@@ -2,29 +2,30 @@
 ---
 ## 🔌 Endpoints
 ### 📋 Resumen de Endpoints
-| Módulo     | Método   | Endpoint                    | Permiso / Rol requerido   |
-| ---------- | -------- | --------------------------- | ------------------------- |
-| **System** | `GET`    | `/api/v1/health`            | Público                   |
-| **Auth**   | `POST`   | `/api/v1/auth/register`     | Público                   |
-| **Auth**   | `POST`   | `/api/v1/auth/login`        | Público                   |
-| **Auth**   | `GET`    | `/api/v1/auth/me`           | Autenticado               |
-| **Auth**   | `POST`   | `/api/v1/auth/logout`       | Autenticado               |
-| **Users**  | `PUT`    | `/api/v1/users/profile`     | Autenticado (Propietario) |
-| **Users**  | `POST`   | `/api/v1/users/avatar`      | Autenticado (Propietario) |
-| **Users**  | `DELETE` | `/api/v1/users/avatar`      | Autenticado (Propietario) |
-| **Users**  | `POST`   | `/api/v1/users/:id/avatar`  | Rol `SUPER_ADMIN`         |
-| **Users**  | `DELETE` | `/api/v1/users/:id/avatar`  | Rol `SUPER_ADMIN`         |
-| **Users**  | `GET`    | `/api/v1/users`             | `users:read`              |
-| **Users**  | `POST`   | `/api/v1/users`             | `users:create`            |
-| **Users**  | `PUT`    | `/api/v1/users/:id`         | `users:update`            |
-| **Users**  | `PUT`    | `/api/v1/users/:id/roles`   | Rol `SUPER_ADMIN`         |
-| **Users**  | `DELETE` | `/api/v1/users/:id`         | `users:delete`            |
-| **Roles**  | `GET`    | `/api/v1/roles`             | `roles:read`              |
-| **Roles**  | `GET`    | `/api/v1/roles/permissions` | `roles:read`              |
-| **Roles**  | `POST`   | `/api/v1/roles`             | `roles:create`            |
-| **Roles**  | `PUT`    | `/api/v1/roles/:id`         | `roles:update`            |
-| **Roles**  | `DELETE` | `/api/v1/roles/:id`         | `roles:delete`            |
-| **Audit**  | `GET`    | `/api/v1/audit-logs`        | Rol `SUPER_ADMIN`         |
+| Módulo     | Método   | Endpoint                          | Permiso / Rol requerido   |
+| ---------- | -------- | --------------------------------- | ------------------------- |
+| **System** | `GET`    | `/api/v1/health`                  | Público                   |
+| **Auth**   | `POST`   | `/api/v1/auth/register`           | Público                   |
+| **Auth**   | `POST`   | `/api/v1/auth/login`              | Público                   |
+| **Auth**   | `GET`    | `/api/v1/auth/me`                 | Autenticado               |
+| **Auth**   | `POST`   | `/api/v1/auth/logout`             | Autenticado               |
+| **Users**  | `PUT`    | `/api/v1/users/profile`           | Autenticado (Propietario) |
+| **Users**  | `POST`   | `/api/v1/users/avatar`            | Autenticado (Propietario) |
+| **Users**  | `DELETE` | `/api/v1/users/avatar`            | Autenticado (Propietario) |
+| **Users**  | `POST`   | `/api/v1/users/:id/avatar`        | `users:update`            |
+| **Users**  | `DELETE` | `/api/v1/users/:id/avatar`        | `users:update`            |
+| **Users**  | `GET`    | `/api/v1/users`                   | `users:read`              |
+| **Users**  | `POST`   | `/api/v1/users`                   | `users:create`            |
+| **Users**  | `PUT`    | `/api/v1/users/:id`               | `users:update`            |
+| **Users**  | `PUT`    | `/api/v1/users/:id/roles`         | `roles:update`            |
+| **Users**  | `DELETE` | `/api/v1/users/:id`               | `users:delete`            |
+| **Roles**  | `GET`    | `/api/v1/roles`                   | `roles:read`              |
+| **Roles**  | `GET`    | `/api/v1/roles/permissions`       | `roles:read`              |
+| **Roles**  | `POST`   | `/api/v1/roles`                   | `roles:create`            |
+| **Roles**  | `PUT`    | `/api/v1/roles/:id`               | `roles:update`            |
+| **Roles**  | `DELETE` | `/api/v1/roles/:id`               | `roles:delete`            |
+| **Audit**  | `GET`    | `/api/v1/audit-logs`              | `audit:read`              |
+| **Audit**  | `GET`    | `/api/v1/admin/system-diagnostic` | `system:logs:read`        |
 
 
 ### ✅ Pruebas de Endpoints
@@ -552,6 +553,33 @@
         Keep-Alive: timeout=5
 
         {"status":"success","message":"Usuario eliminado correctamente"}
+        ```
+
+### Probar la Ingesta de Logs
+1. Crear un registro de pruebas en la tabla `system_logs` (`/api/v1/system-logs/ingest`):
+    ```bash
+    curl -i -X POST http://localhost:3000/api/v1/system-logs/ingest \
+        -H "Content-Type: application/json" \
+        -d '{
+            "level": "WARN",
+            "message": "Prueba de error simulada desde Docker",
+            "path": "/dashboard"
+        }'    
+    ```
+    + Output:
+        ```bash
+        HTTP/1.1 201 Created
+        X-Powered-By: Express
+        Vary: Origin
+        Access-Control-Allow-Credentials: true
+        Content-Type: application/json; charset=utf-8
+        Content-Length: 47
+        ETag: W/"2f-/JJwPx/Nt2Bp0qpWXZfVtj7MMU0"
+        Date: Wed, 16 Sep 2026 14:31:25 GMT
+        Connection: keep-alive
+        Keep-Alive: timeout=5
+
+        {"status":"success","message":"Log registrado"}
         ```
 ---
 [🔙](index.md)

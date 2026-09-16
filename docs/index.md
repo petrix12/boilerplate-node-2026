@@ -117,6 +117,9 @@
 + [ ] Seguridad y Hardening HTTP (Backend): Desinfección de entrada contra inyecciones SQL / XSS y sanitización de payloads JSON.
 + [ ] Documentación & CI/CD (Swagger, .env.example, pruebas unitarias básicas).
 + [ ] Incluir ruta de documentación.
++ [ ] Realizar pruebas unitarias.
++ [ ] Que aparezca la manito cuando el maouse se posicione sobre un botón, o algo por el estilo.
++ [ ] Asegurar que los endpoints en el backend se puedan ejecutar según los permisos que les corresponde.
 
 
 ### Terminadas

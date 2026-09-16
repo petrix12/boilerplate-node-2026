@@ -109,17 +109,22 @@
     // Modelo SystemLog
     model SystemLog {
         id         String   @id @default(uuid())
-        level      String   @default("ERROR") // ERROR, WARN, INFO
-        message    String
+        source     String   @default("BACKEND") // BACKEND, FRONTEND, DATABASE
+        level      String   @default("ERROR")   // ERROR, WARN, INFO, CRITICAL
+        message    String   @db.Text
         stackTrace String?  @db.Text
         path       String?
         method     String?
         statusCode Int?     @default(500)
         userId     String?
+        context    Json?    // Información contextual extra (IP, navegador, payload de error, etc.)
         createdAt  DateTime @default(now())
 
+        @@index([source])
+        @@index([level])
+        @@index([createdAt])
         @@map("system_logs")
-    }   
+    }
     ```
     + Define los modelos (Usuarios, Roles, Auditorías, etc.) y la conexión a PostgreSQL.
 2. Crear el Orquestador Principal de Seeders `backend/prisma/seed.js`:
@@ -608,6 +613,279 @@
             req,
         });
         ```
+2. Crear el Servicio de Ingesta (`backend/src/services/systemLog.service.js`):
+    ```js
+    const prisma = require('../config/prisma');
+
+    const systemLogService = {
+        /**
+        * Registra un error o advertencia en la tabla SystemLog
+        */
+        async log({
+            source = 'BACKEND',
+            level = 'ERROR',
+            message,
+            stackTrace = null,
+            path = null,
+            method = null,
+            statusCode = 500,
+            userId = null,
+            context = null,
+        }) {
+            try {
+                return await prisma.systemLog.create({
+                    data: {
+                        source,
+                        level,
+                        message: message ? String(message) : 'Mensaje no especificado',
+                        stackTrace: stackTrace ? String(stackTrace) : null,
+                        path,
+                        method,
+                        statusCode: parseInt(statusCode, 10) || 500,
+                        userId,
+                        context: context ? context : undefined,
+                    },
+                });
+            } catch (error) {
+                // Evitamos que un error guardando el log detenga la aplicación
+                console.error('[SYSTEM LOG ERROR]: No se pudo guardar el log en DB:', error.message);
+            }
+        },
+    };
+
+    module.exports = systemLogService;    
+    ```
+    + Crearemos un servicio dedicado para interactuar con la tabla SystemLog de manera asíncrona y segura (para que un fallo guardando un log jamás interrumpa la petición principal).
+3. Crear el Servicio de Limpieza (`backend/src/services/cron.service.js`):
+    ```js
+    const prisma = require('../config/prisma');
+
+    const cleanupOldLogs = async () => {
+        try {
+            const retentionDays = parseInt(process.env.LOG_RETENTION_DAYS, 10) || 30;
+            
+            // Calcular fecha límite
+            const limitDate = new Date();
+            limitDate.setDate(limitDate.getDate() - retentionDays);
+
+            const result = await prisma.systemLog.deleteMany({
+                where: {
+                    createdAt: {
+                        lt: limitDate,
+                    },
+                },
+            });
+
+            if (result.count > 0) {
+                console.log(`[CLEANUP CRON]: Se eliminaron ${result.count} logs antiguos con más de ${retentionDays} días.`);
+            }
+        } catch (error) {
+            console.error('[CLEANUP CRON ERROR]: Error al purgar logs antiguos:', error.message);
+        }
+    };
+
+    const initSystemCleanup = () => {
+        // Ejecutar una vez al arrancar el servidor (opcional)
+        cleanupOldLogs();
+
+        // Programar la ejecución cada 24 horas (24 * 60 * 60 * 1000 ms)
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+        setInterval(cleanupOldLogs, TWENTY_FOUR_HOURS);
+
+        console.log('[CLEANUP CRON]: Servicio de purga automática de logs inicializado.');
+    };
+
+    module.exports = { initSystemCleanup, cleanupOldLogs };    
+    ```
+4. Crear el Agregador (`backend/src/services/diagnosticAggregator.service.js`):
+    ```js
+    const prisma = require('../config/prisma');
+
+    const diagnosticAggregatorService = {
+        /**
+        * Recopila y resume los datos clave del sistema para la IA
+        */
+        async getSystemDiagnosticData() {
+            try {
+                const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+                // 1. Conteo de logs de sistema (últimas 24h) agrupados por fuente y nivel
+                const systemLogsSummary = await prisma.systemLog.groupBy({
+                    by: ['source', 'level'],
+                    where: {
+                        createdAt: { gte: twentyFourHoursAgo }
+                    },
+                        _count: {
+                        id: true
+                    }
+                });
+
+                // 2. Obtener los últimos 10 errores más críticos o recientes del sistema
+                const recentErrors = await prisma.systemLog.findMany({
+                    where: {
+                        createdAt: { gte: twentyFourHoursAgo }
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 10,
+                    select: {
+                        source: true,
+                        level: true,
+                        message: true,
+                        path: true,
+                        statusCode: true,
+                        createdAt: true
+                    }
+                });
+
+                // 3. Resumen de auditoría de seguridad (Intentos de login, accesos, etc. últimas 24h)
+                const auditLogsSummary = await prisma.auditLog.groupBy({
+                    by: ['action', 'entity'],
+                    where: {
+                        createdAt: { gte: twentyFourHoursAgo }
+                    },
+                    _count: {
+                        id: true
+                    },
+                    orderBy: {
+                        _count: { id: 'desc' }
+                    },
+                    take: 5
+                });
+
+                // 4. Métricas generales del servidor y DB
+                const dbStatus = 'Connected'; // Si llegó aquí, la BD responde
+                const totalUsers = await prisma.user.count();
+                const activeUsers = await prisma.user.count({ where: { isActive: true } });
+
+                return {
+                    timestamp: new Date().toISOString(),
+                    environment: process.env.NODE_ENV || 'development',
+                    infrastructure: {
+                        backend: 'Node.js / Express (Docker)',
+                        database: `PostgreSQL (${dbStatus})`,
+                        frontend: 'Vite / Vue / SPA'
+                    },
+                    metrics: {
+                        totalUsers,
+                        activeUsers
+                    },
+                    systemLogsSummary,
+                    recentErrors,
+                    auditLogsSummary
+                };
+            } catch (error) {
+                console.error('[DIAGNOSTIC AGGREGATOR ERROR]:', error.message);
+                throw new Error('No se pudo recopilar el diagnóstico del sistema');
+            }
+        }
+    };
+
+    module.exports = diagnosticAggregatorService;    
+    ```
+5. Crear el Servicio de IA Adaptativo (`backend/src/services/ai.service.js`):
+    ```js
+    const diagnosticAggregatorService = require('./diagnosticAggregator.service');
+
+    const aiService = {
+        /**
+        * Genera el diagnóstico del sistema utilizando la IA configurada (Groq)
+        */
+        async generateSystemDiagnostic() {
+            const provider = process.env.AI_PROVIDER || 'groq';
+            const apiKey = process.env.AI_API_KEY;
+            const model = process.env.AI_MODEL || 'llama-3.3-70b-versatile';
+
+            if (!apiKey) {
+                throw new Error('La clave de API de IA (AI_API_KEY) no está configurada en el entorno.');
+            }
+
+            // 1. Recopilar datos estructurados del agregador
+            const rawData = await diagnosticAggregatorService.getSystemDiagnosticData();
+
+            // 2. Construir el prompt de sistema y usuario
+            const systemPrompt = `
+                Eres un Arquitecto de Software Senior y Especialista en DevOps y Ciberseguridad. 
+                Tu objetivo es analizar los datos de diagnóstico y auditoría de una aplicación web (Node.js, Express, PostgreSQL, Vue 3) y emitir un informe técnico claro, profesional y directo en formato JSON estrictamente válido.
+                
+                Debes evaluar:
+                - Estado del backend.
+                - Estado del frontend.
+                - Estado de la base de datos.
+                - Estado global de la aplicación.
+                - Estado de seguridad (analizando auditorías e intentos sospechosos).
+                - Recomendaciones prácticas (comandos de consola, optimizaciones de BD, parches de seguridad).
+
+                Responde ÚNICAMENTE con un objeto JSON válido que contenga la siguiente estructura exacta:
+                {
+                    "backendStatus": "healthy | warning | critical",
+                    "frontendStatus": "healthy | warning | critical",
+                    "databaseStatus": "healthy | warning | critical",
+                    "globalStatus": "healthy | warning | critical",
+                    "securityStatus": "secure | suspicious | compromised",
+                    "summary": "Resumen ejecutivo breve en lenguaje humano",
+                    "details": {
+                        "backend": "Análisis detallado del backend...",
+                        "frontend": "Análisis detallado del frontend...",
+                        "database": "Análisis detallado de la base de datos...",
+                        "security": "Análisis detallado de seguridad y auditoría..."
+                    },
+                    "recommendations": [
+                        "Acción 1 recomendada...",
+                        "Acción 2 recomendada..."
+                    ]
+                }
+            `;
+
+            const userPayload = JSON.stringify(rawData, null, 2);
+
+            // 3. Seleccionar proveedor y ejecutar petición (Patrón Strategy / Adaptador)
+            if (provider === 'groq') {
+                return await this._callGroqAPI(apiKey, model, systemPrompt, userPayload);
+            } else {
+                throw new Error(`El proveedor de IA '${provider}' no está soportado actualmente.`);
+            }
+        },
+
+        /**
+        * Adaptador específico para Groq Cloud usando Fetch nativo
+        */
+        async _callGroqAPI(apiKey, model, systemPrompt, userPayload) {
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: `Analiza los siguientes datos del sistema:\n${userPayload}` }
+                        ],
+                        response_format: { type: 'json_object' }, // Forzar respuesta JSON limpia
+                        temperature: 0.2, // Baja temperatura para análisis técnico objetivo
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`Error en API de Groq (${response.status}): ${errorData}`);
+                }
+
+                const data = await response.json();
+                const content = data.choices[0]?.message?.content;
+
+                return JSON.parse(content);
+            } catch (error) {
+                console.error('[AI SERVICE ERROR]:', error.message);
+                throw new Error(`Fallo al generar el diagnóstico con IA: ${error.message}`);
+            }
+        },
+    };
+
+    module.exports = aiService;    
+    ```
 
 ### 🎮 Paso 7: Controladores de la API (`src/controllers/`)
 + Implementa la capa de orquestación de respuesta para cada dominio:
@@ -789,6 +1067,9 @@
             });
             const userPermissions = Array.from(permissionsSet);
 
+            // Evaluar si la IA está habilitada comprobando la variable de entorno
+            const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';        
+
             return res.status(200).json({
                 status: 'success',
                 data: { 
@@ -800,7 +1081,10 @@
                         roles: userRoles, 
                         permissions: userPermissions,
                         createdAt: user.createdAt 
-                    } 
+                    },
+                    features: {
+                        aiDiagnostic: isAiEnabled
+                    }
                 },
             });
         } catch (error) {
@@ -830,7 +1114,7 @@
         }
     };
 
-    module.exports = { register, login, getMe, logout };  
+    module.exports = { register, login, getMe, logout }; 
     ```
 2. `backend/src/controllers/profile.controller.js`: Gestión de perfil de usuario autenticado:
     ```js
@@ -1713,6 +1997,67 @@
 
     module.exports = { getAuditLogs };    
     ```
+6. `backend/src/controllers/systemLog.controller.js`: Recibirá los errores capturados en el cliente/frontend y los pasará al servicio:
+    ```js
+    const systemLogService = require('../services/systemLog.service');
+
+    const ingestFrontendLog = async (req, res) => {
+        try {
+            const { level = 'ERROR', message, stackTrace, path, context } = req.body;
+
+            if (!message) {
+                return res.status(400).json({ message: 'El mensaje del log es obligatorio' });
+            }
+
+            await systemLogService.log({
+                source: 'FRONTEND',
+                level,
+                message,
+                stackTrace,
+                path,
+                statusCode: null,
+                userId: req.user?.id || null, // Opcional si la ruta pasa por auth
+                context: {
+                    ...context,
+                    userAgent: req.headers['user-agent'],
+                    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+                },
+            });
+
+            return res.status(201).json({ status: 'success', message: 'Log registrado' });
+        } catch (error) {
+            console.error('Error al ingerir log de frontend:', error);
+            return res.status(500).json({ message: 'Error interno al procesar el log' });
+        }
+    };
+
+    module.exports = { ingestFrontendLog };    
+    ```
+7. `backend/src/controllers/diagnostic.controller.js`: Controlador de Diagnóstico:
+    ```js
+    const aiService = require('../services/ai.service');
+
+    const getSystemDiagnostic = async (req, res, next) => {
+        try {
+            const diagnosticReport = await aiService.generateSystemDiagnostic();
+
+            return res.status(200).json({
+                status: 'success',
+                data: diagnosticReport,
+            });
+        } catch (error) {
+            console.error('Error al generar diagnóstico del sistema:', error);
+            return res.status(500).json({
+                status: 'error',
+                message: error.message || 'Error interno al generar el diagnóstico de IA',
+            });
+        }
+    };
+
+    module.exports = {
+        getSystemDiagnostic,
+    };    
+    ```
 
 ### 🛣️ Paso 8: Definición de Rutas (`src/routes/`)
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
@@ -1815,7 +2160,39 @@
 
     module.exports = router;
     ```
-5. `backend/src/routes/index.js`: Router central que registra todos los módulos:
+5. `backend/src/routes/systemLog.routes.js`: Definir la Ruta de Ingesta:
+    ```js
+    const express = require('express');
+    const router = express.Router();
+    const { ingestFrontendLog } = require('../controllers/systemLog.controller');
+    const { authenticateJWT } = require('../middlewares/auth.middleware');
+
+    // Ingesta pública o semi-protegida para errores del cliente
+    // Nota: Usamos un middleware opcional o authenticateJWT según si permites logs de usuarios no autenticados.
+    router.post('/ingest', ingestFrontendLog);
+
+    module.exports = router;    
+    ```
+6. `backend/src/routes/diagnostic.routes.js`: Rutas de Diagnóstico:
+    ```js
+    const express = require('express');
+    const router = express.Router();
+    const { getSystemDiagnostic } = require('../controllers/diagnostic.controller');
+    const { authenticateJWT, checkPermission } = require('../middlewares/auth.middleware'); // O tu middleware de permisos correspondiente
+
+    // Protegido con JWT y opcionalmente permisos de sistema/admin
+    router.use(authenticateJWT);
+
+    // GET /api/v1/diagnostics/system
+    router.get('/system', getSystemDiagnostic);
+
+    // O si usas control de permisos estricto:
+    // router.get('/system', checkPermission('system:read'), getSystemDiagnostic);
+
+    module.exports = router;    
+    
+    ```
+7. `backend/src/routes/index.js`: Router central que registra todos los módulos:
     ```js
     const express = require('express');
     const router = express.Router();
@@ -1824,12 +2201,16 @@
     const userRoutes = require('./user.routes');
     const roleRoutes = require('./role.routes');
     const auditRoutes = require('./audit.routes');
+    const systemRoutes = require('./systemLog.routes');
+    const diagnosticRoutes = require('./diagnostic.routes');
 
     // Definición limpia de módulos
     router.use('/auth', authRoutes);
     router.use('/users', userRoutes);
     router.use('/roles', roleRoutes);
     router.use('/audit-logs', auditRoutes);
+    router.use('/system-logs', systemRoutes);
+    router.use('/diagnostics', diagnosticRoutes);
 
     module.exports = router;
     ```
@@ -2179,6 +2560,10 @@
         console.log(`🚀 Servidor ejecutándose en ${APP_URL}`);
         console.log(`📌 Entorno: ${process.env.NODE_ENV || 'development'}`);
     });
+
+    // Inicializar el Servicio de Limpieza de Logs Antiguos
+    const { initSystemCleanup } = require('./services/cron.service');
+    initSystemCleanup();
 
     // Cierre Limpio (Graceful Shutdown)
     const gracefulShutdown = (signal) => {

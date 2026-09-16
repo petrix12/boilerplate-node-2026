@@ -107,5 +107,39 @@ Para guardar las imágenes de perfil, PDFs y documentos sin recargar la base de 
     + Project URL: [https://xxxxxx.supabase.co](https://xxxxxx.supabase.co)
     + anon / public key: eyJhbGciOiJKV1QiLC... (Clave pública)
     + service_role key: eyJhbGciOiJKV1QiLC... (Clave privada para el backend - ¡mantener secreta!).
+
+### 🪪 Cómo obtener tus credenciales de Groq
+1. Ve a `console.groq.com` e inicia sesión (puedes usar tu cuenta de Google o GitHub).
+2. En el menú lateral izquierdo, haz clic en `API Keys`.
+3. Haz clic en `Create API Key`.
+4. Nombra la clave (ej. `Boilerplate-System-Health`) y copia el token generado (gsk_...).
+5. Configuración del Entorno Backend (.env)
+    + Agregaremos las variables de entorno en el backend para dejar la arquitectura lista para el patrón adaptador:
+        ```env
+        # IA Diagnostic Configuration
+        AI_PROVIDER=groq
+        GROQ_API_KEY=gsk_tu_clave_aqui_xxxxxxxxx
+        GROQ_MODEL=qwen/qwen3.8-27b
+        ```
+        + Nota: Si en el futuro deseas probar con otra opción gratuita como Google AI Studio o DeepSeek, solo cambiaremos la variable `AI_PROVIDER` y su clave respectiva.
+6. Probar API de Groq y ver modelos disponibles via cURL:
+    + Modelos disponibles:
+        ```bash
+        curl -X GET "https://api.groq.com/openai/v1/models" \
+            -H "Authorization: Bearer gsk_tu_clave_aqui_xxxxxxxxx"
+        ```
+    + Pruebas de API:
+        ```bash
+        curl -X POST "https://api.groq.com/openai/v1/models" \
+            -H "Authorization: Bearer gsk_tu_clave_aqui_xxxxxxxxx" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "model": "openai/gpt-oss-20b",
+                "messages": [
+                    {"role": "user", "content": "Hola, haz un diagnóstico rápido de prueba."}
+                ]
+            }'
+        ```
+        + Adapta `"model": "openai/gpt-oss-20b"` a algún modelo permitido.
 ---
 [🔙](index.md)

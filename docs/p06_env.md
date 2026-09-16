@@ -95,6 +95,17 @@
     # - - - PRODUCCIÓN - - -
     # ==========================================
     # FRONTEND_URL=https://boilerplate-node-2026.vercel.app
+
+    # ===================================================================================================
+    # IA Diagnostic Configuration
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL | PRODUCCIÓN - - -
+    # ==========================================
+    AI_PROVIDER=groq
+    AI_API_KEY=gsk_tu_clave_aqui_xxxxxxxxx
+    AI_MODEL=qwen/qwen3.8-27b
+    LOG_RETENTION_DAYS=30
     ```
 2. Actualizar variables de entorno en `https://render.com`.
 

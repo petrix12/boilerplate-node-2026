@@ -53,6 +53,9 @@ export const useAuthStore = defineStore('auth', {
                 return this.userPermissions.includes(permission);
             };
         },
+
+        // Indica si la funcionalidad de diagnóstico por IA está activa según la respuesta del backend
+        aiDiagnosticActive: (state) => !!state.user?.aiDiagnostic,
     },
 
     actions: {
@@ -66,7 +69,10 @@ export const useAuthStore = defineStore('auth', {
                 const data = response.data?.data || response.data;
                 
                 this.token = data.token;
-                this.user = data.user;
+                this.user = {
+                    ...data.user,
+                    ...(data.features || {})
+                };
                 localStorage.setItem('token', data.token);
 
                 return response.data;
@@ -106,7 +112,11 @@ export const useAuthStore = defineStore('auth', {
             this.loading = true;
             try {
                 const response = await api.get('/auth/me');
-                this.user = response.data.data.user;
+                const { user, features } = response.data.data;
+                this.user = {
+                    ...user,
+                    ...(features || {})
+                };
             } catch (err) {
                 console.error('Sesión expirada o token inválido:', err);
                 this.logout();

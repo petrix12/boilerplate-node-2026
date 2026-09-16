@@ -61,7 +61,23 @@
                     </div>
                     <h2 class="text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors">Auditoría / Logs</h2>
                     <p class="text-slate-400 text-xs mt-1">Historial de cambios críticos y acciones de los administradores.</p>
-                </router-link>            
+                </router-link>
+
+                <!-- Módulo: Diagnóstico del Sistema por IA -->
+                <router-link 
+                    v-if="isAiActive"
+                    to="/admin/system-diagnostic"
+                    class="group p-6 bg-slate-800/60 border border-slate-700/60 hover:border-indigo-500/50 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/5"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <CpuChipIcon class="w-6 h-6" />
+                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">IA Activa</span>
+                    </div>
+                    <h2 class="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">Diagnóstico del Sistema por IA</h2>
+                    <p class="text-slate-400 text-xs mt-1">Análisis inteligente del estado, salud y seguridad global.</p>
+                </router-link>             
 
             </div>
         </div>
@@ -69,5 +85,10 @@
 </template>
 
 <script setup>
-    import { ChevronLeftIcon, UsersIcon, ShieldCheckIcon, DocumentChartBarIcon } from '@heroicons/vue/24/outline';
+    import { computed } from 'vue';
+    import { useAuthStore } from '@/stores/auth.store';
+    import { ChevronLeftIcon, UsersIcon, ShieldCheckIcon, DocumentChartBarIcon, CpuChipIcon } from '@heroicons/vue/24/outline';
+
+    const authStore = useAuthStore();
+    const isAiActive = computed(() => authStore.aiDiagnosticActive);
 </script>

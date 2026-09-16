@@ -103,14 +103,19 @@ model AuditLog {
 // Modelo SystemLog
 model SystemLog {
   id         String   @id @default(uuid())
-  level      String   @default("ERROR") // ERROR, WARN, INFO
-  message    String
+  source     String   @default("BACKEND") // BACKEND, FRONTEND, DATABASE
+  level      String   @default("ERROR")   // ERROR, WARN, INFO, CRITICAL
+  message    String   @db.Text
   stackTrace String?  @db.Text
   path       String?
   method     String?
   statusCode Int?     @default(500)
   userId     String?
+  context    Json?    // Información contextual extra (IP, navegador, payload de error, etc.)
   createdAt  DateTime @default(now())
 
+  @@index([source])
+  @@index([level])
+  @@index([createdAt])
   @@map("system_logs")
 }

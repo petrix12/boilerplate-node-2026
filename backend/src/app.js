@@ -79,6 +79,10 @@ const server = app.listen(PORT, () => {
     console.log(`📌 Entorno: ${process.env.NODE_ENV || 'development'}`);
 });
 
+// Inicializar el Servicio de Limpieza de Logs Antiguos
+const { initSystemCleanup } = require('./services/cron.service');
+initSystemCleanup();
+
 // Cierre Limpio (Graceful Shutdown)
 const gracefulShutdown = (signal) => {
     console.log(`\nRecibida señal ${signal}. Cerrando servidor limpiamente...`);
