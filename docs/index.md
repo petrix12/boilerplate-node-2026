@@ -122,8 +122,9 @@
 + [ ] Asegurar que los endpoints en el backend se puedan ejecutar según los permisos que les corresponde.
 + [ ] Verificar si es necesario variable de entorno IA_ACTIVE.
 + [ ] Crear example.env o como se llame.
-+ [ ] Homologar vistas admin.
 + [ ] Limpiar proyecto frontend de archivos que no se usan.
++ [ ] Implementar mensaje sweetalert en todos los lugares que haga falta.
++ [ ] Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
 
 
 ### Terminadas
@@ -132,3 +133,4 @@
 + [x] Adecuar la aplicación para que sea mas general, por ejemplo cambiar familytree2026-backend por backend, adaptar la vista del home, etc.
 + [x] CRUD avatars en User Admin.
 + [x] Refactorizar para acceder a las vistas administrativas con permisos y no con roles.
++ [x] Homologar vistas admin.

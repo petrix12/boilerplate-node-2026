@@ -1,32 +1,39 @@
 <template>
     <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-        <div class="p-6 max-w-7xl mx-auto">
-            <!-- Botón Volver al Panel -->
-            <div class="mb-6">
-                <router-link 
-                    to="/admin" 
-                    class="inline-flex items-center space-x-2 text-sm text-purple-400 hover:text-purple-300 transition-colors group"
-                >
-                    <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                    <span>Volver al Panel Admin</span>
-                </router-link>
-            </div>
-
-            <!-- Encabezado y Acción -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                <div>
-                    <p class="text-slate-400 text-sm mt-1">
-                        Administra los roles del sistema y configura las acciones permitidas para cada uno.
-                    </p>
+        <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
+            
+            <!-- Cabecera envuelta en tarjeta (Estilo Diagnóstico / Usuarios) -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
+                <!-- Botón Volver al Panel -->
+                <div class="mb-4">
+                    <router-link 
+                        to="/admin" 
+                        class="inline-flex items-center space-x-2 text-sm text-purple-400 hover:text-purple-300 transition-colors group"
+                    >
+                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                        <span>Volver al Panel Admin</span>
+                    </router-link>
                 </div>
-                <button 
-                    v-if="authStore.hasPermission('roles:create')"
-                    @click="openModal()"
-                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30"
-                >
-                    <PlusIcon class="w-5 h-5" />
-                    <span>Nuevo Rol</span>
-                </button>
+
+                <!-- Título, Descripción y Acción -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                            <span>Gestión de Roles</span>
+                        </h1>
+                        <p class="text-slate-400 text-sm mt-1">
+                            Administra los roles del sistema y configura las acciones permitidas para cada uno.
+                        </p>
+                    </div>
+                    <button 
+                        v-if="authStore.hasPermission('roles:create')"
+                        @click="openModal()"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30 shrink-0"
+                    >
+                        <PlusIcon class="w-5 h-5" />
+                        <span>Nuevo Rol</span>
+                    </button>
+                </div>
             </div>        
 
             <!-- Tabla de Roles -->
@@ -81,7 +88,7 @@
                                         <PencilIcon class="w-4 h-4" />
                                     </button>
                                     
-                                    <!-- Eliminar rol (Se oculta explicitamente para SUPER_ADMIN) -->
+                                    <!-- Eliminar rol (Se oculta explícitamente para SUPER_ADMIN) -->
                                     <button 
                                         v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
                                         @click="confirmDelete(role)"
@@ -189,156 +196,156 @@
 </template>
 
 <script setup>
-    import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
-    import { ref, computed, onMounted } from 'vue';
-    import { roleService } from '@/services';
-    import Swal from 'sweetalert2';
-    import { useAuthStore } from '@/stores/auth.store';
+import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
+import { ref, computed, onMounted } from 'vue';
+import { roleService } from '@/services';
+import Swal from 'sweetalert2';
+import { useAuthStore } from '@/stores/auth.store';
 
-    // Instancia del store para acceder a los getters
-    const authStore = useAuthStore();
+// Instancia del store para acceder a los getters
+const authStore = useAuthStore();
 
-    const roles = ref([]);
-    const availablePermissions = ref([]);
-    const isModalOpen = ref(false);
-    const saving = ref(false);
-    const targetRole = ref(null);
+const roles = ref([]);
+const availablePermissions = ref([]);
+const isModalOpen = ref(false);
+const saving = ref(false);
+const targetRole = ref(null);
 
-    const form = ref({
-        name: '',
-        description: '',
-        permissions: []
-    });
+const form = ref({
+    name: '',
+    description: '',
+    permissions: []
+});
 
-    // Agrupar permisos por módulo para mostrarlos organizados
-    const groupedPermissions = computed(() => {
-        return availablePermissions.value.reduce((acc, perm) => {
-            if (!acc[perm.module]) acc[perm.module] = [];
-            acc[perm.module].push(perm);
-            return acc;
-        }, {});
-    });
+// Agrupar permisos por módulo para mostrarlos organizados
+const groupedPermissions = computed(() => {
+    return availablePermissions.value.reduce((acc, perm) => {
+        if (!acc[perm.module]) acc[perm.module] = [];
+        acc[perm.module].push(perm);
+        return acc;
+    }, {});
+});
 
-    const loadData = async () => {
-        try {
-            const [rolesRes, permsRes] = await Promise.all([
-                roleService.getRoles(),
-                roleService.getPermissions() // 👈 Usamos roleService.getPermissions()
-            ]);
-            roles.value = rolesRes.data?.roles || rolesRes.roles || [];
-            availablePermissions.value = permsRes.data?.permissions || permsRes.permissions || [];
-        } catch (err) {
-            console.error('Error al cargar datos:', err);
-            Swal.fire({
-                title: 'Error',
-                text: 'No se pudieron cargar los roles y permisos.',
-                icon: 'error',
-                background: '#1e293b',
-                color: '#f8fafc'
-            });
-        }
-    };
-
-    const openModal = (role = null) => {
-        targetRole.value = role;
-        if (role) {
-            const rolePerms = Array.isArray(role.permissions) ? role.permissions : [];
-            form.value = {
-                name: role.name,
-                description: role.description || '',
-                permissions: rolePerms.map(p => typeof p === 'object' ? p.action : p)
-            };
-        } else {
-            form.value = { name: '', description: '', permissions: [] };
-        }
-        isModalOpen.value = true;
-    };
-
-    const saveRole = async () => {
-        saving.value = true;
-        try {
-            if (targetRole.value) {
-                await roleService.updateRole(targetRole.value.id, form.value);
-            } else {
-                await roleService.createRole(form.value);
-            }
-            isModalOpen.value = false;
-            await loadData();
-            
-            Swal.fire({
-                title: '¡Guardado!',
-                text: 'El rol ha sido guardado exitosamente.',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false,
-                background: '#1e293b',
-                color: '#f8fafc'
-            });
-        } catch (err) {
-            Swal.fire({
-                title: 'Error',
-                text: err.response?.data?.message || 'Error al guardar el rol',
-                icon: 'error',
-                background: '#1e293b',
-                color: '#f8fafc'
-            });
-        } finally {
-            saving.value = false;
-        }
-    };
-
-    const confirmDelete = async (role) => {
-        // Protección a nivel de lógica JS
-        if (role.name === 'SUPER_ADMIN') {
-            Swal.fire({
-                title: 'Acción No Permitida',
-                text: 'El rol SUPER_ADMIN es un rol de sistema y no puede ser eliminado.',
-                icon: 'error',
-                background: '#1e293b',
-                color: '#f8fafc'
-            });
-            return;
-        }
-
-        const result = await Swal.fire({
-            title: '¿Eliminar Rol?',
-            html: `Estás a punto de eliminar el rol <strong>${role.name}</strong>.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
+const loadData = async () => {
+    try {
+        const [rolesRes, permsRes] = await Promise.all([
+            roleService.getRoles(),
+            roleService.getPermissions() // 👈 Usamos roleService.getPermissions()
+        ]);
+        roles.value = rolesRes.data?.roles || rolesRes.roles || [];
+        availablePermissions.value = permsRes.data?.permissions || permsRes.permissions || [];
+    } catch (err) {
+        console.error('Error al cargar datos:', err);
+        Swal.fire({
+            title: 'Error',
+            text: 'No se pudieron cargar los roles y permisos.',
+            icon: 'error',
             background: '#1e293b',
             color: '#f8fafc'
         });
+    }
+};
 
-        if (result.isConfirmed) {
-            try {
-                await roleService.deleteRole(role.id);
-                await loadData();
-            } catch (err) {
-                Swal.fire({
-                    title: 'Error',
-                    text: err.response?.data?.message || 'Error al eliminar el rol',
-                    icon: 'error',
-                    background: '#1e293b',
-                    color: '#f8fafc'
-                });
-            }
+const openModal = (role = null) => {
+    targetRole.value = role;
+    if (role) {
+        const rolePerms = Array.isArray(role.permissions) ? role.permissions : [];
+        form.value = {
+            name: role.name,
+            description: role.description || '',
+            permissions: rolePerms.map(p => typeof p === 'object' ? p.action : p)
+        };
+    } else {
+        form.value = { name: '', description: '', permissions: [] };
+    }
+    isModalOpen.value = true;
+};
+
+const saveRole = async () => {
+    saving.value = true;
+    try {
+        if (targetRole.value) {
+            await roleService.updateRole(targetRole.value.id, form.value);
+        } else {
+            await roleService.createRole(form.value);
         }
-    };
+        isModalOpen.value = false;
+        await loadData();
+        
+        Swal.fire({
+            title: '¡Guardado!',
+            text: 'El rol ha sido guardado exitosamente.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            background: '#1e293b',
+            color: '#f8fafc'
+        });
+    } catch (err) {
+        Swal.fire({
+            title: 'Error',
+            text: err.response?.data?.message || 'Error al guardar el rol',
+            icon: 'error',
+            background: '#1e293b',
+            color: '#f8fafc'
+        });
+    } finally {
+        saving.value = false;
+    }
+};
 
-    const getRoleBadgeClass = (name) => {
-        switch (name) {
-            case 'SUPER_ADMIN': return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
-            case 'ADMIN': return 'bg-blue-900/40 text-blue-300 border-blue-500/30';
-            case 'USER': return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
-            default: return 'bg-yellow-900/40 text-yellow-300 border-yellow-500/30';
-        }
-    };
+const confirmDelete = async (role) => {
+    // Protección a nivel de lógica JS
+    if (role.name === 'SUPER_ADMIN') {
+        Swal.fire({
+            title: 'Acción No Permitida',
+            text: 'El rol SUPER_ADMIN es un rol de sistema y no puede ser eliminado.',
+            icon: 'error',
+            background: '#1e293b',
+            color: '#f8fafc'
+        });
+        return;
+    }
 
-    onMounted(() => {
-        loadData();
+    const result = await Swal.fire({
+        title: '¿Eliminar Rol?',
+        html: `Estás a punto de eliminar el rol <strong>${role.name}</strong>.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        background: '#1e293b',
+        color: '#f8fafc'
     });
+
+    if (result.isConfirmed) {
+        try {
+            await roleService.deleteRole(role.id);
+            await loadData();
+        } catch (err) {
+            Swal.fire({
+                title: 'Error',
+                text: err.response?.data?.message || 'Error al eliminar el rol',
+                icon: 'error',
+                background: '#1e293b',
+                color: '#f8fafc'
+            });
+        }
+    }
+};
+
+const getRoleBadgeClass = (name) => {
+    switch (name) {
+        case 'SUPER_ADMIN': return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
+        case 'ADMIN': return 'bg-blue-900/40 text-blue-300 border-blue-500/30';
+        case 'USER': return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
+        default: return 'bg-yellow-900/40 text-yellow-300 border-yellow-500/30';
+    }
+};
+
+onMounted(() => {
+    loadData();
+});
 </script>

@@ -1,29 +1,30 @@
 <template>
     <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-        <div class="p-6 max-w-7xl mx-auto space-y-6">
-            <!-- Botón de retorno al Panel Admin -->
-            <div class="mb-6">
-                <router-link 
-                    to="/admin" 
-                    class="inline-flex items-center space-x-2 text-sm text-yellow-400 hover:text-yellow-300 transition-colors group"
-                >
-                    <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                    <span>Volver al Panel Admin</span>
-                </router-link>
-            </div>
-
-            <!-- Header -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
+            <!-- Header / Tarjeta de Encabezado con Botón de Retorno -->
+            <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-white">Auditoría del Sistema</h1>
-                    <p class="text-sm text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
+                    <router-link 
+                        to="/admin" 
+                        class="inline-flex items-center space-x-2 text-sm text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300 transition-colors group"
+                    >
+                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                        <span>Volver al Panel Admin</span>
+                    </router-link>
                 </div>
-                <button 
-                    @click="fetchLogs" 
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-800 hover:bg-yellow-700 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer"
-                >
-                    <span>Refrescar</span>
-                </button>
+
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Auditoría del Sistema</h1>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
+                    </div>
+                    <button 
+                        @click="fetchLogs" 
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer shadow-sm"
+                    >
+                        <span>Refrescar</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Filtros -->
@@ -35,7 +36,7 @@
                         @input="debounceSearch"
                         type="text" 
                         placeholder="Acción, usuario, email..." 
-                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-800 dark:text-slate-200"
                     />
                 </div>
 
@@ -44,7 +45,7 @@
                     <select 
                         v-model="filters.entity" 
                         @change="fetchLogs(1)"
-                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-800 dark:text-slate-200"
                     >
                         <option value="">Todas</option>
                         <option value="User">Usuario</option>
@@ -60,7 +61,7 @@
                         ref="startDateInput"
                         type="text" 
                         placeholder="Seleccionar fecha..."
-                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer text-slate-800 dark:text-slate-200"
                     />
                 </div>
 
@@ -70,7 +71,7 @@
                         ref="endDateInput"
                         type="text" 
                         placeholder="Seleccionar fecha..."
-                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer text-slate-800 dark:text-slate-200"
                     />
                 </div>
             </div>
@@ -85,8 +86,8 @@
                                     <div class="flex items-center space-x-1">
                                         <span>Fecha / Hora</span>
                                         <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                            <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                         </span>
                                     </div>
                                 </th>
@@ -95,8 +96,8 @@
                                     <div class="flex items-center space-x-1">
                                         <span>Usuario</span>
                                         <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'user' && sortOrder === 'asc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'user' && sortOrder === 'desc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                            <span :class="sortBy === 'user' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'user' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                         </span>
                                     </div>
                                 </th>
@@ -105,8 +106,8 @@
                                     <div class="flex items-center space-x-1">
                                         <span>Acción</span>
                                         <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'action' && sortOrder === 'asc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'action' && sortOrder === 'desc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                            <span :class="sortBy === 'action' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'action' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                         </span>
                                     </div>
                                 </th>
@@ -115,8 +116,8 @@
                                     <div class="flex items-center space-x-1">
                                         <span>Entidad</span>
                                         <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'entity' && sortOrder === 'asc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'entity' && sortOrder === 'desc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                            <span :class="sortBy === 'entity' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'entity' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                         </span>
                                     </div>
                                 </th>
@@ -124,7 +125,7 @@
                                 <th class="py-3 px-4 text-left">IP</th>
                                 <th class="py-3 px-4 text-right">Detalles</th>
                             </tr>
-                        </thead>                  
+                        </thead>               
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
                             <tr v-if="loading">
                                 <td colspan="6" class="text-center py-8 text-slate-400">Cargando registros...</td>
@@ -152,7 +153,7 @@
                                     <button 
                                         v-if="log.details" 
                                         @click="openDetailsModal(log)" 
-                                        class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium cursor-pointer"
+                                        class="text-xs text-yellow-600 dark:text-yellow-400 hover:underline font-medium cursor-pointer"
                                     >
                                         Ver JSON
                                     </button>
@@ -172,14 +173,14 @@
                         <button 
                             :disabled="pagination.page <= 1" 
                             @click="changePage(pagination.page - 1)" 
-                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                         >
                             Anterior
                         </button>
                         <button 
                             :disabled="pagination.page >= pagination.totalPages" 
                             @click="changePage(pagination.page + 1)" 
-                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                         >
                             Siguiente
                         </button>
@@ -193,9 +194,9 @@
                     <div class="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-1">
                         <h3 class="text-lg font-bold text-slate-900 dark:text-white">Detalles del Evento</h3>
                         <span class="text-xs text-slate-400 font-mono">{{ selectedLogModal.action }} - {{ formatDate(selectedLogModal.createdAt) }}</span>
-                    </div>                
+                    </div>    
                     <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 overflow-y-auto overflow-x-hidden max-h-[50vh] max-w-full">
-                        <pre class="text-emerald-400 font-mono text-xs whitespace-pre-wrap break-all leading-relaxed select-all">{{ formatJsonDetails(selectedLogModal.details) }}</pre>
+                        <pre class="text-yellow-400 font-mono text-xs whitespace-pre-wrap break-all leading-relaxed select-all">{{ formatJsonDetails(selectedLogModal.details) }}</pre>
                     </div>
                     <div class="flex justify-end">
                         <button 
@@ -212,154 +213,154 @@
 </template>
 
 <script setup>
-    import { ref, onMounted, onUnmounted } from 'vue';
-    import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
-    import { auditService } from '@/services';
-    import flatpickr from 'flatpickr';
-    import 'flatpickr/dist/flatpickr.css';
-    import 'flatpickr/dist/themes/dark.css';
-    import { Spanish } from 'flatpickr/dist/l10n/es.js';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+import { auditService } from '@/services';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.css';
+import 'flatpickr/dist/themes/dark.css';
+import { Spanish } from 'flatpickr/dist/l10n/es.js';
 
-    const logs = ref([]);
-    const loading = ref(false);
-    const selectedLogModal = ref(null);
+const logs = ref([]);
+const loading = ref(false);
+const selectedLogModal = ref(null);
 
-    const startDateInput = ref(null);
-    const endDateInput = ref(null);
-    let fpStart = null;
-    let fpEnd = null;
+const startDateInput = ref(null);
+const endDateInput = ref(null);
+let fpStart = null;
+let fpEnd = null;
 
-    const filters = ref({
-        search: '',
-        entity: '',
-        startDate: '',
-        endDate: '',
-    });
+const filters = ref({
+    search: '',
+    entity: '',
+    startDate: '',
+    endDate: '',
+});
 
-    const pagination = ref({
-        page: 1,
-        limit: 15,
-        total: 0,
-        totalPages: 1,
-    });
+const pagination = ref({
+    page: 1,
+    limit: 15,
+    total: 0,
+    totalPages: 1,
+});
 
-    const sortBy = ref('createdAt');
-    const sortOrder = ref('desc');
+const sortBy = ref('createdAt');
+const sortOrder = ref('desc');
+
+const handleSort = (field) => {
+    if (sortBy.value === field) {
+        sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortBy.value = field;
+        sortOrder.value = 'asc';
+    }
+    fetchLogs(1);
+};
+
+const fetchLogs = async (page = 1) => {
+    const targetPage = (typeof page === 'number' && !isNaN(page)) ? page : 1;
     
-    const handleSort = (field) => {
-        if (sortBy.value === field) {
-            sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-        } else {
-            sortBy.value = field;
-            sortOrder.value = 'asc';
-        }
+    pagination.value.page = targetPage;
+    loading.value = true;
+
+    try {
+        const response = await auditService.getAuditLogs({
+            page: pagination.value.page,
+            limit: pagination.value.limit,
+            search: filters.value.search,
+            entity: filters.value.entity,
+            startDate: filters.value.startDate,
+            endDate: filters.value.endDate,
+            sortBy: sortBy.value,
+            sortOrder: sortOrder.value
+        });
+
+        // Extrae la data directo del payload estandarizado del backend
+        const resData = response.data || response;
+        logs.value = resData.logs || [];
+        pagination.value = resData.pagination || { page: 1, limit: 15, total: 0, totalPages: 1 };
+    } catch (err) {
+        console.error('Error al cargar logs:', err);
+        logs.value = [];
+    } finally {
+        loading.value = false;
+    }
+}; 
+
+let searchTimeout = null;
+const debounceSearch = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
         fetchLogs(1);
+    }, 400);
+};
+
+const changePage = (newPage) => {
+    if (newPage < 1 || newPage > pagination.value.totalPages) return;
+    fetchLogs(newPage);
+};    
+
+const openDetailsModal = (log) => {
+    selectedLogModal.value = log;
+};
+
+const getEntityBadgeClass = (entity) => {
+    switch (entity) {
+        case 'User': return 'bg-blue-500/10 text-emerald-500 border-emerald-500/20';
+        case 'Role': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+        case 'Auth': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+        default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+    }
+};
+
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('es-ES', {
+        dateStyle: 'short',
+        timeStyle: 'medium',
+    });
+};
+
+const formatJsonDetails = (details) => {
+    if (!details) return '';
+    try {
+        const parsed = typeof details === 'string' ? JSON.parse(details) : details;
+        return JSON.stringify(parsed, null, 2);
+    } catch (e) {
+        return details;
+    }
+};
+
+onMounted(() => {
+    fetchLogs();
+
+    const commonConfig = {
+        locale: Spanish,
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'd/m/Y',
+        allowInput: true,
     };
 
-    const fetchLogs = async (page = 1) => {
-        const targetPage = (typeof page === 'number' && !isNaN(page)) ? page : 1;
-        
-        pagination.value.page = targetPage;
-        loading.value = true;
-
-        try {
-            const response = await auditService.getAuditLogs({
-                page: pagination.value.page,
-                limit: pagination.value.limit,
-                search: filters.value.search,
-                entity: filters.value.entity,
-                startDate: filters.value.startDate,
-                endDate: filters.value.endDate,
-                sortBy: sortBy.value,
-                sortOrder: sortOrder.value
-            });
-
-            // Extrae la data directo del payload estandarizado del backend
-            const resData = response.data || response;
-            logs.value = resData.logs || [];
-            pagination.value = resData.pagination || { page: 1, limit: 15, total: 0, totalPages: 1 };
-        } catch (err) {
-            console.error('Error al cargar logs:', err);
-            logs.value = [];
-        } finally {
-            loading.value = false;
-        }
-    }; 
-
-    let searchTimeout = null;
-    const debounceSearch = () => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
+    fpStart = flatpickr(startDateInput.value, {
+        ...commonConfig,
+        onChange: (selectedDates, dateStr) => {
+            filters.value.startDate = dateStr;
             fetchLogs(1);
-        }, 400);
-    };
-
-    const changePage = (newPage) => {
-        if (newPage < 1 || newPage > pagination.value.totalPages) return;
-        fetchLogs(newPage);
-    };    
-
-    const openDetailsModal = (log) => {
-        selectedLogModal.value = log;
-    };
-
-    const getEntityBadgeClass = (entity) => {
-        switch (entity) {
-            case 'User': return 'bg-blue-500/10 text-emerald-500 border-emerald-500/20';
-            case 'Role': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-            case 'Auth': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-            default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
-        }
-    };
-
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleString('es-ES', {
-            dateStyle: 'short',
-            timeStyle: 'medium',
-        });
-    };
-
-    const formatJsonDetails = (details) => {
-        if (!details) return '';
-        try {
-            const parsed = typeof details === 'string' ? JSON.parse(details) : details;
-            return JSON.stringify(parsed, null, 2);
-        } catch (e) {
-            return details;
-        }
-    };
-    
-    onMounted(() => {
-        fetchLogs();
-
-        const commonConfig = {
-            locale: Spanish,
-            dateFormat: 'Y-m-d',
-            altInput: true,
-            altFormat: 'd/m/Y',
-            allowInput: true,
-        };
-
-        fpStart = flatpickr(startDateInput.value, {
-            ...commonConfig,
-            onChange: (selectedDates, dateStr) => {
-                filters.value.startDate = dateStr;
-                fetchLogs(1);
-            },
-        });
-
-        fpEnd = flatpickr(endDateInput.value, {
-            ...commonConfig,
-            onChange: (selectedDates, dateStr) => {
-                filters.value.endDate = dateStr;
-                fetchLogs(1);
-            },
-        });
+        },
     });
 
-    onUnmounted(() => {
-        if (fpStart) fpStart.destroy();
-        if (fpEnd) fpEnd.destroy();
+    fpEnd = flatpickr(endDateInput.value, {
+        ...commonConfig,
+        onChange: (selectedDates, dateStr) => {
+            filters.value.endDate = dateStr;
+            fetchLogs(1);
+        },
     });
+});
+
+onUnmounted(() => {
+    if (fpStart) fpStart.destroy();
+    if (fpEnd) fpEnd.destroy();
+});
 </script>

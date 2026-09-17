@@ -1120,42 +1120,137 @@
     + Crea el archivo `frontend/src/views/DashboardView.vue`:
         ```vue
         <script setup>
-            import { useRouter } from 'vue-router';
+            import { computed } from 'vue';
             import { useAuthStore } from '../stores/auth.store';
+            import { 
+                ShieldCheckIcon, 
+                UserCircleIcon, 
+                CommandLineIcon, 
+                CpuChipIcon, 
+                ArrowRightIcon,
+                ServerIcon,
+                CheckCircleIcon
+            } from '@heroicons/vue/24/outline';
 
             const authStore = useAuthStore();
-            const router = useRouter();
 
-            const handleLogout = async () => {
-                await authStore.logout();
-                router.push({ name: 'login' });
-            };
+            // Verificamos si el usuario tiene rol de administrador o dev
+            const isAdmin = computed(() => {
+                return authStore.userRoles?.some(role => ['admin', 'super-admin', 'Developer'].includes(role));
+            });
         </script>
 
         <template>
-            <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-                <!-- Main Content -->
-                <main class="flex-1 p-6 max-w-4xl mx-auto w-full">
-                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg">
-                        <h2 class="text-lg font-semibold text-emerald-400 mb-4">Perfil de Usuario Autenticado</h2>
-                        
-                        <div class="space-y-3 text-slate-300">
-                            <p><strong class="text-slate-100">ID:</strong> {{ authStore.user?.id }}</p>
-                            <p><strong class="text-slate-100">Nombre:</strong> {{ authStore.user?.name }}</p>
-                            <p><strong class="text-slate-100">Correo:</strong> {{ authStore.user?.email }}</p>
-                            <p>
-                                <strong class="text-slate-100">Roles:</strong>
-                                    <span
-                                        v-for="role in authStore.userRoles"
-                                        :key="role"
-                                        class="ml-2 inline-block px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold rounded"
-                                    >
-                                        {{ role }}
+            <div class="max-w-7xl mx-auto p-6 space-y-6">
+                <!-- Banner de Bienvenida / Perfil Resumido -->
+                <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/60 p-6 sm:p-8 rounded-2xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl font-bold shadow-inner">
+                            {{ authStore.user?.name?.charAt(0).toUpperCase() || 'U' }}
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="text-2xl font-bold text-white">¡Hola, {{ authStore.user?.name }}!</h1>
+                                <span class="flex h-2 w-2 relative">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                 </span>
+                            </div>
+                            <p class="text-sm text-slate-400 mt-0.5">{{ authStore.user?.email }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <span 
+                            v-for="role in authStore.userRoles" 
+                            :key="role"
+                            class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold rounded-full flex items-center gap-1.5"
+                        >
+                            <ShieldCheckIcon class="w-4 h-4" />
+                            {{ role }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Métricas Rápidas / Stack Info (Demuestra dominio técnico) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-xl">
+                            <ServerIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Estado del Sistema</p>
+                            <p class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1 mt-0.5">
+                                <CheckCircleIcon class="w-4 h-4 text-emerald-500" /> Operativo
                             </p>
                         </div>
                     </div>
-                </main>
+
+                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-purple-500/10 text-purple-500 dark:text-purple-400 rounded-xl">
+                            <CommandLineIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Arquitectura</p>
+                            <p class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">Modular / REST</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-yellow-500/10 text-yellow-500 dark:text-yellow-400 rounded-xl">
+                            <CpuChipIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Seguridad Auth</p>
+                            <p class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">JWT / Sanctum</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 rounded-xl">
+                            <UserCircleIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">ID de Sesión</p>
+                            <p class="text-sm font-mono font-bold text-slate-900 dark:text-white mt-0.5">#{{ authStore.user?.id || 'N/A' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accesos / Acciones Principales -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Tarjeta de Acceso Admin (Si aplica) -->
+                    <div v-if="isAdmin" class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700/80 shadow-sm flex flex-col justify-between space-y-4">
+                        <div>
+                            <span class="px-2.5 py-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-semibold rounded-full">Zona Restringida</span>
+                            <h2 class="text-xl font-bold text-white mt-3">Panel de Administración</h2>
+                            <p class="text-slate-400 text-xs mt-1 leading-relaxed">
+                                Tienes privilegios asignados para gestionar usuarios, roles, auditoría del sistema y diagnósticos avanzados de la plataforma.
+                            </p>
+                        </div>
+                        <router-link 
+                            to="/admin" 
+                            class="inline-flex items-center justify-between px-4 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors shadow-sm group"
+                        >
+                            <span>Acceder al Panel Admin</span>
+                            <ArrowRightIcon class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                        </router-link>
+                    </div>
+
+                    <!-- Tarjeta de Bienvenida / Info del Boilerplate -->
+                    <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between space-y-4">
+                        <div>
+                            <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full">Boilerplate Ready</span>
+                            <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-3">Explora el Código y Estructura</h2>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
+                                Este entorno demuestra buenas prácticas de desarrollo Full-Stack, separación de responsabilidades, componentes reutilizables y diseño responsivo.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 pt-2">
+                            <span class="text-xs text-slate-400 font-mono">Vue 3 + Tailwind CSS + Pinia</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </template>
         ```
@@ -1534,87 +1629,91 @@
 10. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
     ```vue
     <template>
-        <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-            <div class="p-6 max-w-7xl mx-auto">        
-                <!-- Botón de retorno al Dashboard Principal -->
-                <div class="mb-6">
+        <div class="max-w-7xl mx-auto p-6 space-y-6">
+            <!-- Header / Tarjeta de Encabezado con Botón de Retorno -->
+            <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
+                <div>
                     <router-link 
                         to="/dashboard" 
-                        class="inline-flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors group"
+                        class="inline-flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors group"
                     >
                         <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
                         <span>Volver al Dashboard</span>
                     </router-link>
-                </div>        
-                <div class="mb-8">
-                    <p class="text-slate-400 text-sm">Gestiona la configuración global de la plataforma, accesos y permisos.</p>
                 </div>
 
-                <!-- Grid de Accesos Directos a Módulos Admin -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    
-                    <!-- Módulo: Usuarios -->
-                    <router-link 
-                        to="/admin/users" 
-                        class="group p-6 bg-slate-800/60 border border-slate-700/60 hover:border-emerald-500/50 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5"
-                    >
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
-                                <UsersIcon class="w-6 h-6" />
-                            </div>
-                            <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">Activo</span>
-                        </div>
-                        <h2 class="text-lg font-semibold text-white group-hover:text-emerald-400 transition-colors">Gestión de Usuarios</h2>
-                        <p class="text-slate-400 text-xs mt-1">Creación, edición de datos personales, asignación de roles y eliminación.</p>
-                    </router-link>
-
-                    <!-- Módulo: Roles y Permisos -->
-                    <router-link 
-                        to="/admin/roles" 
-                        class="group p-6 bg-slate-800/60 border border-slate-700/60 hover:border-purple-500/50 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/5"
-                    >
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl group-hover:scale-110 transition-transform">
-                                <ShieldCheckIcon class="w-6 h-6" />
-                            </div>
-                            <span class="text-xs font-semibold px-2.5 py-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-full">Dev / Config</span>
-                        </div>
-                        <h2 class="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">Roles y Permisos</h2>
-                        <p class="text-slate-400 text-xs mt-1">Administración de la tabla de roles globales del sistema (CRUD de Roles).</p>
-                    </router-link>
-
-                    <!-- Módulo: Logs de Auditoría / Sistema -->
-                    <router-link 
-                        to="/admin/audit-logs" 
-                        class="group p-6 bg-slate-800/60 border border-slate-700/60 hover:border-emerald-500/50 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5"
-                    >
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-3 bg-yellow-500/10 text-yellow-400 rounded-xl group-hover:scale-110 transition-transform">
-                                <DocumentChartBarIcon class="w-6 h-6" />
-                            </div>
-                            <span class="text-xs font-semibold px-2.5 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full">Sistema</span>
-                        </div>
-                        <h2 class="text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors">Auditoría / Logs</h2>
-                        <p class="text-slate-400 text-xs mt-1">Historial de cambios críticos y acciones de los administradores.</p>
-                    </router-link>
-
-                    <!-- Módulo: Diagnóstico del Sistema por IA -->
-                    <router-link 
-                        v-if="isAiActive"
-                        to="/admin/system-diagnostic"
-                        class="group p-6 bg-slate-800/60 border border-slate-700/60 hover:border-indigo-500/50 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/5"
-                    >
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
-                                <CpuChipIcon class="w-6 h-6" />
-                            </div>
-                            <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">IA Activa</span>
-                        </div>
-                        <h2 class="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">Diagnóstico del Sistema por IA</h2>
-                        <p class="text-slate-400 text-xs mt-1">Análisis inteligente del estado, salud y seguridad global.</p>
-                    </router-link>             
-
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Panel de Administración</h1>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Gestiona la configuración global de la plataforma, accesos y permisos.</p>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Grid de Accesos Directos a Módulos Admin (Cada uno con su identidad de color intacta) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Módulo: Usuarios -->
+                <router-link 
+                    to="/admin/users" 
+                    class="group p-6 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 hover:border-emerald-500/50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-emerald-500/5"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <UsersIcon class="w-6 h-6" />
+                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full">Activo</span>
+                    </div>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">Gestión de Usuarios</h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs mt-1">Creación, edición de datos personales, asignación de roles y eliminación.</p>
+                </router-link>
+
+                <!-- Módulo: Roles y Permisos -->
+                <router-link 
+                    to="/admin/roles" 
+                    class="group p-6 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 hover:border-purple-500/50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-purple-500/5"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <ShieldCheckIcon class="w-6 h-6" />
+                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-full">Dev / Config</span>
+                    </div>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors">Roles y Permisos</h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs mt-1">Administración de la tabla de roles globales del sistema (CRUD de Roles).</p>
+                </router-link>
+
+                <!-- Módulo: Logs de Auditoría / Sistema -->
+                <router-link 
+                    to="/admin/audit-logs" 
+                    class="group p-6 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 hover:border-yellow-500/50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-yellow-500/5"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <DocumentChartBarIcon class="w-6 h-6" />
+                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20 rounded-full">Sistema</span>
+                    </div>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">Auditoría / Logs</h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs mt-1">Historial de cambios críticos y acciones de los administradores.</p>
+                </router-link>
+
+                <!-- Módulo: Diagnóstico del Sistema por IA -->
+                <router-link 
+                    v-if="isAiActive"
+                    to="/admin/system-diagnostic"
+                    class="group p-6 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 hover:border-indigo-500/50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-indigo-500/5"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
+                            <CpuChipIcon class="w-6 h-6" />
+                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-full">IA Activa</span>
+                    </div>
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-white group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">Diagnóstico del Sistema por IA</h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs mt-1">Análisis inteligente del estado, salud y seguridad global.</p>
+                </router-link>
+
             </div>
         </div>
     </template>
@@ -2292,33 +2391,40 @@
         ```vue
         <template>
             <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-                <div class="p-6 max-w-7xl mx-auto">
-                    <!-- Botón Volver al Panel -->
-                    <div class="mb-6">
-                        <router-link 
-                            to="/admin" 
-                            class="inline-flex items-center space-x-2 text-sm text-purple-400 hover:text-purple-300 transition-colors group"
-                        >
-                            <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                            <span>Volver al Panel Admin</span>
-                        </router-link>
-                    </div>
-
-                    <!-- Encabezado y Acción -->
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                        <div>
-                            <p class="text-slate-400 text-sm mt-1">
-                                Administra los roles del sistema y configura las acciones permitidas para cada uno.
-                            </p>
+                <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
+                    
+                    <!-- Cabecera envuelta en tarjeta (Estilo Diagnóstico / Usuarios) -->
+                    <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl">
+                        <!-- Botón Volver al Panel -->
+                        <div class="mb-4">
+                            <router-link 
+                                to="/admin" 
+                                class="inline-flex items-center space-x-2 text-sm text-purple-400 hover:text-purple-300 transition-colors group"
+                            >
+                                <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                                <span>Volver al Panel Admin</span>
+                            </router-link>
                         </div>
-                        <button 
-                            v-if="authStore.hasPermission('roles:create')"
-                            @click="openModal()"
-                            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30"
-                        >
-                            <PlusIcon class="w-5 h-5" />
-                            <span>Nuevo Rol</span>
-                        </button>
+
+                        <!-- Título, Descripción y Acción -->
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                                    <span>Gestión de Roles</span>
+                                </h1>
+                                <p class="text-slate-400 text-sm mt-1">
+                                    Administra los roles del sistema y configura las acciones permitidas para cada uno.
+                                </p>
+                            </div>
+                            <button 
+                                v-if="authStore.hasPermission('roles:create')"
+                                @click="openModal()"
+                                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30 shrink-0"
+                            >
+                                <PlusIcon class="w-5 h-5" />
+                                <span>Nuevo Rol</span>
+                            </button>
+                        </div>
                     </div>        
 
                     <!-- Tabla de Roles -->
@@ -2373,7 +2479,7 @@
                                                 <PencilIcon class="w-4 h-4" />
                                             </button>
                                             
-                                            <!-- Eliminar rol (Se oculta explicitamente para SUPER_ADMIN) -->
+                                            <!-- Eliminar rol (Se oculta explícitamente para SUPER_ADMIN) -->
                                             <button 
                                                 v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
                                                 @click="confirmDelete(role)"
@@ -2481,188 +2587,189 @@
         </template>
 
         <script setup>
-            import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
-            import { ref, computed, onMounted } from 'vue';
-            import { roleService } from '@/services';
-            import Swal from 'sweetalert2';
-            import { useAuthStore } from '@/stores/auth.store';
+        import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
+        import { ref, computed, onMounted } from 'vue';
+        import { roleService } from '@/services';
+        import Swal from 'sweetalert2';
+        import { useAuthStore } from '@/stores/auth.store';
 
-            // Instancia del store para acceder a los getters
-            const authStore = useAuthStore();
+        // Instancia del store para acceder a los getters
+        const authStore = useAuthStore();
 
-            const roles = ref([]);
-            const availablePermissions = ref([]);
-            const isModalOpen = ref(false);
-            const saving = ref(false);
-            const targetRole = ref(null);
+        const roles = ref([]);
+        const availablePermissions = ref([]);
+        const isModalOpen = ref(false);
+        const saving = ref(false);
+        const targetRole = ref(null);
 
-            const form = ref({
-                name: '',
-                description: '',
-                permissions: []
-            });
+        const form = ref({
+            name: '',
+            description: '',
+            permissions: []
+        });
 
-            // Agrupar permisos por módulo para mostrarlos organizados
-            const groupedPermissions = computed(() => {
-                return availablePermissions.value.reduce((acc, perm) => {
-                    if (!acc[perm.module]) acc[perm.module] = [];
-                    acc[perm.module].push(perm);
-                    return acc;
-                }, {});
-            });
+        // Agrupar permisos por módulo para mostrarlos organizados
+        const groupedPermissions = computed(() => {
+            return availablePermissions.value.reduce((acc, perm) => {
+                if (!acc[perm.module]) acc[perm.module] = [];
+                acc[perm.module].push(perm);
+                return acc;
+            }, {});
+        });
 
-            const loadData = async () => {
-                try {
-                    const [rolesRes, permsRes] = await Promise.all([
-                        roleService.getRoles(),
-                        roleService.getPermissions() // 👈 Usamos roleService.getPermissions()
-                    ]);
-                    roles.value = rolesRes.data?.roles || rolesRes.roles || [];
-                    availablePermissions.value = permsRes.data?.permissions || permsRes.permissions || [];
-                } catch (err) {
-                    console.error('Error al cargar datos:', err);
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'No se pudieron cargar los roles y permisos.',
-                        icon: 'error',
-                        background: '#1e293b',
-                        color: '#f8fafc'
-                    });
-                }
-            };
-
-            const openModal = (role = null) => {
-                targetRole.value = role;
-                if (role) {
-                    const rolePerms = Array.isArray(role.permissions) ? role.permissions : [];
-                    form.value = {
-                        name: role.name,
-                        description: role.description || '',
-                        permissions: rolePerms.map(p => typeof p === 'object' ? p.action : p)
-                    };
-                } else {
-                    form.value = { name: '', description: '', permissions: [] };
-                }
-                isModalOpen.value = true;
-            };
-
-            const saveRole = async () => {
-                saving.value = true;
-                try {
-                    if (targetRole.value) {
-                        await roleService.updateRole(targetRole.value.id, form.value);
-                    } else {
-                        await roleService.createRole(form.value);
-                    }
-                    isModalOpen.value = false;
-                    await loadData();
-                    
-                    Swal.fire({
-                        title: '¡Guardado!',
-                        text: 'El rol ha sido guardado exitosamente.',
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false,
-                        background: '#1e293b',
-                        color: '#f8fafc'
-                    });
-                } catch (err) {
-                    Swal.fire({
-                        title: 'Error',
-                        text: err.response?.data?.message || 'Error al guardar el rol',
-                        icon: 'error',
-                        background: '#1e293b',
-                        color: '#f8fafc'
-                    });
-                } finally {
-                    saving.value = false;
-                }
-            };
-
-            const confirmDelete = async (role) => {
-                // Protección a nivel de lógica JS
-                if (role.name === 'SUPER_ADMIN') {
-                    Swal.fire({
-                        title: 'Acción No Permitida',
-                        text: 'El rol SUPER_ADMIN es un rol de sistema y no puede ser eliminado.',
-                        icon: 'error',
-                        background: '#1e293b',
-                        color: '#f8fafc'
-                    });
-                    return;
-                }
-
-                const result = await Swal.fire({
-                    title: '¿Eliminar Rol?',
-                    html: `Estás a punto de eliminar el rol <strong>${role.name}</strong>.`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#64748b',
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar',
+        const loadData = async () => {
+            try {
+                const [rolesRes, permsRes] = await Promise.all([
+                    roleService.getRoles(),
+                    roleService.getPermissions() // 👈 Usamos roleService.getPermissions()
+                ]);
+                roles.value = rolesRes.data?.roles || rolesRes.roles || [];
+                availablePermissions.value = permsRes.data?.permissions || permsRes.permissions || [];
+            } catch (err) {
+                console.error('Error al cargar datos:', err);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'No se pudieron cargar los roles y permisos.',
+                    icon: 'error',
                     background: '#1e293b',
                     color: '#f8fafc'
                 });
+            }
+        };
 
-                if (result.isConfirmed) {
-                    try {
-                        await roleService.deleteRole(role.id);
-                        await loadData();
-                    } catch (err) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: err.response?.data?.message || 'Error al eliminar el rol',
-                            icon: 'error',
-                            background: '#1e293b',
-                            color: '#f8fafc'
-                        });
-                    }
+        const openModal = (role = null) => {
+            targetRole.value = role;
+            if (role) {
+                const rolePerms = Array.isArray(role.permissions) ? role.permissions : [];
+                form.value = {
+                    name: role.name,
+                    description: role.description || '',
+                    permissions: rolePerms.map(p => typeof p === 'object' ? p.action : p)
+                };
+            } else {
+                form.value = { name: '', description: '', permissions: [] };
+            }
+            isModalOpen.value = true;
+        };
+
+        const saveRole = async () => {
+            saving.value = true;
+            try {
+                if (targetRole.value) {
+                    await roleService.updateRole(targetRole.value.id, form.value);
+                } else {
+                    await roleService.createRole(form.value);
                 }
-            };
+                isModalOpen.value = false;
+                await loadData();
+                
+                Swal.fire({
+                    title: '¡Guardado!',
+                    text: 'El rol ha sido guardado exitosamente.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: '#1e293b',
+                    color: '#f8fafc'
+                });
+            } catch (err) {
+                Swal.fire({
+                    title: 'Error',
+                    text: err.response?.data?.message || 'Error al guardar el rol',
+                    icon: 'error',
+                    background: '#1e293b',
+                    color: '#f8fafc'
+                });
+            } finally {
+                saving.value = false;
+            }
+        };
 
-            const getRoleBadgeClass = (name) => {
-                switch (name) {
-                    case 'SUPER_ADMIN': return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
-                    case 'ADMIN': return 'bg-blue-900/40 text-blue-300 border-blue-500/30';
-                    case 'USER': return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
-                    default: return 'bg-yellow-900/40 text-yellow-300 border-yellow-500/30';
-                }
-            };
+        const confirmDelete = async (role) => {
+            // Protección a nivel de lógica JS
+            if (role.name === 'SUPER_ADMIN') {
+                Swal.fire({
+                    title: 'Acción No Permitida',
+                    text: 'El rol SUPER_ADMIN es un rol de sistema y no puede ser eliminado.',
+                    icon: 'error',
+                    background: '#1e293b',
+                    color: '#f8fafc'
+                });
+                return;
+            }
 
-            onMounted(() => {
-                loadData();
+            const result = await Swal.fire({
+                title: '¿Eliminar Rol?',
+                html: `Estás a punto de eliminar el rol <strong>${role.name}</strong>.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                background: '#1e293b',
+                color: '#f8fafc'
             });
+
+            if (result.isConfirmed) {
+                try {
+                    await roleService.deleteRole(role.id);
+                    await loadData();
+                } catch (err) {
+                    Swal.fire({
+                        title: 'Error',
+                        text: err.response?.data?.message || 'Error al eliminar el rol',
+                        icon: 'error',
+                        background: '#1e293b',
+                        color: '#f8fafc'
+                    });
+                }
+            }
+        };
+
+        const getRoleBadgeClass = (name) => {
+            switch (name) {
+                case 'SUPER_ADMIN': return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
+                case 'ADMIN': return 'bg-blue-900/40 text-blue-300 border-blue-500/30';
+                case 'USER': return 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30';
+                default: return 'bg-yellow-900/40 text-yellow-300 border-yellow-500/30';
+            }
+        };
+
+        onMounted(() => {
+            loadData();
+        });
         </script>
         ```
 13. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
     ```vue
     <template>
         <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-            <div class="p-6 max-w-7xl mx-auto space-y-6">
-                <!-- Botón de retorno al Panel Admin -->
-                <div class="mb-6">
-                    <router-link 
-                        to="/admin" 
-                        class="inline-flex items-center space-x-2 text-sm text-yellow-400 hover:text-yellow-300 transition-colors group"
-                    >
-                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                        <span>Volver al Panel Admin</span>
-                    </router-link>
-                </div>
-
-                <!-- Header -->
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
+                <!-- Header / Tarjeta de Encabezado con Botón de Retorno -->
+                <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
                     <div>
-                        <h1 class="text-2xl font-bold text-white">Auditoría del Sistema</h1>
-                        <p class="text-sm text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
+                        <router-link 
+                            to="/admin" 
+                            class="inline-flex items-center space-x-2 text-sm text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300 transition-colors group"
+                        >
+                            <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                            <span>Volver al Panel Admin</span>
+                        </router-link>
                     </div>
-                    <button 
-                        @click="fetchLogs" 
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-800 hover:bg-yellow-700 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer"
-                    >
-                        <span>Refrescar</span>
-                    </button>
+
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Auditoría del Sistema</h1>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
+                        </div>
+                        <button 
+                            @click="fetchLogs" 
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer shadow-sm"
+                        >
+                            <span>Refrescar</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Filtros -->
@@ -2674,7 +2781,7 @@
                             @input="debounceSearch"
                             type="text" 
                             placeholder="Acción, usuario, email..." 
-                            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-800 dark:text-slate-200"
                         />
                     </div>
 
@@ -2683,7 +2790,7 @@
                         <select 
                             v-model="filters.entity" 
                             @change="fetchLogs(1)"
-                            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-800 dark:text-slate-200"
                         >
                             <option value="">Todas</option>
                             <option value="User">Usuario</option>
@@ -2699,7 +2806,7 @@
                             ref="startDateInput"
                             type="text" 
                             placeholder="Seleccionar fecha..."
-                            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer text-slate-800 dark:text-slate-200"
                         />
                     </div>
 
@@ -2709,7 +2816,7 @@
                             ref="endDateInput"
                             type="text" 
                             placeholder="Seleccionar fecha..."
-                            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer text-slate-800 dark:text-slate-200"
                         />
                     </div>
                 </div>
@@ -2724,8 +2831,8 @@
                                         <div class="flex items-center space-x-1">
                                             <span>Fecha / Hora</span>
                                             <span class="inline-flex flex-col text-[10px] leading-none">
-                                                <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                                <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                                <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                                <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                             </span>
                                         </div>
                                     </th>
@@ -2734,8 +2841,8 @@
                                         <div class="flex items-center space-x-1">
                                             <span>Usuario</span>
                                             <span class="inline-flex flex-col text-[10px] leading-none">
-                                                <span :class="sortBy === 'user' && sortOrder === 'asc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                                <span :class="sortBy === 'user' && sortOrder === 'desc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                                <span :class="sortBy === 'user' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                                <span :class="sortBy === 'user' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                             </span>
                                         </div>
                                     </th>
@@ -2744,8 +2851,8 @@
                                         <div class="flex items-center space-x-1">
                                             <span>Acción</span>
                                             <span class="inline-flex flex-col text-[10px] leading-none">
-                                                <span :class="sortBy === 'action' && sortOrder === 'asc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                                <span :class="sortBy === 'action' && sortOrder === 'desc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                                <span :class="sortBy === 'action' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                                <span :class="sortBy === 'action' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                             </span>
                                         </div>
                                     </th>
@@ -2754,8 +2861,8 @@
                                         <div class="flex items-center space-x-1">
                                             <span>Entidad</span>
                                             <span class="inline-flex flex-col text-[10px] leading-none">
-                                                <span :class="sortBy === 'entity' && sortOrder === 'asc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                                <span :class="sortBy === 'entity' && sortOrder === 'desc' ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                                <span :class="sortBy === 'entity' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                                <span :class="sortBy === 'entity' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                             </span>
                                         </div>
                                     </th>
@@ -2763,7 +2870,7 @@
                                     <th class="py-3 px-4 text-left">IP</th>
                                     <th class="py-3 px-4 text-right">Detalles</th>
                                 </tr>
-                            </thead>                  
+                            </thead>               
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
                                 <tr v-if="loading">
                                     <td colspan="6" class="text-center py-8 text-slate-400">Cargando registros...</td>
@@ -2791,7 +2898,7 @@
                                         <button 
                                             v-if="log.details" 
                                             @click="openDetailsModal(log)" 
-                                            class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium cursor-pointer"
+                                            class="text-xs text-yellow-600 dark:text-yellow-400 hover:underline font-medium cursor-pointer"
                                         >
                                             Ver JSON
                                         </button>
@@ -2811,14 +2918,14 @@
                             <button 
                                 :disabled="pagination.page <= 1" 
                                 @click="changePage(pagination.page - 1)" 
-                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                             >
                                 Anterior
                             </button>
                             <button 
                                 :disabled="pagination.page >= pagination.totalPages" 
                                 @click="changePage(pagination.page + 1)" 
-                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                             >
                                 Siguiente
                             </button>
@@ -2832,9 +2939,9 @@
                         <div class="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-1">
                             <h3 class="text-lg font-bold text-slate-900 dark:text-white">Detalles del Evento</h3>
                             <span class="text-xs text-slate-400 font-mono">{{ selectedLogModal.action }} - {{ formatDate(selectedLogModal.createdAt) }}</span>
-                        </div>                
+                        </div>    
                         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 overflow-y-auto overflow-x-hidden max-h-[50vh] max-w-full">
-                            <pre class="text-emerald-400 font-mono text-xs whitespace-pre-wrap break-all leading-relaxed select-all">{{ formatJsonDetails(selectedLogModal.details) }}</pre>
+                            <pre class="text-yellow-400 font-mono text-xs whitespace-pre-wrap break-all leading-relaxed select-all">{{ formatJsonDetails(selectedLogModal.details) }}</pre>
                         </div>
                         <div class="flex justify-end">
                             <button 
@@ -2851,156 +2958,156 @@
     </template>
 
     <script setup>
-        import { ref, onMounted, onUnmounted } from 'vue';
-        import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
-        import { auditService } from '@/services';
-        import flatpickr from 'flatpickr';
-        import 'flatpickr/dist/flatpickr.css';
-        import 'flatpickr/dist/themes/dark.css';
-        import { Spanish } from 'flatpickr/dist/l10n/es.js';
+    import { ref, onMounted, onUnmounted } from 'vue';
+    import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+    import { auditService } from '@/services';
+    import flatpickr from 'flatpickr';
+    import 'flatpickr/dist/flatpickr.css';
+    import 'flatpickr/dist/themes/dark.css';
+    import { Spanish } from 'flatpickr/dist/l10n/es.js';
 
-        const logs = ref([]);
-        const loading = ref(false);
-        const selectedLogModal = ref(null);
+    const logs = ref([]);
+    const loading = ref(false);
+    const selectedLogModal = ref(null);
 
-        const startDateInput = ref(null);
-        const endDateInput = ref(null);
-        let fpStart = null;
-        let fpEnd = null;
+    const startDateInput = ref(null);
+    const endDateInput = ref(null);
+    let fpStart = null;
+    let fpEnd = null;
 
-        const filters = ref({
-            search: '',
-            entity: '',
-            startDate: '',
-            endDate: '',
-        });
+    const filters = ref({
+        search: '',
+        entity: '',
+        startDate: '',
+        endDate: '',
+    });
 
-        const pagination = ref({
-            page: 1,
-            limit: 15,
-            total: 0,
-            totalPages: 1,
-        });
+    const pagination = ref({
+        page: 1,
+        limit: 15,
+        total: 0,
+        totalPages: 1,
+    });
 
-        const sortBy = ref('createdAt');
-        const sortOrder = ref('desc');
+    const sortBy = ref('createdAt');
+    const sortOrder = ref('desc');
+
+    const handleSort = (field) => {
+        if (sortBy.value === field) {
+            sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortBy.value = field;
+            sortOrder.value = 'asc';
+        }
+        fetchLogs(1);
+    };
+
+    const fetchLogs = async (page = 1) => {
+        const targetPage = (typeof page === 'number' && !isNaN(page)) ? page : 1;
         
-        const handleSort = (field) => {
-            if (sortBy.value === field) {
-                sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortBy.value = field;
-                sortOrder.value = 'asc';
-            }
+        pagination.value.page = targetPage;
+        loading.value = true;
+
+        try {
+            const response = await auditService.getAuditLogs({
+                page: pagination.value.page,
+                limit: pagination.value.limit,
+                search: filters.value.search,
+                entity: filters.value.entity,
+                startDate: filters.value.startDate,
+                endDate: filters.value.endDate,
+                sortBy: sortBy.value,
+                sortOrder: sortOrder.value
+            });
+
+            // Extrae la data directo del payload estandarizado del backend
+            const resData = response.data || response;
+            logs.value = resData.logs || [];
+            pagination.value = resData.pagination || { page: 1, limit: 15, total: 0, totalPages: 1 };
+        } catch (err) {
+            console.error('Error al cargar logs:', err);
+            logs.value = [];
+        } finally {
+            loading.value = false;
+        }
+    }; 
+
+    let searchTimeout = null;
+    const debounceSearch = () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
             fetchLogs(1);
+        }, 400);
+    };
+
+    const changePage = (newPage) => {
+        if (newPage < 1 || newPage > pagination.value.totalPages) return;
+        fetchLogs(newPage);
+    };    
+
+    const openDetailsModal = (log) => {
+        selectedLogModal.value = log;
+    };
+
+    const getEntityBadgeClass = (entity) => {
+        switch (entity) {
+            case 'User': return 'bg-blue-500/10 text-emerald-500 border-emerald-500/20';
+            case 'Role': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+            case 'Auth': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+            default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+        }
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleString('es-ES', {
+            dateStyle: 'short',
+            timeStyle: 'medium',
+        });
+    };
+
+    const formatJsonDetails = (details) => {
+        if (!details) return '';
+        try {
+            const parsed = typeof details === 'string' ? JSON.parse(details) : details;
+            return JSON.stringify(parsed, null, 2);
+        } catch (e) {
+            return details;
+        }
+    };
+
+    onMounted(() => {
+        fetchLogs();
+
+        const commonConfig = {
+            locale: Spanish,
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            allowInput: true,
         };
 
-        const fetchLogs = async (page = 1) => {
-            const targetPage = (typeof page === 'number' && !isNaN(page)) ? page : 1;
-            
-            pagination.value.page = targetPage;
-            loading.value = true;
-
-            try {
-                const response = await auditService.getAuditLogs({
-                    page: pagination.value.page,
-                    limit: pagination.value.limit,
-                    search: filters.value.search,
-                    entity: filters.value.entity,
-                    startDate: filters.value.startDate,
-                    endDate: filters.value.endDate,
-                    sortBy: sortBy.value,
-                    sortOrder: sortOrder.value
-                });
-
-                // Extrae la data directo del payload estandarizado del backend
-                const resData = response.data || response;
-                logs.value = resData.logs || [];
-                pagination.value = resData.pagination || { page: 1, limit: 15, total: 0, totalPages: 1 };
-            } catch (err) {
-                console.error('Error al cargar logs:', err);
-                logs.value = [];
-            } finally {
-                loading.value = false;
-            }
-        }; 
-
-        let searchTimeout = null;
-        const debounceSearch = () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
+        fpStart = flatpickr(startDateInput.value, {
+            ...commonConfig,
+            onChange: (selectedDates, dateStr) => {
+                filters.value.startDate = dateStr;
                 fetchLogs(1);
-            }, 400);
-        };
-
-        const changePage = (newPage) => {
-            if (newPage < 1 || newPage > pagination.value.totalPages) return;
-            fetchLogs(newPage);
-        };    
-
-        const openDetailsModal = (log) => {
-            selectedLogModal.value = log;
-        };
-
-        const getEntityBadgeClass = (entity) => {
-            switch (entity) {
-                case 'User': return 'bg-blue-500/10 text-emerald-500 border-emerald-500/20';
-                case 'Role': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-                case 'Auth': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
-            }
-        };
-
-        const formatDate = (dateString) => {
-            if (!dateString) return 'N/A';
-            return new Date(dateString).toLocaleString('es-ES', {
-                dateStyle: 'short',
-                timeStyle: 'medium',
-            });
-        };
-
-        const formatJsonDetails = (details) => {
-            if (!details) return '';
-            try {
-                const parsed = typeof details === 'string' ? JSON.parse(details) : details;
-                return JSON.stringify(parsed, null, 2);
-            } catch (e) {
-                return details;
-            }
-        };
-        
-        onMounted(() => {
-            fetchLogs();
-
-            const commonConfig = {
-                locale: Spanish,
-                dateFormat: 'Y-m-d',
-                altInput: true,
-                altFormat: 'd/m/Y',
-                allowInput: true,
-            };
-
-            fpStart = flatpickr(startDateInput.value, {
-                ...commonConfig,
-                onChange: (selectedDates, dateStr) => {
-                    filters.value.startDate = dateStr;
-                    fetchLogs(1);
-                },
-            });
-
-            fpEnd = flatpickr(endDateInput.value, {
-                ...commonConfig,
-                onChange: (selectedDates, dateStr) => {
-                    filters.value.endDate = dateStr;
-                    fetchLogs(1);
-                },
-            });
+            },
         });
 
-        onUnmounted(() => {
-            if (fpStart) fpStart.destroy();
-            if (fpEnd) fpEnd.destroy();
+        fpEnd = flatpickr(endDateInput.value, {
+            ...commonConfig,
+            onChange: (selectedDates, dateStr) => {
+                filters.value.endDate = dateStr;
+                fetchLogs(1);
+            },
         });
+    });
+
+    onUnmounted(() => {
+        if (fpStart) fpStart.destroy();
+        if (fpEnd) fpEnd.destroy();
+    });
     </script>
     ```
 14. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
