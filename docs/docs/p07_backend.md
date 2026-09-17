@@ -1,5 +1,3 @@
-[🔙](index.md)
----
 ## ⚙️ Desarrollo del Backend
 ### 🗄️ Paso 1: Configuración de Base de Datos y ORM (Prisma)
 1. Configuración del `Archivo de Modelo de Datos` de Prisma: actualizar (reemplazar) el archivo `backend/prisma/schema.prisma`:
@@ -2690,5 +2688,3 @@
         ```bash
         DATABASE_URL="postgresql://postgres.<Project ID>:<Password>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" node src/seeders/superadmin.seeder.js
         ```
----
-[🔙](index.md)

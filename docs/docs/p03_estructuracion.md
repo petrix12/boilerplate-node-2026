@@ -1,5 +1,3 @@
-[🔙](index.md)
----
 ## 💻 Estructuración Local y Control de Versiones (Git & GitHub)
 + Esta sección documenta el procedimiento estándar para organizar el espacio de trabajo local, levantar la infraestructura de desarrollo mediante Docker y vincular los proyectos con repositorios remotos en GitHub.
 
@@ -147,7 +145,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
             "prisma": "6.4.0"
         }
     }
-    ```
+    ```    
     + Ejecutar:
         ```bash
         rm -rf node_modules package-lock.json
@@ -185,7 +183,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         npx prisma migrate dev --name init
         ```
 8. Crear archivo de variables de entorno `backend/.env`:
-    ```env
+    ```ini
     # ==========================================
     # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
     # ==========================================
@@ -200,7 +198,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
     ```
 9.  Crear `backend/.gitignore`:
-    ```gitignore
+    ```text
     node_modules/
     .env
     .env.*
@@ -309,6 +307,15 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     npm run dev
     ```
 
+#### Paso 4: Crear estructura de proyecto de documentación inicial
+1. Inicializar `VitePress` dentro de la carpeta principal del monorepo:
+    ```bash
+    npm init vitepress@latest
+    ```
+    + Project name: › docs
+2. Entrar, hacer el `npm install` y probar el `npm run dev` para validar que todo vuela con Vite.
+
+
 ### 📑 PARTE 3: Git y GitHub
 
 #### Iniciar repositorio Git y subir a GitHub
@@ -357,5 +364,4 @@ git commit -m "chore: initial commit"
 # 8. Crea el repositorio público (o privado) y súbelo de una vez
 gh repo create boilerplate-node-2026 --public --source=. --remote=origin --push
 ```
----
-[🔙](index.md)
+

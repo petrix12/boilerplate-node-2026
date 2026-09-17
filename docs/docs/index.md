@@ -1,22 +1,28 @@
 # Bolierplate Node.js | Vue.js 2026
 
-## 💡 [Incepción del Proyecto](p01_incepcion.md)
-## 🟢 [Instalación de Node.js mediante NVM en WSL (Ubuntu)](p02_instalacion_node.md)
-## 💻 [Estructuración Local y Control de Versiones (Git & GitHub)](p03_estructuracion.md)
-## 🐳 [Dockerización](p04_dockerizacion.md)
-## 🚀 [Despliegue en Producción (CI/CD $0 USD)](p05_deploy.md)
-## 🔐 [Variables de entorno](p06_env.md)
-## ⚙️ [Desarrollo del Backend](p07_backend.md)
-## 🔌 [Endpoints](p08_endpoints.md)
-## 💻 [Desarrollo del Frontend](p09_frontend.md)
+## 💡 [Incepción del Proyecto](p01_incepcion)
+## 🟢 [Instalación de Node.js mediante NVM en WSL (Ubuntu)](p02_instalacion_node)
+## 💻 [Estructuración Local y Control de Versiones (Git & GitHub)](p03_estructuracion)
+## 🐳 [Dockerización](p04_dockerizacion)
+## 🚀 [Despliegue en Producción (CI/CD $0 USD)](p05_deploy)
+## 🔐 [Variables de entorno](p06_env)
+## ⚙️ [Desarrollo del Backend](p07_backend)
+## 🔌 [Endpoints](p08_endpoints)
+## 💻 [Desarrollo del Frontend](p09_frontend)
+## 📋 [Aplicación para documentación](p10_app_documentacion)
 
 ## --------------------------------------------------------        
 
+- [ ] Tarea pendiente o sin seleccionar
+- [x] Tarea completada o seleccionada (también sirve [X])
+
+- ✅ Tarea completada o seleccionada
+- ◻️ Tarea pendiente o sin seleccionar
 
 
 ## --------------------------------------------------------
 
-
+```text
 .
 ├── Dockerfile
 ├── README.md
@@ -74,7 +80,7 @@
 └── vite.config.js
 
 13 directories, 44 files
-
+```
 
 
 ## A mano
@@ -101,6 +107,15 @@
         ```bash
         docker update --restart=no nombre_contenedor
         ```
+2. **Ubuntu**:
+    + Ver estructura de carpetas sin las carpetas node_modules ni archivo ocultos
+        ```bash
+        tree --dirsfirst -I "node_modules|vendor|.git|temporal|uploads|migrations|borrador.md"
+        ```
+        + Instalación de tree en sistemas basados en Red Hat / Fedora / CentOS:
+            ```bash
+            sudo apt update && sudo apt install tree
+            ```
 
 ## Tares
 ### Pendientes

@@ -1,5 +1,3 @@
-[🔙](index.md)
----
 ## 🚀 Despliegue en Producción (CI/CD $0 USD)
 
 ### Persistencia de Datos (Supabase PostgreSQL)
@@ -45,11 +43,11 @@
         + Start Command: npm start (o node server.js / node index.js, dependiendo de cómo arranques tu servidor en el package.json)
         + Instance Type: Free ($0/mo)
     + Configuración de Variables de Entorno: Desplázate hasta la sección Environment Variables y añade:
-        + PORT: 10000
-        + APP_URL: "https://boilerplate-node.onrender.com"
-        + NODE_ENV: production
-        + DATABASE_URL: "postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:6543/<DATABASE_NAME>?pgbouncer=true"
-        + DIRECT_URL: "postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:5432/<DATABASE_NAME>"
+        + PORT: `10000`
+        + APP_URL: `https://boilerplate-node.onrender.com`
+        + NODE_ENV: `production`
+        + DATABASE_URL: `postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:6543/<DATABASE_NAME>?pgbouncer=true`
+        + DIRECT_URL: `postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:5432/<DATABASE_NAME>`
     + Haz clic en `Deploy Web Service`.
     + Copia la URL pública generada (ej. [https://boilerplate-node-2026.onrender.com](https://boilerplate-node-2026.onrender.com)).
 3. Prueba de funcionamiento:
@@ -57,7 +55,6 @@
         ```bash
         curl https://boilerplate-node-2026.onrender.com/api/health
         ```
-
 ### Configuración de Enrutamiento SPA en Vercel
 1. Crea un archivo llamado `vercel.json` en la raíz de tu proyecto frontend (`frontend/vercel.json`) con el siguiente contenido:
     ```json
@@ -98,5 +95,4 @@
         + Value: "https://boilerplate-node-2026.onrender.com/api/v1"
 5. Despliegue Final:
     + Haz clic en Deploy. Tras guardar o cambiar variables de entorno, ejecuta siempre un Redeploy (sin usar Build Cache) para inyectar la URL de la API en los archivos estáticos de React/Vite.
----
-[🔙](index.md)
+

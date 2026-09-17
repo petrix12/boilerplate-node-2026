@@ -1,17 +1,16 @@
-[🔙](index.md)
----
 ## 🐳 Dockerización
 1. Mapear el dominio local en tu Sistema Operativo:
     + Abre el archivo hosts de tu sistema con permisos de administrador:
         + Windows (WSL): `C:\Windows\System32\drivers\etc\hosts`.
         + Linux/WSL: `/etc/hosts`.
-    + Agrega esta línea al final:
-        ```
+    + Agrega estas líneas al final:
+        ```text
         127.0.0.1   boilerplate.test
+        127.0.0.1   docs.boilerplate.test
         ```
 2. Dockerización del Backend:
     + Crea `backend/.dockerignore`:
-        ```dockerignore
+        ```docker
         node_modules
         npm-debug.log
         .env
@@ -21,7 +20,7 @@
         dist        
         ```
     + Crea `backend/Dockerfile`:
-        ```Dockerfile
+        ```docker
         FROM node:20-alpine AS base
 
         WORKDIR /usr/src/app
@@ -43,7 +42,7 @@
         ```
 3. Dockerización del Frontend:
     + Crea `frontend/.dockerignore`:
-        ```dockerignore
+        ```docker
         node_modules
         dist
         .git
@@ -51,7 +50,7 @@
         README.md
         ```
     + Crea `frontend/Dockerfile`:
-        ```Dockerfile
+        ```docker
         FROM node:20-alpine
 
         WORKDIR /usr/src/app
@@ -68,7 +67,8 @@
         ```
 4. Configurar Nginx Reverse Proxy:
     + Crea una carpeta nginx en la raíz del proyecto con el archivo `nginx/default.conf`:
-        ```conf
+        ```nginx
+        # 1. Servidor para la Aplicación Principal (Frontend y Backend API)
         server {
             listen 80;
             server_name boilerplate.test;
@@ -91,10 +91,25 @@
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             }
         }
+
+        # 2. Servidor para la Documentación (VitePress)
+        server {
+            listen 80;
+            server_name docs.boilerplate.test;
+
+            location / {
+                proxy_pass http://boilerplate_docs:5173;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+            }
+        }
         ```
 5. Orquestación de Infraestructura Local con `docker-compose.yml`
 + Crea el archivo `docker-compose.yml` en la raíz del proyecto:
-```yml
+```yaml
 services:
   # Nginx Gateway
   proxy:
@@ -108,6 +123,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - docs
     networks:
       - app-network
 
@@ -213,6 +229,21 @@ services:
     networks:
       - app-network
 
+  # Documentación (VitePress)
+  docs:
+    image: node:18-alpine
+    container_name: boilerplate_docs
+    restart: always
+    working_dir: /usr/src/app
+    ports:
+      - "8080:5173"
+    volumes:
+      - ./docs:/usr/src/app
+      - /usr/src/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
@@ -223,7 +254,7 @@ volumes:
 ```
 6. Ajustar `.env` en el Backend:
     + Actualiza tu archivo `backend/.env` para usar el nombre del contenedor de la base de datos:
-        ```env
+        ```ini
         # ==========================================
         # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
         # ==========================================
@@ -271,5 +302,3 @@ volumes:
         # Estado de los contenedores
         docker compose ps
         ```
----
-[🔙](index.md)

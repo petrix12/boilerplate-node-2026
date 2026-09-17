@@ -11,6 +11,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - docs
     networks:
       - app-network
 
@@ -113,6 +114,21 @@ services:
       postgres_dev:
         condition: service_healthy
     command: npx prisma studio --port 5555 --browser none
+    networks:
+      - app-network
+
+  # Documentación (VitePress)
+  docs:
+    image: node:18-alpine
+    container_name: boilerplate_docs
+    restart: always
+    working_dir: /usr/src/app
+    ports:
+      - "8080:5173"
+    volumes:
+      - ./docs:/usr/src/app
+      - /usr/src/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     networks:
       - app-network
 

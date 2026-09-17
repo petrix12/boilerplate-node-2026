@@ -1,5 +1,3 @@
-[🔙](index.md)
----
 ## 💡 Incepción del Proyecto
 
 ### 📑 Especificación de Arquitectura e Infraestructura de Software
@@ -115,7 +113,7 @@ Para guardar las imágenes de perfil, PDFs y documentos sin recargar la base de 
 4. Nombra la clave (ej. `Boilerplate-System-Health`) y copia el token generado (gsk_...).
 5. Configuración del Entorno Backend (.env)
     + Agregaremos las variables de entorno en el backend para dejar la arquitectura lista para el patrón adaptador:
-        ```env
+        ```ini
         # IA Diagnostic Configuration
         AI_PROVIDER=groq
         GROQ_API_KEY=gsk_tu_clave_aqui_xxxxxxxxx
@@ -141,5 +139,3 @@ Para guardar las imágenes de perfil, PDFs y documentos sin recargar la base de 
             }'
         ```
         + Adapta `"model": "openai/gpt-oss-20b"` a algún modelo permitido.
----
-[🔙](index.md)

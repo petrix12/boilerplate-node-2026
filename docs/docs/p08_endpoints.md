@@ -1,5 +1,3 @@
-[🔙](index.md)
----
 ## 🔌 Endpoints
 ### 📋 Resumen de Endpoints
 | Módulo     | Método   | Endpoint                          | Permiso / Rol requerido   |
@@ -581,5 +579,3 @@
 
         {"status":"success","message":"Log registrado"}
         ```
----
-[🔙](index.md)

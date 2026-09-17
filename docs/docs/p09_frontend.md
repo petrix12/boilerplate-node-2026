@@ -1,5 +1,3 @@
-[🔙](index.md)
----
 ## 💻 Desarrollo del Frontend
 
 ### 📦 Instalación de Dependencias
@@ -3338,6 +3336,3 @@
             </div>
         </template>       
         ```
-
----
-[🔙](index.md)

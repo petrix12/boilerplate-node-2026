@@ -60,7 +60,7 @@ Edita tu archivo hosts (`/etc/hosts` en Linux/WSL o `C:\Windows\System32\drivers
 
 2. Configurar variables de entorno
 Crea el archivo `backend/.env` basándote en la configuración de Docker:
-    ```env
+    ```ini
     # ===================================================================================================
     # CONFIGURACIÓN DEL SERVIDOR BACKEND
     # ===================================================================================================

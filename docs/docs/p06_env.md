@@ -1,9 +1,7 @@
-[🔙](index.md)
----
 ## 🔐 Variables de entorno
 ### Backend
 1. Variables de Entorno del Backend (`backend/.env`):
-    ```env
+    ```ini
     # ===================================================================================================
     # CONFIGURACIÓN DEL SERVIDOR BACKEND
     # ===================================================================================================
@@ -114,7 +112,7 @@
 
 ### Frontend
 1. Variables de Entorno del Frontend (`frontend/.env`):
-    ```env
+    ```ini
     # ===================================================================================================
     # CONFIGURACIÓN DEL SERVIDOR FRONTEND
     # ===================================================================================================
@@ -133,5 +131,3 @@
     # VITE_APP_NAME="Node|Vue Boilerplate"
     ```
 2. Actualizar variables de entorno en `https://vercel.com`.
----
-[🔙](index.md)
