@@ -1,68 +1,68 @@
 <script setup>
-    import { ref, computed, onMounted, onUnmounted } from 'vue';
-    import { useRouter, useRoute } from 'vue-router';
-    import { useAuthStore } from '../stores/auth.store';
-    import {
-        Cog6ToothIcon, 
-        Squares2X2Icon, 
-        ArrowRightOnRectangleIcon, 
-        ChevronDownIcon 
-    } from '@heroicons/vue/24/outline';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '../stores/auth.store';
+import {
+    Cog6ToothIcon, 
+    Squares2X2Icon, 
+    ArrowRightOnRectangleIcon, 
+    ChevronDownIcon 
+} from '@heroicons/vue/24/outline';
 
-    const props = defineProps({
-        title: {
-            type: String,
-            default: 'Dashboard'
-        }
-    });
+const props = defineProps({
+    title: {
+        type: String,
+        default: 'Dashboard'
+    }
+});
 
-    const authStore = useAuthStore();
-    const router = useRouter();
-    const route = useRoute();
+const authStore = useAuthStore();
+const router = useRouter();
+const route = useRoute();
 
-    const isDropdownOpen = ref(false);
-    const dropdownRef = ref(null);
+const isDropdownOpen = ref(false);
+const dropdownRef = ref(null);
 
-    // Inicial del nombre para avatar por defecto
-    const userInitial = computed(() => {
-        return authStore.user?.name ? authStore.user.name.charAt(0).toUpperCase() : 'U';
-    });
+// Inicial del nombre para avatar por defecto
+const userInitial = computed(() => {
+    return authStore.user?.name ? authStore.user.name.charAt(0).toUpperCase() : 'U';
+});
 
-    // Comprobar si estamos en una ruta administrativa
-    const isAdminArea = computed(() => {
-        return route.path.startsWith('/admin');
-    });
+// Comprobar si estamos en una ruta administrativa
+const isAdminArea = computed(() => {
+    return route.path.startsWith('/admin');
+});
 
-    const toggleDropdown = () => {
-        isDropdownOpen.value = !isDropdownOpen.value;
-    };
+const toggleDropdown = () => {
+    isDropdownOpen.value = !isDropdownOpen.value;
+};
 
-    // Cerrar dropdown al hacer clic afuera
-    const handleClickOutside = (event) => {
-        if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
-            isDropdownOpen.value = false;
-        }
-    };
+// Cerrar dropdown al hacer clic afuera
+const handleClickOutside = (event) => {
+    if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
+        isDropdownOpen.value = false;
+    }
+};
 
-    // Control de error al cargar el logo
-    const hasLogoError = ref(false);
+// Control de error al cargar el logo
+const hasLogoError = ref(false);
 
-    const handleLogoError = () => {
-        hasLogoError.value = true;
-    };
+const handleLogoError = () => {
+    hasLogoError.value = true;
+};
 
-    onMounted(() => {
-        document.addEventListener('click', handleClickOutside);
-    });
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside);
+});
 
-    onUnmounted(() => {
-        document.removeEventListener('click', handleClickOutside);
-    });
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
+});
 
-    const handleLogout = async () => {
-        await authStore.logout();
-        router.push({ name: 'login' });
-    };
+const handleLogout = async () => {
+    await authStore.logout();
+    router.push({ name: 'login' });
+};
 </script>
 
 <template>
@@ -72,9 +72,7 @@
             <!-- LADO IZQUIERDO: Logo + Nombre App + Sección Dinámica -->
             <div class="flex items-center space-x-3">
                 <router-link to="/" class="flex items-center space-x-2">
-                    <!-- Ubicación recomendada de la imagen/logo -->
-                    <!-- <img src="/logo.png" alt="App Logo" class="w-8 h-8 object-contain" /> -->
-                     <img 
+                    <img 
                         v-if="!hasLogoError"
                         src="/logo.png" 
                         alt="App Logo" 
@@ -86,7 +84,6 @@
 
                 <span class="text-slate-600 font-light text-xl">/</span>
 
-                <!-- Título dinámico recibido por Props -->
                 <h1 class="text-base sm:text-lg font-semibold text-emerald-400">
                     {{ props.title }}
                 </h1>
@@ -113,7 +110,7 @@
                     <ChevronDownIcon class="w-4 h-4 text-slate-400" />
                 </button>
 
-                <!-- Menu Desplegable -->
+                <!-- Menú Desplegable -->
                 <Transition
                     enter-active-class="transition duration-100 ease-out"
                     enter-from-class="transform scale-95 opacity-0"
@@ -142,7 +139,7 @@
                             <span>Configuración</span>
                         </router-link>
 
-                        <!-- Item 2: Alternar entre Admin y Dashboard de forma profesional -->
+                        <!-- Item 2: Alternar entre Admin y Dashboard -->
                         <router-link 
                             v-if="authStore.hasPermission('admin:access') && !isAdminArea"
                             to="/admin" 

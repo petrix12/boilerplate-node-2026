@@ -120,6 +120,10 @@
 + [ ] Realizar pruebas unitarias.
 + [ ] Que aparezca la manito cuando el maouse se posicione sobre un botón, o algo por el estilo.
 + [ ] Asegurar que los endpoints en el backend se puedan ejecutar según los permisos que les corresponde.
++ [ ] Verificar si es necesario variable de entorno IA_ACTIVE.
++ [ ] Crear example.env o como se llame.
++ [ ] Homologar vistas admin.
++ [ ] Limpiar proyecto frontend de archivos que no se usan.
 
 
 ### Terminadas
