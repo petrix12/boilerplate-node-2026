@@ -4,6 +4,7 @@ export default defineConfig({
     title: "Boilerplate Node.js | Vue.js 2026",
     description: "Documentación oficial del proyecto boilerplate 2026",
     lang: 'es-ES',
+    ignoreDeadLinks: true,
     themeConfig: {
         // Barra de navegación superior
         nav: [

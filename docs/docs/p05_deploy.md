@@ -80,7 +80,6 @@
     + En el onboarding, selecciona "I'm working on personal projects" para habilitar el plan Hobby 100% gratuito (sin tarjeta).
     + En el aviso de seguridad 2FA, selecciona "Skip securing my account".
     + Haz clic en Add New... > Project e importa `boilerplate-node-2026`.
-    + 
 2. Importación y Despliegue del Frontend:
     + En el Dashboard, haz clic en Add New... > Project.
     + Importa el repositorio del frontend (`boilerplate-node-2026`).
@@ -96,3 +95,11 @@
 5. Despliegue Final:
     + Haz clic en Deploy. Tras guardar o cambiar variables de entorno, ejecuta siempre un Redeploy (sin usar Build Cache) para inyectar la URL de la API en los archivos estáticos de React/Vite.
 
+### Proyecto de documentación (Vercel)
+1. Importación y Despliegue de VitePress:
+    + En el Dashboard, haz clic en Add New... > Project.
+    + Importa el repositorio del frontend (`boilerplate-node-2026`).
+    + Project Name: `boilerplate-node-2026-docs`.
+    + Root Directory: `docs`.
+    + Clic: `Deploy`.
+2. mmm
