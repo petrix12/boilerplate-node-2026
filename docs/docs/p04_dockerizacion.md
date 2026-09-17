@@ -284,10 +284,10 @@ volumes:
         docker compose up -d --build frontend
         ```
     + Verificar acceso:
-        + Frontend: [http://boilerplate.test](http://boilerplate.test)
-        + API Health Check: [http://boilerplate.test/api/health](http://boilerplate.test/api/health)
-        + MinIO Console: [http://localhost:9001](http://localhost:9001)
-        + Prisma Studio: [http://localhost:5555](http://localhost:5555)
+        + Frontend: `http://boilerplate.test`
+        + API Health Check: `http://boilerplate.test/api/health`
+        + MinIO Console: `http://localhost:9001`
+        + Prisma Studio: `http://localhost:5555`
     + Ver logs del sistema:
         ```bash
         docker compose logs -f backend
