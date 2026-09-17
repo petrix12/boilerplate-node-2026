@@ -100,6 +100,16 @@
     + En el Dashboard, haz clic en Add New... > Project.
     + Importa el repositorio del frontend (`boilerplate-node-2026`).
     + Project Name: `boilerplate-node-2026-docs`.
-    + Root Directory: `docs`.
+2. Configuración a tener en cuenta:
+    + Sttings > Build and Deployement:
+        + Project Settings:
+            + Framework Preset: `VitePress`.
+            + Build Command: `npx vitepress build .`.
+            + Output Directory: `.vitepress/dist`.
+            + Install Command: Override.
+            + Development Command: Override.
+        + Root Directory: `docs`.
+    
+    
+    
     + Clic: `Deploy`.
-2. mmm
