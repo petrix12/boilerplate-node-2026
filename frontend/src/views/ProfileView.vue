@@ -9,6 +9,9 @@ const authStore = useAuthStore();
 const fileInputRef = ref(null);
 const saving = ref(false);
 
+// Estado para controlar el efecto visual cuando arrastras sobre la zona
+const isDragging = ref(false);
+
 // Configuración base de SweetAlert2 con estilo oscuro (Slate)
 const swalDark = Swal.mixin({
     background: '#1e293b',
@@ -219,6 +222,44 @@ const removeCurrentAvatar = async () => {
         saving.value = false;
     }
 };
+
+// Función para manejar el evento Drop
+const handleDrop = (event) => {
+    isDragging.value = false;
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+        const file = files[0];
+        
+        // 1. Validar que sea una imagen
+        if (!file.type.startsWith('image/')) {
+            swalDark.fire({
+                title: 'Archivo inválido',
+                text: 'Por favor, arrastra un archivo de imagen válido.',
+                icon: 'warning'
+            });
+            return;
+        }
+
+        // 2. Validar tamaño máximo (2MB) - ¡AQUÍ ESTÁ LA CLAVE!
+        if (file.size > 2 * 1024 * 1024) {
+            swalDark.fire({
+                title: 'Archivo muy grande',
+                text: 'La imagen supera el tamaño máximo permitido de 2MB.',
+                icon: 'warning'
+            });
+            return;
+        }
+
+        // Liberar ObjectURL anterior si existía para evitar leaks de memoria
+        if (profileForm.value.avatarUrl && profileForm.value.avatarUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(profileForm.value.avatarUrl);
+        }
+
+        // Asignamos el archivo correctamente
+        profileForm.value.avatarFile = file;
+        profileForm.value.avatarUrl = URL.createObjectURL(file);
+    }
+};
 </script>
 
 <template>
@@ -240,15 +281,23 @@ const removeCurrentAvatar = async () => {
         </div>
 
         <form @submit.prevent="updateProfile" class="space-y-6">
-            <!-- Sección Avatar & Datos Básicos -->
+            <!-- Sección Avatar & Datos Básicos con Drag & Drop -->
             <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
                 <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
                     <UserIcon class="w-5 h-5 text-emerald-400" />
                     Información Personal
                 </h3>
 
-                <div class="flex flex-col sm:flex-row items-center gap-6 mb-6">
-                    <div class="relative w-24 h-24 rounded-full overflow-hidden bg-slate-700 border-2 border-slate-600 flex items-center justify-center shrink-0">
+                <!-- Contenedor principal con eventos de Drag & Drop -->
+                <div 
+                    class="flex flex-col sm:flex-row items-center gap-6 mb-6 p-4 rounded-xl border-2 border-dashed transition-all duration-200"
+                    :class="isDragging ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]' : 'border-slate-700/80 bg-slate-900/30'"
+                    @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false"
+                    @drop.prevent="handleDrop"
+                >
+                    <!-- Avatar Preview -->
+                    <div class="relative w-24 h-24 rounded-full overflow-hidden bg-slate-700 border-2 border-slate-600 flex items-center justify-center shrink-0 shadow-inner">
                         <img 
                             v-if="profileForm.avatarUrl" 
                             :src="profileForm.avatarUrl" 
@@ -260,9 +309,10 @@ const removeCurrentAvatar = async () => {
                         </span>
                     </div>
 
-                    <div class="flex flex-col space-y-2 text-center sm:text-left">
-                        <div class="flex gap-3 justify-center sm:justify-start">
-                            <label class="cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl transition-colors">
+                    <!-- Botones y Mensaje de guía -->
+                    <div class="flex flex-col space-y-2 text-center sm:text-left w-full">
+                        <div class="flex flex-wrap gap-3 justify-center sm:justify-start">
+                            <label class="cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl transition-colors shadow-md">
                                 <span>Cambiar Foto</span>
                                 <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleAvatarChange" />
                             </label>
@@ -285,7 +335,9 @@ const removeCurrentAvatar = async () => {
                                 Quitar Foto
                             </button>
                         </div>
-                        <p class="text-xs text-slate-500">JPG, PNG o WEBP. Máximo 2MB.</p>
+                        <p class="text-xs text-slate-400 pt-1">
+                            <span class="text-emerald-400 font-medium">Arrastra una imagen aquí</span> o usa el botón. JPG, PNG / Máx. 2MB.
+                        </p>
                     </div>
                 </div>
 

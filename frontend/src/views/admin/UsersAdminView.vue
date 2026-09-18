@@ -258,8 +258,15 @@
                             />
                         </div>
 
-                        <div class="flex items-center space-x-4">
-                            <div class="relative w-16 h-16 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center border border-slate-600 shrink-0">
+                        <!-- Contenedor principal con eventos de Drag & Drop -->
+                        <div 
+                            class="flex items-center space-x-4 p-3 rounded-xl border-2 border-dashed transition-all duration-200 mb-4"
+                            :class="isDragging ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]' : 'border-slate-700/80 bg-slate-900/30'"
+                            @dragover.prevent="isDragging = true"
+                            @dragleave.prevent="isDragging = false"
+                            @drop.prevent="handleDrop"
+                        >
+                            <div class="relative w-16 h-16 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center border border-slate-600 shrink-0 shadow-inner">
                                 <img 
                                     v-if="userForm.avatarUrl" 
                                     :src="userForm.avatarUrl" 
@@ -274,29 +281,34 @@
                                 </div>
                             </div>
 
-                            <div class="flex flex-col space-y-2">
-                                <label class="cursor-pointer px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs text-slate-200 font-medium rounded-lg border border-slate-600 transition-colors inline-block text-center">
-                                    <span>{{ uploadingAvatar ? 'Subiendo...' : 'Subir imagen' }}</span>
-                                    <input 
-                                        ref="fileInputRef" 
-                                        type="file" 
-                                        accept="image/*" 
-                                        class="hidden" 
+                            <div class="flex flex-col space-y-1.5 w-full">
+                                <div class="flex items-center gap-2">
+                                    <label class="cursor-pointer px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs text-slate-200 font-medium rounded-lg border border-slate-600 transition-colors inline-block text-center shadow-sm">
+                                        <span>{{ uploadingAvatar ? 'Subiendo...' : 'Subir imagen' }}</span>
+                                        <input 
+                                            ref="fileInputRef" 
+                                            type="file" 
+                                            accept="image/*" 
+                                            class="hidden" 
+                                            :disabled="uploadingAvatar"
+                                            @change="handleAvatarChange" 
+                                        />
+                                    </label>
+                                    <button 
+                                        v-if="userForm.avatarUrl" 
+                                        type="button" 
                                         :disabled="uploadingAvatar"
-                                        @change="handleAvatarChange" 
-                                    />
-                                </label>
-                                <button 
-                                    v-if="userForm.avatarUrl" 
-                                    type="button" 
-                                    :disabled="uploadingAvatar"
-                                    @click="removeAvatar"
-                                    class="text-xs text-red-400 hover:text-red-300 text-left transition-colors disabled:opacity-50"
-                                >
-                                    Eliminar imagen
-                                </button>
+                                        @click="removeAvatar"
+                                        class="text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 font-medium"
+                                    >
+                                        Eliminar
+                                    </button>
+                                </div>
+                                <p class="text-[11px] text-slate-400">
+                                    <span class="text-emerald-400 font-medium">Arrastra una imagen</span> o usa el botón (Máx. 2MB).
+                                </p>
                             </div>
-                        </div>
+                        </div>                      
 
                         <div class="flex justify-end gap-3 pt-2">
                             <button
@@ -349,6 +361,7 @@ const isUserModalOpen = ref(false);
 const targetUser = ref(null);
 const fileInputRef = ref(null);
 const uploadingAvatar = ref(false);
+const isDragging = ref(false);
 
 const userForm = ref({
     name: '',
@@ -358,41 +371,11 @@ const userForm = ref({
     avatarFile: null
 });
 
-// Manejar cambio/subida de imagen
-const handleAvatarChange = async (event) => {
+// Manejar cambio/subida de imagen mediante el input file tradicional
+const handleAvatarChange = (event) => {
     const file = event.target.files[0];
-    if (!file) return;
-
-    if (targetUser.value) {
-        uploadingAvatar.value = true;
-        try {
-            // Asegurar que file sea una instancia válida de Blob/File
-            const formData = new FormData();
-            formData.append('avatar', file, file.name);
-
-            const res = await userService.uploadUserAvatarById(targetUser.value.id, formData);
-            
-            const updatedAvatar = res.data?.user?.avatarUrl || URL.createObjectURL(file);
-            userForm.value.avatarUrl = updatedAvatar;
-            targetUser.value.avatarUrl = updatedAvatar;
-            targetUser.value.avatar = updatedAvatar;
-        } catch (err) {
-            Swal.fire({
-                title: 'Error',
-                text: err.response?.data?.message || 'Error al subir la imagen',
-                icon: 'error',
-                background: '#1e293b',
-                color: '#f8fafc'
-            });
-        } finally {
-            uploadingAvatar.value = false;
-        }
-    } else {
-        userForm.value.avatarFile = file;
-        userForm.value.avatarUrl = URL.createObjectURL(file);
-    }
+    processSelectedFile(file);
 };
-
 // Eliminar foto de perfil
 const removeAvatar = async () => {
     if (targetUser.value) {
@@ -646,7 +629,79 @@ const fetchAvailableRoles = async () => {
     } catch (err) {
         console.error('Error al cargar roles disponibles:', err);
     }
-};    
+};
+
+// Función centralizada para validar el archivo (tipo y límite de 2MB) y procesarlo
+const processSelectedFile = async (file) => {
+    if (!file) return;
+
+    // 1. Validar que sea una imagen
+    if (!file.type.startsWith('image/')) {
+        Swal.fire({
+            title: 'Archivo inválido',
+            text: 'Por favor, selecciona o arrastra un archivo de imagen válido.',
+            icon: 'warning',
+            background: '#1e293b',
+            color: '#f8fafc'
+        });
+        return;
+    }
+
+    // 2. Validar límite estricto de 2MB
+    if (file.size > 2 * 1024 * 1024) {
+        Swal.fire({
+            title: 'Archivo muy grande',
+            text: 'La imagen supera el tamaño máximo permitido de 2MB.',
+            icon: 'warning',
+            background: '#1e293b',
+            color: '#f8fafc'
+        });
+        if (fileInputRef.value) fileInputRef.value.value = '';
+        return;
+    }
+
+    if (targetUser.value) {
+        // MODO EDICIÓN: Sube el avatar inmediatamente al servidor por ID
+        uploadingAvatar.value = true;
+        try {
+            const formData = new FormData();
+            formData.append('avatar', file, file.name);
+
+            const res = await userService.uploadUserAvatarById(targetUser.value.id, formData);
+            
+            const updatedAvatar = res.data?.user?.avatarUrl || URL.createObjectURL(file);
+            userForm.value.avatarUrl = updatedAvatar;
+            targetUser.value.avatarUrl = updatedAvatar;
+            targetUser.value.avatar = updatedAvatar;
+        } catch (err) {
+            Swal.fire({
+                title: 'Error',
+                text: err.response?.data?.message || 'Error al subir la imagen',
+                icon: 'error',
+                background: '#1e293b',
+                color: '#f8fafc'
+            });
+        } finally {
+            uploadingAvatar.value = false;
+        }
+    } else {
+        // MODO CREACIÓN: Guarda temporalmente el archivo en el formulario
+        if (userForm.value.avatarUrl && userForm.value.avatarUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(userForm.value.avatarUrl);
+        }
+        userForm.value.avatarFile = file;
+        userForm.value.avatarUrl = URL.createObjectURL(file);
+    }
+};
+
+// Manejar evento Drop de la zona interactiva
+const handleDrop = (event) => {
+    isDragging.value = false;
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+        processSelectedFile(files[0]);
+    }
+};
 
 onMounted(() => {
     fetchUsers();
