@@ -1,6 +1,6 @@
-## 💡 Incepción del Proyecto
+# 💡 Incepción del Proyecto
 
-### 📑 Especificación de Arquitectura e Infraestructura de Software
+## 📑 Especificación de Arquitectura e Infraestructura de Software
 1. **Resumen Ejecutivo**
 El presente documento describe la arquitectura de software, stack tecnológico e infraestructura cloud elegida para el desarrollo del **Starter Kit / Boilerplate Web**. El objetivo principal es construir una plataforma moderna, escalable, segura y desacoplada, utilizando una arquitectura de `microservicios/decoupled` de capa gratuita (Free Tier Operations), garantizando costo $0.00 USD de mantenimiento operativo sin comprometer los estándares de la industria.
 
@@ -60,17 +60,17 @@ El presente documento describe la arquitectura de software, stack tecnológico e
     Archivos (PDF/Img)  | Supabase Storage  | 1 GB de Almacenamiento S3             | Totalmente aislado de la BD principal.
 
 
-### 📖 Configuración de Base de Datos y Almacenamiento
+## 📖 Configuración de Base de Datos y Almacenamiento
 Esta sección detalla el proceso paso a paso para desplegar la capa de datos en la nube (Supabase) y preparar el entorno de desarrollo local.
 
-#### 🛠️ PARTE 1: Creación del Proyecto en Supabase (Producción / Cloud)
+### 🛠️ PARTE 1: Creación del Proyecto en Supabase (Producción / Cloud)
 
-##### Paso 1: Registro e Inicio de Sesión
+#### Paso 1: Registro e Inicio de Sesión
 1. Dirígete a [supabase.com](https://supabase.com).
 2. Haz clic en "Start your project" / "Sign In".
 3. Selecciona la opción "Continue with GitHub" para autenticarte usando tu cuenta de GitHub (esto evita crear contraseñas adicionales y facilitará futuras integraciones).
 
-##### Paso 2: Crear una Nueva Organización y Proyecto
+#### Paso 2: Crear una Nueva Organización y Proyecto
 1. En el panel principal (Dashboard), haz clic en el botón "New Project".
 2. Si es tu primera vez, te pedirá seleccionar una Organization (puedes crear una con tu nombre o el nombre del proyecto).
 3. Completa el formulario de creación con los siguientes datos:
@@ -81,7 +81,7 @@ Esta sección detalla el proceso paso a paso para desplegar la capa de datos en 
 4. Haz clic en "Create new project".
     + ⏳ Nota: Supabase tardará entre 1 y 2 minutos en aprovisionar la base de datos PostgreSQL en la nube.
 
-##### Paso 3: Obtener las Credenciales de la Base de Datos (PostgreSQL)
+#### Paso 3: Obtener las Credenciales de la Base de Datos (PostgreSQL)
 Para que nuestro Backend en Node.js (vía Prisma ORM) se conecte a la base de datos, necesitamos el Connection String (Cadena de conexión).
 1. En el menú lateral izquierdo de Supabase, ve a Project Settings (el icono de engranaje ⚙️ en la parte inferior).
 2. Selecciona la sección Database.
@@ -93,7 +93,7 @@ Para que nuestro Backend en Node.js (vía Prisma ORM) se conecte a la base de da
     ```
 6. Reemplaza [YOUR-PASSWORD] en la cadena por la contraseña real que creaste en el Paso 2
 
-##### Paso 4: Crear el Bucket de Almacenamiento para Archivos (Storage)
+#### Paso 4: Crear el Bucket de Almacenamiento para Archivos (Storage)
 Para guardar las imágenes de perfil, PDFs y documentos sin recargar la base de datos:
 1. En el menú lateral izquierdo de Supabase, haz clic en el icono de Storage (🗂️).
 2. Haz clic en el botón "Create a new bucket".
@@ -106,7 +106,7 @@ Para guardar las imágenes de perfil, PDFs y documentos sin recargar la base de 
     + anon / public key: eyJhbGciOiJKV1QiLC... (Clave pública)
     + service_role key: eyJhbGciOiJKV1QiLC... (Clave privada para el backend - ¡mantener secreta!).
 
-### 🪪 Cómo obtener tus credenciales de Groq
+## 🪪 Cómo obtener tus credenciales de Groq
 1. Ve a `console.groq.com` e inicia sesión (puedes usar tu cuenta de Google o GitHub).
 2. En el menú lateral izquierdo, haz clic en `API Keys`.
 3. Haz clic en `Create API Key`.

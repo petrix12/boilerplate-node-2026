@@ -1,7 +1,7 @@
-## 💻 Estructuración Local y Control de Versiones (Git & GitHub)
+# 💻 Estructuración Local y Control de Versiones (Git & GitHub)
 + Esta sección documenta el procedimiento estándar para organizar el espacio de trabajo local, levantar la infraestructura de desarrollo mediante Docker y vincular los proyectos con repositorios remotos en GitHub.
 
-### 🏗️ PARTE 1: Organización del Espacio de Trabajo (Mono-Repo)
+## 🏗️ PARTE 1: Organización del Espacio de Trabajo (Mono-Repo)
 A diferencia de un monolito, la arquitectura desacoplada requiere separar el código fuente de la infraestructura y de los diferentes clientes.
 
 + **Estructura de Directorios**
@@ -19,9 +19,9 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     └── README.md           # Instrucciones de setup inicial
     ```
 
-### 🚀 PARTE 2: Creación de la Estructura e Infraestructura Local
+## 🚀 PARTE 2: Creación de la Estructura e Infraestructura Local
 
-#### Paso 1: Crear la Jerarquía de Directorios
+### Paso 1: Crear la Jerarquía de Directorios
 + Ejecuta los siguientes comandos en tu terminal para inicializar el espacio de trabajo:
     ```bash
     # 1. Asegúrate de estar en tu directorio de proyectos en Linux
@@ -34,7 +34,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     cd boilerplate-node-2026
     ```
 
-#### Paso 2: Crear estructura del Backend Inicial
+### Paso 2: Crear estructura del Backend Inicial
 1. Inicialización del Proyecto e Instalación de Dependencias:
     + Ubicados en la carpeta `backend`, inicializamos el paquete de Node.js e instalamos el conjunto de librerías necesarias:
         ```bash
@@ -254,7 +254,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         curl http://localhost:3000/api/health
         ```
 
-#### Paso 3: Crear estructura del Frontend Inicial
+### Paso 3: Crear estructura del Frontend Inicial
 + Esta fase cubre la construcción del cliente SPA dentro de la carpeta `frontend` utilizando Vue 3 (Composition API / `<script setup>`), Vite, Pinia, Vue Router y Axios, con Tailwind CSS v4 para los estilos.
 1. Creación del Proyecto Vue 3 con Vite
     + Antes de instalar paquetes de terceros, generamos la estructura oficial de Vue 3 dentro de la carpeta del frontend:
@@ -307,7 +307,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     npm run dev
     ```
 
-#### Paso 4: Crear estructura de proyecto de documentación inicial
+### Paso 4: Crear estructura de proyecto de documentación inicial
 1. Inicializar `VitePress` dentro de la carpeta principal del monorepo:
     ```bash
     npm init vitepress@latest
@@ -316,9 +316,9 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
 2. Entrar, hacer el `npm install` y probar el `npm run dev` para validar que todo vuela con Vite.
 
 
-### 📑 PARTE 3: Git y GitHub
+## 🐙 PARTE 3: Git y GitHub
 
-#### Iniciar repositorio Git y subir a GitHub
+### Iniciar repositorio Git y subir a GitHub
 ```bash
 # 3. Entra a la carpeta
 cd boilerplate-node-2026
@@ -330,7 +330,7 @@ git init
 code .
 ```
 
-#### Subir proyecto a GitHub CLI
+### Subir proyecto a GitHub CLI
 ```bash
 # 1. Instalar dependencias previas
 sudo apt update && sudo apt install -y curl wget gpg

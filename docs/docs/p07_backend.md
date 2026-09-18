@@ -1,5 +1,6 @@
-## ⚙️ Desarrollo del Backend
-### 🗄️ Paso 1: Configuración de Base de Datos y ORM (Prisma)
+# ⚙️ Desarrollo del Backend
+
+## 🗄️ Paso 1: Configuración de Base de Datos y ORM (Prisma)
 1. Configuración del `Archivo de Modelo de Datos` de Prisma: actualizar (reemplazar) el archivo `backend/prisma/schema.prisma`:
     ```prisma
     // This is your Prisma schema file,
@@ -156,7 +157,7 @@
         });   
     ```
 
-### 🛠️ Paso 2: Clientes de Servicios y Unidades de Configuración (`src/config/`)
+## 🛠️ Paso 2: Clientes de Servicios y Unidades de Configuración (`src/config/`)
 + Crear la carpeta `backend/src/config/` e inicializa los clientes de integración:
 1. `backend/src/config/prisma.js`: Instancia singleton de @prisma/client para ser reutilizada en la aplicación.
     ```js
@@ -255,7 +256,7 @@
     module.exports = { s3Client, ensureBucketExists };        
     ```
 
-### 🧰 Paso 3: Utilidades Genéricas (`src/utils/`)
+## 🧰 Paso 3: Utilidades Genéricas (`src/utils/`)
 + Crea los helpers universales necesarios para controladores y middlewares:
 1. `backend/src/utils/request.utils.js`: Helpers para formatear respuestas HTTP estándar (successResponse, errorResponse, etc.) o parsear la IP/User-Agent del cliente:
     ```js
@@ -279,7 +280,7 @@
     module.exports = { getClientIp };    
     ```
 
-### 🛡️ Paso 5: Middlewares Fundamentales (`src/middlewares/`)
+## 🛡️ Paso 5: Middlewares Fundamentales (`src/middlewares/`)
 + Crea la capa intermedia para el manejo de peticiones, seguridad y errores:
 1. `backend/src/middlewares/error.middleware.js`: Capturador global de excepciones/errores de la API:
     ```js
@@ -564,7 +565,7 @@
     module.exports = upload;    
     ```
 
-### 💼 Paso 5: Servicios de Negocio (`src/services/`)
+## 💼 Paso 5: Servicios de Negocio (`src/services/`)
 + Crea la lógica de negocio independiente de las rutas HTTP:
 1. `backend/src/services/audit.service.js`: Métodos para registrar y consultar eventos del sistema en la base de datos (logs de auditoría).
     ```js
@@ -892,7 +893,7 @@
     module.exports = aiService;  
     ```
 
-### 🎮 Paso 7: Controladores de la API (`src/controllers/`)
+## 🎮 Paso 7: Controladores de la API (`src/controllers/`)
 + Implementa la capa de orquestación de respuesta para cada dominio:
 1. `backend/src/controllers/auth.controller.js`: Login, registro, cambio de contraseña y refresco de tokens:
     ```js
@@ -2064,7 +2065,7 @@
     };    
     ```
 
-### 🛣️ Paso 8: Definición de Rutas (`src/routes/`)
+## 🛣️ Paso 8: Definición de Rutas (`src/routes/`)
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
 1. `backend/src/routes/auth.routes.js`: Rutas de autenticación (/api/v1/auth/*):
     ```js
@@ -2220,7 +2221,7 @@
     module.exports = router;
     ```
 
-### 🌱 Paso 9: Seeders y Scripts de Datos (`src/seeders/` & `src/`)
+## 🌱 Paso 9: Seeders y Scripts de Datos (`src/seeders/` & `src/`)
 + Define la siembra de datos de desarrollo y producción:
 1. `backend/src/seeders/role-permission.seeder.js`: Script para generar roles y permisos:
     ```js
@@ -2482,7 +2483,7 @@
     }
      ```
 
-### 🚀 Paso 10: Punto de Entrada de la Aplicación (`src/app.js`)
+## 🚀 Paso 10: Punto de Entrada de la Aplicación (`src/app.js`)
 1. Crea `backend/src/app.js` unificando toda la arquitectura:
     ```js
     const express = require('express');

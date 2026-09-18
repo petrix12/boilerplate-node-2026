@@ -5,6 +5,9 @@ export default defineConfig({
     description: "Documentación oficial del proyecto boilerplate 2026",
     lang: 'es-ES',
     ignoreDeadLinks: true,
+    head: [
+        ['link', { rel: 'icon', href: '/favicon.ico' }]
+    ],    
     themeConfig: {
         // Barra de navegación superior
         nav: [
@@ -28,8 +31,19 @@ export default defineConfig({
                     { text: '💻 Desarrollo del Frontend', link: '/p09_frontend' },
                     { text: '📋 Aplicación para documentación', link: '/p10_app_documentacion' }
                 ]
+            },
+            {
+                text: 'Recursos',
+                items: [
+                    { text: '🔗 URL de interés', link: '/r01_url' }
+                ]
             }
         ],
+        
+        // Enlace directo al repositorio de GitHub para editar o ver el código
+        socialLinks: [
+            { icon: 'github', link: 'https://github.com/petrix12/boilerplate-node-2026' }
+        ],       
 
         // Textos de la interfaz en español
         outlineTitle: 'En esta página',
@@ -37,6 +51,6 @@ export default defineConfig({
         docFooter: {
             prev: 'Página anterior',
             next: 'Página siguiente'
-        }
+        }    
     }
 })

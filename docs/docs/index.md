@@ -10,7 +10,10 @@
 ## 🔌 [Endpoints](p08_endpoints)
 ## 💻 [Desarrollo del Frontend](p09_frontend)
 ## 📋 [Aplicación para documentación](p10_app_documentacion)
+---
+## 🔗 [URL de interes](r01_url)
 
+---
 ## --------------------------------------------------------        
 
 - [ ] Tarea pendiente o sin seleccionar
@@ -140,6 +143,7 @@
 + [ ] Limpiar proyecto frontend de archivos que no se usan.
 + [ ] Implementar mensaje sweetalert en todos los lugares que haga falta.
 + [ ] Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
++ [ ] Indicar la creación de los archivos README.md y LICENSE
 
 
 ### Terminadas

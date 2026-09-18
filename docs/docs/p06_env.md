@@ -1,5 +1,6 @@
-## 🔐 Variables de entorno
-### Backend
+# 🔐 Variables de entorno
+
+## ⚙️ Backend
 1. Variables de Entorno del Backend (`backend/.env`):
     ```ini
     # ===================================================================================================
@@ -110,7 +111,7 @@
     ```
 2. Actualizar variables de entorno en `https://render.com`.
 
-### Frontend
+## 💻 Frontend
 1. Variables de Entorno del Frontend (`frontend/.env`):
     ```ini
     # ===================================================================================================

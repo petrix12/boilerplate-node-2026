@@ -1,6 +1,6 @@
-## 💻 Desarrollo del Frontend
+# 💻 Desarrollo del Frontend
 
-### 📦 Instalación de Dependencias
+## 📦 Instalación de Dependencias
 1. Instalamos Axios para las peticiones HTTP y el plugin oficial de Tailwind CSS v4 para Vite entre otras:
     ```bash
      # Instalar cliente HTTP
@@ -25,7 +25,7 @@
     docker compose up -d
     ```
 
-### 🎨 Inicialización de la Capa de Presentación
+## 🎨 Inicialización de la Capa de Presentación
 1. Configuración de Vite y Tailwind v4: 
     + Abre el archivo `frontend/vite.config.js` déjalo exactamente así:
         ```js
@@ -404,7 +404,7 @@
     app.mount('#app')
     ```
 
-### ⚡ Establecer los servicios (`src/services/`)
+## ⚡ Establecer los servicios (`src/services/`)
 1. Crear servicio `frontend/src/services/auth.service.js`
     ```js
     import api from '@/api/axios';
@@ -569,7 +569,7 @@
     ```
 
 
-### 🎨 Vistas de Autenticación y Dashboard (`src/views/`)
+## 🎨 Vistas de Autenticación y Dashboard (`src/views/`)
 1. Suministrar icono y logo de la aplicación en:
     + Icono: `frontend/public/favicon.ico`.
     + Logo: `frontend/public/logo.png`.

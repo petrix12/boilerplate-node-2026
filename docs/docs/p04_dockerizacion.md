@@ -1,113 +1,113 @@
-## 🐳 Dockerización
-1. Mapear el dominio local en tu Sistema Operativo:
-    + Abre el archivo hosts de tu sistema con permisos de administrador:
-        + Windows (WSL): `C:\Windows\System32\drivers\etc\hosts`.
-        + Linux/WSL: `/etc/hosts`.
-    + Agrega estas líneas al final:
-        ```text
-        127.0.0.1   boilerplate.test
-        127.0.0.1   docs.boilerplate.test
-        ```
-2. Dockerización del Backend:
-    + Crea `backend/.dockerignore`:
-        ```docker
-        node_modules
-        npm-debug.log
-        .env
-        .git
-        .gitignore
-        README.md
-        dist        
-        ```
-    + Crea `backend/Dockerfile`:
-        ```docker
-        FROM node:20-alpine AS base
+# 🐳 Dockerización
+## Paso 1: Mapear el dominio local en tu Sistema Operativo
+  + Abre el archivo hosts de tu sistema con permisos de administrador:
+      + Windows (WSL): `C:\Windows\System32\drivers\etc\hosts`.
+      + Linux/WSL: `/etc/hosts`.
+  + Agrega estas líneas al final:
+      ```text
+      127.0.0.1   boilerplate.test
+      127.0.0.1   docs.boilerplate.test
+      ```
+## Paso 2: Dockerización del Backend
+  + Crea `backend/.dockerignore`:
+      ```docker
+      node_modules
+      npm-debug.log
+      .env
+      .git
+      .gitignore
+      README.md
+      dist        
+      ```
+  + Crea `backend/Dockerfile`:
+      ```docker
+      FROM node:20-alpine AS base
 
-        WORKDIR /usr/src/app
+      WORKDIR /usr/src/app
 
-        # Dependencias para Prisma / OpenSSL en Alpine
-        RUN apk add --no-cache openssl
+      # Dependencias para Prisma / OpenSSL en Alpine
+      RUN apk add --no-cache openssl
 
-        COPY package*.json ./
-        COPY prisma ./prisma/
+      COPY package*.json ./
+      COPY prisma ./prisma/
 
-        RUN npm ci
-        RUN npx prisma generate
+      RUN npm ci
+      RUN npx prisma generate
 
-        COPY . .
+      COPY . .
 
-        EXPOSE 3000
+      EXPOSE 3000
 
-        CMD ["npm", "run", "dev"]
-        ```
-3. Dockerización del Frontend:
-    + Crea `frontend/.dockerignore`:
-        ```docker
-        node_modules
-        dist
-        .git
-        .gitignore
-        README.md
-        ```
-    + Crea `frontend/Dockerfile`:
-        ```docker
-        FROM node:20-alpine
+      CMD ["npm", "run", "dev"]
+      ```
+## Paso 3: Dockerización del Frontend
+  + Crea `frontend/.dockerignore`:
+      ```docker
+      node_modules
+      dist
+      .git
+      .gitignore
+      README.md
+      ```
+  + Crea `frontend/Dockerfile`:
+      ```docker
+      FROM node:20-alpine
 
-        WORKDIR /usr/src/app
+      WORKDIR /usr/src/app
 
-        COPY package*.json ./
+      COPY package*.json ./
 
-        RUN npm ci
+      RUN npm ci
 
-        COPY . .
+      COPY . .
 
-        EXPOSE 5173
+      EXPOSE 5173
 
-        CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
-        ```
-4. Configurar Nginx Reverse Proxy:
-    + Crea una carpeta nginx en la raíz del proyecto con el archivo `nginx/default.conf`:
-        ```nginx
-        # 1. Servidor para la Aplicación Principal (Frontend y Backend API)
-        server {
-            listen 80;
-            server_name boilerplate.test;
+      CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+      ```
+## Paso 4: Configurar Nginx Reverse Proxy
+  + Crea una carpeta nginx en la raíz del proyecto con el archivo `nginx/default.conf`:
+    ```nginx
+    # 1. Servidor para la Aplicación Principal (Frontend y Backend API)
+    server {
+        listen 80;
+        server_name boilerplate.test;
 
-            # Enrutamiento al Frontend (Vue 3 / Vite)
-            location / {
-                proxy_pass http://frontend:5173;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-                proxy_set_header Host $host;
-            }
-
-            # Enrutamiento al Backend (Express API)
-            location /api/ {
-                proxy_pass http://backend:3000;
-                proxy_http_version 1.1;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            }
+        # Enrutamiento al Frontend (Vue 3 / Vite)
+        location / {
+            proxy_pass http://frontend:5173;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
         }
 
-        # 2. Servidor para la Documentación (VitePress)
-        server {
-            listen 80;
-            server_name docs.boilerplate.test;
-
-            location / {
-                proxy_pass http://boilerplate_docs:5173;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-                proxy_set_header Host $host;
-                proxy_cache_bypass $http_upgrade;
-            }
+        # Enrutamiento al Backend (Express API)
+        location /api/ {
+            proxy_pass http://backend:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         }
-        ```
-5. Orquestación de Infraestructura Local con `docker-compose.yml`
+    }
+
+    # 2. Servidor para la Documentación (VitePress)
+    server {
+        listen 80;
+        server_name docs.boilerplate.test;
+
+        location / {
+            proxy_pass http://boilerplate_docs:5173;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+        }
+    }
+    ```
+## Paso 5: Orquestación de Infraestructura Local con `docker-compose.yml`
 + Crea el archivo `docker-compose.yml` en la raíz del proyecto:
 ```yaml
 services:
@@ -252,53 +252,53 @@ volumes:
   postgres_data:
   minio_data:
 ```
-6. Ajustar `.env` en el Backend:
-    + Actualiza tu archivo `backend/.env` para usar el nombre del contenedor de la base de datos:
-        ```ini
-        # ==========================================
-        # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
-        # ==========================================
-        PORT=3000
-        APP_URL=http://boilerplate.test
-        NODE_ENV=development
+## Paso 6: Ajustar `.env` en el Backend
+  + Actualiza tu archivo `backend/.env` para usar el nombre del contenedor de la base de datos:
+      ```ini
+      # ==========================================
+      # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
+      # ==========================================
+      PORT=3000
+      APP_URL=http://boilerplate.test
+      NODE_ENV=development
 
-        # ==========================================
-        # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS LOCAL
-        # ==========================================        
-        DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
-        DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+      # ==========================================
+      # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS LOCAL
+      # ==========================================        
+      DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+      DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
 
-        # ==========================================
-        # CONFIGURACIÓN DEL BUCKET DE ALMACENAMIENTO DE ARCHIVOS LOCAL
-        # ==========================================
-        S3_ENDPOINT="http://minio:9000"
-        ```
-7. Comandos de Ejecución:
-    + Levantar todo el entorno:
-        ```bash
-        # Levantar todos los servicios
-        docker compose up -d --build
+      # ==========================================
+      # CONFIGURACIÓN DEL BUCKET DE ALMACENAMIENTO DE ARCHIVOS LOCAL
+      # ==========================================
+      S3_ENDPOINT="http://minio:9000"
+      ```
+## Paso 7: Comandos de Ejecución
+  + Levantar todo el entorno:
+      ```bash
+      # Levantar todos los servicios
+      docker compose up -d --build
 
-        # Levantar solo un servicio, por ejemplo el backend o el frontend
-        docker compose up -d --build backend
-        docker compose up -d --build frontend
-        ```
-    + Verificar acceso:
-        + Frontend: `http://boilerplate.test`
-        + API Health Check: `http://boilerplate.test/api/health`
-        + MinIO Console: `http://localhost:9001`
-        + Prisma Studio: `http://localhost:5555`
-    + Ver logs del sistema:
-        ```bash
-        docker compose logs -f backend
-        docker compose logs -f frontend
-        docker compose logs minio
-        ```
-    + Comandos de interes
-        ```bash
-        # Ejecutar migraciones o comandos de Prisma dentro del contenedor
-        docker compose exec backend npx prisma migrate dev
+      # Levantar solo un servicio, por ejemplo el backend o el frontend
+      docker compose up -d --build backend
+      docker compose up -d --build frontend
+      ```
+  + Verificar acceso:
+      + Frontend: `http://boilerplate.test`
+      + API Health Check: `http://boilerplate.test/api/health`
+      + MinIO Console: `http://localhost:9001`
+      + Prisma Studio: `http://localhost:5555`
+  + Ver logs del sistema:
+      ```bash
+      docker compose logs -f backend
+      docker compose logs -f frontend
+      docker compose logs minio
+      ```
+  + Comandos de interes
+      ```bash
+      # Ejecutar migraciones o comandos de Prisma dentro del contenedor
+      docker compose exec backend npx prisma migrate dev
 
-        # Estado de los contenedores
-        docker compose ps
-        ```
+      # Estado de los contenedores
+      docker compose ps
+      ```

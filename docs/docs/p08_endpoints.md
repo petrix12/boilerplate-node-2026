@@ -1,5 +1,5 @@
-## 🔌 Endpoints
-### 📋 Resumen de Endpoints
+# 🔌 Endpoints
+## 📋 Resumen de Endpoints
 | Módulo     | Método   | Endpoint                          | Permiso / Rol requerido   |
 | ---------- | -------- | --------------------------------- | ------------------------- |
 | **System** | `GET`    | `/api/v1/health`                  | Público                   |
@@ -26,8 +26,8 @@
 | **Audit**  | `GET`    | `/api/v1/admin/system-diagnostic` | `system:logs:read`        |
 
 
-### ✅ Pruebas de Endpoints
-#### 🩺 Health Check (Público)
+## ✅ Pruebas de Endpoints
+### 🩺 Health Check (Público)
 1. Ejecutar:
     ```bash
     curl -i -X GET http://localhost:3000/api/v1/health
@@ -48,7 +48,7 @@
         {"status":"success","message":"API Boilerplate-Node-2026 operativa","environment":"development","timestamp":"2026-09-11T14:28:25.699Z"}
         ```
 
-#### 🔐 Autenticación (Registro y Login)
+### 🔐 Autenticación (Registro y Login)
 1. Registro de Usuario (POST `/api/v1/auth/register`):
     ```bash
     curl -i -X POST http://localhost:3000/api/v1/auth/register \
@@ -120,7 +120,7 @@
         {"status":"success","message":"Sesión cerrada correctamente"}        
         ```
 
-#### 👤 Módulo de Usuario Actual y Perfil
+### 👤 Módulo de Usuario Actual y Perfil
 1. Guardar token:
     ```bash
     TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjllYzEyODY1LTk5NjgtNDE0OC05ZjIzLTQyN2MwNjJiNjFhZCIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsInJvbGVzIjpbXSwiaWF0IjoxNzg5MTM3MzU4LCJleHAiOjE3ODk3NDIxNTh9.63emy0B8wPbLhjjb2PMuitlQ1YldKfSkD_Mctsg31JQ"
@@ -257,7 +257,7 @@
         {"status":"success","message":"Avatar de usuario eliminado","data":{"user":{"id":"14f33bf7-e8c4-488d-bef0-dbc2f828402c","name":"Emilio Piña Sisneros","email":"emilio.pinasisneros@hotmail.com","avatarUrl":null,"createdAt":"2026-09-10T19:44:37.296Z"}}}
         ```
 
-#### 👥 Módulo de Gestión de Usuarios y Permisos
+### 👥 Módulo de Gestión de Usuarios y Permisos
 1. Intento de Lectura de Usuarios Sin Permisos (GET `/api/v1/users`):
     ```bash
     curl -i -X GET http://localhost:3000/api/v1/users \
@@ -299,7 +299,7 @@
         {"status":"fail","message":"No tienes los permisos requeridos para ejecutar esta acción"}bazop@PetrixIesus:~/projects/boilerplate-node-2026$ 
         ```
 
-#### 🕵️ Autenticación como Super Admin y Pruebas Administrativas
+### 🕵️ Autenticación como Super Admin y Pruebas Administrativas
 1. Login con Super Admin (POST `/api/v1/auth/login`):
     ```bash
     curl -i -X POST http://localhost:3000/api/v1/auth/login \
@@ -420,7 +420,7 @@
         {"status":"success","message":"Usuario actualizado correctamente","data":{"user":{"id":"47372aff-6ada-4220-a01e-cb9ec281de29","name":"Carlos Gómez Editado","email":"nuevo.usuario@example.com","avatarUrl":null,"isActive":true,"createdAt":"2026-09-12T09:29:40.219Z","roles":["USER"]}}}
         ```
 
-#### 🔑 Módulo de Gestión de Roles y Permisos
+### 🔑 Módulo de Gestión de Roles y Permisos
 1. Consultar Roles Existentes (GET `/api/v1/roles`):
     ```bash
     curl -i -X GET http://localhost:3000/api/v1/roles \
@@ -487,7 +487,7 @@
         {"status":"success","data":{"permissions":[{"id":"55432b21-be17-48c2-a70c-032b71a0abb3","action":"admin:access","module":"admin","description":"Permite acceder al panel de administración","createdAt":"2026-09-12T13:44:35.831Z"},{"id":"f81bb368-26ca-453c-a535-b4211d72695a","action":"audit:read","module":"audit","description":"Permite ver el historial de auditoría y actividades","createdAt":"2026-09-12T13:44:35.885Z"},{"id":"29964da3-5596-4bf3-a7f8-c53ab3e632c5","action":"roles:create","module":"roles","description":"Permite crear nuevos roles","createdAt":"2026-09-12T13:44:35.865Z"},{"id":"4f6d24a7-d44b-434b-b8c1-de62465cabc7","action":"roles:delete","module":"roles","description":"Permite eliminar roles","createdAt":"2026-09-12T13:44:35.878Z"},{"id":"470a7381-25e7-4c0b-a29e-8d5080446d5a","action":"roles:read","module":"roles","description":"Permite ver lalista de roles y sus permisos","createdAt":"2026-09-12T13:44:35.860Z"},{"id":"94512c45-b397-45a4-ac6c-e463ba4c69f0","action":"roles:update","module":"roles","description":"Permite modificar roles y asignar permisos","createdAt":"2026-09-12T13:44:35.870Z"},{"id":"af557cb8-24ea-42c9-b498-7b2e14fce236","action":"system:logs:read","module":"system","description":"Permite consultar logs técnicos del servidor y la base de datos","createdAt":"2026-09-12T13:44:35.889Z"},{"id":"96321d6f-9a44-4777-bfba-68c1b49a81d9","action":"users:create","module":"users","description":"Permite registrar nuevos usuarios","createdAt":"2026-09-12T13:44:35.845Z"},{"id":"fda4b531-15a3-41b6-ad1c-4d054c72b357","action":"users:delete","module":"users","description":"Permite eliminar usuarios","createdAt":"2026-09-12T13:44:35.854Z"},{"id":"14164c6b-2abb-434d-be97-0fad2a97a678","action":"users:read","module":"users","description":"Permite ver el listado y detalle de usuarios","createdAt":"2026-09-12T13:44:35.839Z"},{"id":"e8ccff77-5a83-4ba4-a029-4a39b4bbfc61","action":"users:update","module":"users","description":"Permite editar datos de usuarios existentes","createdAt":"2026-09-12T13:44:35.850Z"}]}}
         ```
 
-#### 🏷️ Asignación de Roles a un Usuario y Limpieza
+### 🏷️ Asignación de Roles a un Usuario y Limpieza
 1. Asignar el nuevo rol EDITOR al usuario de prueba (PUT `/api/v1/users/:id/roles`):
     ```bash
     curl -i -X PUT http://localhost:3000/api/v1/users/9ec12865-9968-4148-9f23-427c062b61ad/roles \
