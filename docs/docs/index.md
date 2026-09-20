@@ -125,9 +125,7 @@
 + ◻️ Seguridad y Hardening HTTP (Backend): express-rate-limit para prevención de ataques de fuerza bruta en rutas críticas (/login, /register, /forgot-password).
 + ◻️ Seguridad y Hardening HTTP (Backend): Desinfección de entrada contra inyecciones SQL / XSS y sanitización de payloads JSON.
 + ◻️ Documentación & CI/CD (Swagger, .env.example, pruebas unitarias básicas).
-+ ◻️ Incluir ruta de documentación (Variable de entorno APP_DOC_VITEPRESS y agregrar enlace en la app.).
 + ◻️ Realizar pruebas unitarias.
-+ ◻️ Que aparezca la manito cuando el maouse se posicione sobre un botón, o algo por el estilo.
 + ◻️ Asegurar que los endpoints en el backend se puedan ejecutar según los permisos que les corresponde.
 + ◻️ Verificar si es necesario variable de entorno IA_ACTIVE.
 + ◻️ Crear example.env o como se llame.
@@ -136,6 +134,8 @@
 + ◻️ Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
++ ◻️ Incluir ruta de documentación (Variable de entorno APP_DOC_VITEPRESS y agregrar enlace en la app.).
++ ◻️ Que aparezca la manito cuando el maouse se posicione sobre un botón, o algo por el estilo.
 
 
 ### Terminadas

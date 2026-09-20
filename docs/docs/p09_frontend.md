@@ -55,11 +55,32 @@
         body,
         #app {
             min-height: 100vh;
-            min-height: 100dvh; /* Soporte dinámico para navegadores modernos */
+            min-height: 100dvh;
             margin: 0;
             padding: 0;
-            background-color: #0f172a; /* Reemplaza por el color oscuro base de tu tema (ej. slate-900) */
+            background-color: #0f172a;
             color: #f8fafc;
+        }
+
+        /* --- CURSOR POINTER GLOBAL Y PROFESIONAL --- */
+        button,
+        [role="button"],
+        a,
+        label[for],
+        summary,
+        select,
+        input[type="checkbox"],
+        input[type="radio"],
+        input[type="submit"],
+        input[type="button"] {
+            cursor: pointer;
+        }
+
+        /* Excepción profesional: Si un botón está deshabilitado, el cursor debe indicarlo */
+        button:disabled,
+        input:disabled,
+        [disabled] {
+            cursor: not-allowed;
         }
         ```
 2. Cliente HTTP Centralizado (`src/api/axios.js`)
