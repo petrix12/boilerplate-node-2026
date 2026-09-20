@@ -850,17 +850,6 @@
 
                     <!-- Acciones de Usuario y Enlaces Externos -->
                     <div class="flex items-center justify-center gap-4 shrink-0">
-                        <!-- Enlace condicional a la documentación de VitePress -->
-                        <a 
-                            v-if="docsUrl" 
-                            :href="docsUrl" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            class="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
-                        >
-                            <span>📖 Documentación</span>
-                        </a>
-
                         <router-link
                             v-if="authStore.isAuthenticated"
                             to="/dashboard"

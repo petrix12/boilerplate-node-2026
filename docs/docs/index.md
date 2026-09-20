@@ -134,7 +134,7 @@
 + ◻️ Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
-+ ◻️ Incluir ruta de documentación (Variable de entorno APP_DOC_VITEPRESS y agregrar enlace en la app.).
++ ◻️ Modalidad modo oscuro y modo claro.
 
 
 ### Terminadas
@@ -147,6 +147,7 @@
 + ✅ Diagnóstico de la aplicación con IA.
 + ✅ Drag and Drop para gestionar archivos.
 + ✅ Que aparezca la manito cuando el maouse se posicione sobre un botón, o algo por el estilo.
++ ✅ Incluir ruta de documentación (Variable de entorno APP_DOC_VITEPRESS y agregrar enlace en la app.).
 
 
 
