@@ -141,3 +141,19 @@ export const useAuthStore = defineStore('auth', {
         },
     },
 });
+
+const loginWithGoogle = async (idToken) => {
+    try {
+        const response = await axios.post('/auth/google', { idToken });
+        const { token, user } = response.data.data;
+        
+        this.token = token;
+        this.user = user;
+        localStorage.setItem('token', token);
+        
+        // Configurar headers globales de axios si es necesario
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } catch (error) {
+        throw error.response?.data?.message || 'Error en la autenticación con Google';
+    }
+};

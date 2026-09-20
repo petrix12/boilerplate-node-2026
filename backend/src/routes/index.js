@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const authRoutes = require('./auth.routes');
+const googleAuthRoutes = require('./googleAuth.routes');
 const userRoutes = require('./user.routes');
 const roleRoutes = require('./role.routes');
 const auditRoutes = require('./audit.routes');
@@ -10,6 +11,7 @@ const diagnosticRoutes = require('./diagnostic.routes');
 
 // Definición limpia de módulos
 router.use('/auth', authRoutes);
+router.use('/auth', googleAuthRoutes);
 router.use('/users', userRoutes);
 router.use('/roles', roleRoutes);
 router.use('/audit-logs', auditRoutes);

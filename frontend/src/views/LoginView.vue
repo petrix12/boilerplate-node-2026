@@ -2,6 +2,7 @@
     import { ref } from 'vue';
     import { useRouter } from 'vue-router';
     import { useAuthStore } from '../stores/auth.store';
+    import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 
     const authStore = useAuthStore();
     const router = useRouter();
@@ -83,6 +84,15 @@
                     {{ authStore.loading ? 'Cargando...' : 'Entrar' }}
                 </button>
             </form>
+
+            <!-- Divisor visual -->
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+                <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-800 px-2 text-slate-400">O</span></div>
+            </div>
+
+            <!-- Botón de Google aislado -->
+            <GoogleAuthButton text="Iniciar sesión con Google" />            
 
             <p class="mt-6 text-center text-sm text-slate-400">
                 ¿No tienes cuenta?

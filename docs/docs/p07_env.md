@@ -108,6 +108,15 @@
     AI_API_KEY=gsk_tu_clave_aqui_xxxxxxxxx
     AI_MODEL=qwen/qwen3.8-27b
     LOG_RETENTION_DAYS=30
+
+    # ===================================================================================================
+    # LOGIN AUTH - REDES SOCIALES
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL | PRODUCCIÓN - - -
+    # ==========================================
+    GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+    GOOGLE_CLIENT_SECRET=tu-client-secret    
     ```
 2. Actualizar variables de entorno en `https://render.com`.
 
@@ -130,6 +139,14 @@
     # ==========================================
     # VITE_API_BASE_URL=https://tu-proyecto.onrender.com/api/v1
     # VITE_APP_NAME="Node|Vue Boilerplate"
+
+    # ===================================================================================================
+    # LOGIN AUTH - REDES SOCIALES
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL | PRODUCCIÓN - - -
+    # ==========================================
+    VITE_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
 
     # ===================================================================================================
     # URL DE LA DOCUMENTACIÓN DE LA API

@@ -564,6 +564,23 @@
 
     module.exports = upload;    
     ```
+7. `backend/src/middlewares/googleEnabled.middleware.js`: Garantiza que si las credenciales no existen o están vacías, el endpoint devuelva 404 (bloqueando su uso por completo):
+    ```js
+    const checkGoogleAuthEnabled = (req, res, next) => {
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+        if (!clientId || clientId.trim() === '' || !clientSecret || clientSecret.trim() === '') {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'El inicio de sesión con Google no está habilitado.'
+            });
+        }
+        next();
+    };
+
+    module.exports = { checkGoogleAuthEnabled };    
+    ```
 
 ## 💼 Paso 5: Servicios de Negocio (`src/services/`)
 + Crea la lógica de negocio independiente de las rutas HTTP:
@@ -892,6 +909,116 @@
 
     module.exports = aiService;  
     ```
+6. Creaar servicio de Auth con Google (`backend/src/services/googleAuth.service.js`):
+    ```js
+    const prisma = require('../config/prisma');
+    const jwt = require('jsonwebtoken');
+    const bcrypt = require('bcryptjs');
+
+    const generateToken = (user, roles = [], permissions = []) => {
+        return jwt.sign(
+            { id: user.id, email: user.email, roles, permissions },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        );
+    };
+
+    const googleAuthService = {
+        async authenticateWithGoogle(idToken) {
+            // Validar el token directamente con Google
+            const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+            if (!response.ok) {
+                throw new Error('Token de Google inválido o expirado');
+            }
+
+            const googleData = await response.json();
+            const { email, name, picture, aud } = googleData;
+
+            // Validar que el token corresponda a nuestro Client ID
+            if (aud !== process.env.GOOGLE_CLIENT_ID) {
+                throw new Error('El token de Google no pertenece a esta aplicación');
+            }
+
+            if (!email) {
+                throw new Error('La cuenta de Google no proporcionó un correo electrónico');
+            }
+
+            // Buscar si el usuario ya existe en la base de datos
+            let user = await prisma.user.findUnique({
+                where: { email },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: { include: { permission: true } }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Si no existe, lo registramos automáticamente con el rol por defecto 'USER'
+            if (!user) {
+                const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
+                const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
+
+                user = await prisma.user.create({
+                    data: {
+                        email,
+                        name: name || 'Usuario de Google',
+                        password: randomPassword,
+                        avatarUrl: picture || null,
+                        roles: userRole ? { create: { roleId: userRole.id } } : undefined
+                    },
+                    include: {
+                        roles: {
+                            include: {
+                                role: {
+                                    include: {
+                                        permissions: { include: { permission: true } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (!user.isActive) {
+                throw new Error('La cuenta de usuario está desactivada');
+            }
+
+            // Extraer roles y permisos para el JWT
+            const userRoles = user.roles.map(ur => ur.role.name);
+            const permissionsSet = new Set();
+            user.roles.forEach(ur => {
+                ur.role.permissions.forEach(rp => {
+                    permissionsSet.add(rp.permission.action);
+                });
+            });
+            const userPermissions = Array.from(permissionsSet);
+
+            const token = generateToken(user, userRoles, userPermissions);
+
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    roles: userRoles,
+                    permissions: userPermissions
+                },
+                token
+            };
+        }
+    };
+
+    module.exports = googleAuthService;    
+    ```
+    + Este archivo contendrá toda la lógica de validación con Google, gestión de usuarios en Prisma y emisión de tokens.
 
 ## 🎮 Paso 7: Controladores de la API (`src/controllers/`)
 + Implementa la capa de orquestación de respuesta para cada dominio:
@@ -2064,6 +2191,51 @@
         getSystemDiagnostic,
     };    
     ```
+8. `backend/src/controllers/googleAuth.controller.js`: Controlador para Auth con Google:
+    ```js
+    const googleAuthService = require('../services/googleAuth.service');
+    const { getClientIp } = require('../utils/request.utils');
+    const prisma = require('../config/prisma');
+
+    const googleLogin = async (req, res) => {
+        try {
+            const { idToken } = req.body;
+            if (!idToken) {
+                return res.status(400).json({ status: 'fail', message: 'El idToken de Google es obligatorio' });
+            }
+
+            const result = await googleAuthService.authenticateWithGoogle(idToken);
+
+            // Registrar auditoría de éxito
+            await prisma.auditLog.create({
+                data: {
+                    action: 'GOOGLE_LOGIN_SUCCESS',
+                    entity: 'Auth',
+                    entityId: String(result.user.id),
+                    ipAddress: getClientIp(req),
+                    user: { connect: { id: result.user.id } },
+                    details: JSON.stringify({ email: result.user.email })
+                }
+            });
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Inicio de sesión con Google exitoso',
+                data: result
+            });
+        } catch (error) {
+            console.error('Error en googleLogin:', error.message);
+            return res.status(401).json({
+                status: 'fail',
+                message: error.message || 'Error al autenticar con Google'
+            });
+        }
+    };
+
+    module.exports = { googleLogin };    
+    ```
+    + Este controlador actúa únicamente como puente HTTP, delegando la lógica al servicio y registrando auditorías si es necesario.
+
 
 ## 🛣️ Paso 8: Definición de Rutas (`src/routes/`)
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
@@ -2198,12 +2370,27 @@
     module.exports = router;    
     
     ```
-7. `backend/src/routes/index.js`: Router central que registra todos los módulos:
+7. `backend/src/routes/googleAuth.routes.js`: Define las rutas protegidas por el middleware de entorno:
+    ```js
+    const express = require('express');
+    const router = express.Router();
+    const { googleLogin } = require('../controllers/googleAuth.controller');
+    const { checkGoogleAuthEnabled } = require('../middlewares/googleEnabled.middleware');
+
+    // Validar que las funciones middleware estén definidas y no sean undefined
+    router.use(checkGoogleAuthEnabled);
+
+    router.post('/google', googleLogin);
+
+    module.exports = router;
+    ```
+8. `backend/src/routes/index.js`: Router central que registra todos los módulos:
     ```js
     const express = require('express');
     const router = express.Router();
 
     const authRoutes = require('./auth.routes');
+    const googleAuthRoutes = require('./googleAuth.routes');
     const userRoutes = require('./user.routes');
     const roleRoutes = require('./role.routes');
     const auditRoutes = require('./audit.routes');
@@ -2212,6 +2399,7 @@
 
     // Definición limpia de módulos
     router.use('/auth', authRoutes);
+    router.use('/auth', googleAuthRoutes);
     router.use('/users', userRoutes);
     router.use('/roles', roleRoutes);
     router.use('/audit-logs', auditRoutes);

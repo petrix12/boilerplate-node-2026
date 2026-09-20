@@ -4,12 +4,13 @@
 ## 🟢 [Instalación de Node.js mediante NVM en WSL (Ubuntu)](p02_instalacion_node)
 ## 💻 [Estructuración Local y Control de Versiones (Git & GitHub)](p03_estructuracion)
 ## 🐳 [Dockerización](p04_dockerizacion)
-## 🚀 [Despliegue en Producción (CI/CD $0 USD)](p05_deploy)
-## 🔐 [Variables de entorno](p06_env)
-## ⚙️ [Desarrollo del Backend](p07_backend)
-## 🔌 [Endpoints](p08_endpoints)
-## 💻 [Desarrollo del Frontend](p09_frontend)
-## 📋 [Aplicación para documentación](p10_app_documentacion)
+## 📱 [Credenciales en Redes Sociales](p05_social_media)
+## 🚀 [Despliegue en Producción (CI/CD $0 USD)](p06_deploy)
+## 🔐 [Variables de entorno](p07_env)
+## ⚙️ [Desarrollo del Backend](p08_backend)
+## 🔌 [Endpoints](p09_endpoints)
+## 💻 [Desarrollo del Frontend](p10_frontend)
+## 📋 [Aplicación para documentación](p11_app_documentacion)
 ---
 ## 🔗 [URL de interes](r01_url)
 
@@ -117,7 +118,6 @@
 ### Pendientes
 + ◻️ Recuperar credenciales (¿Olvidó su password?).
 + ◻️ Establecer politicas de seguridad en tablas de base de datos de supabase.
-+ ◻️ Login con redes sociales.
 + ◻️ Multi-idiomas.
 + ◻️ Solicitar autenticación de email.
 + ◻️ Revisar la seguridad del backend.
@@ -127,7 +127,6 @@
 + ◻️ Documentación & CI/CD (Swagger, .env.example, pruebas unitarias básicas).
 + ◻️ Realizar pruebas unitarias.
 + ◻️ Asegurar que los endpoints en el backend se puedan ejecutar según los permisos que les corresponde.
-+ ◻️ Verificar si es necesario variable de entorno IA_ACTIVE.
 + ◻️ Crear example.env o como se llame.
 + ◻️ Limpiar proyecto frontend de archivos que no se usan.
 + ◻️ Implementar mensaje sweetalert en todos los lugares que haga falta.
@@ -135,7 +134,13 @@
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
 + ◻️ Modalidad modo oscuro y modo claro.
-
++ ◻️ Login con redes sociales.
+    + ◻️ Google (OAuth 2.0 / OpenID Connect).
+    + ◻️ GitHub.
+    + ◻️ Microsoft (Microsoft Entra ID / Outlook / Azure).
+    + ◻️ Apple (Sign in with Apple).
+    + ◻️ Meta (Facebook Login) / Instagram.
+    + ◻️ X (antes Twitter) / LinkedIn.
 
 ### Terminadas
 + ✅ Dockerización.
@@ -148,6 +153,7 @@
 + ✅ Drag and Drop para gestionar archivos.
 + ✅ Que aparezca la manito cuando el maouse se posicione sobre un botón, o algo por el estilo.
 + ✅ Incluir ruta de documentación (Variable de entorno APP_DOC_VITEPRESS y agregrar enlace en la app.).
++ ✅ Verificar si es necesario variable de entorno IA_ACTIVE.
 
 
 

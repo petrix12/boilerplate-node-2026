@@ -24,12 +24,13 @@ export default defineConfig({
                     { text: '🟢 Instalación de Node.js (WSL)', link: '/p02_instalacion_node' },
                     { text: '💻 Estructuración Local y Git', link: '/p03_estructuracion' },
                     { text: '🐳 Dockerización', link: '/p04_dockerizacion' },
-                    { text: '🚀 Despliegue en Producción', link: '/p05_deploy' },
-                    { text: '🔐 Variables de entorno', link: '/p06_env' },
-                    { text: '⚙️ Desarrollo del Backend', link: '/p07_backend' },
-                    { text: '🔌 Endpoints', link: '/p08_endpoints' },
-                    { text: '💻 Desarrollo del Frontend', link: '/p09_frontend' },
-                    { text: '📋 Aplicación para documentación', link: '/p10_app_documentacion' }
+                    { text: '📱 Credenciales en Redes Sociales', link: '/p05_social_media' },
+                    { text: '🚀 Despliegue en Producción', link: '/p06_deploy' },
+                    { text: '🔐 Variables de entorno', link: '/p07_env' },
+                    { text: '⚙️ Desarrollo del Backend', link: '/p08_backend' },
+                    { text: '🔌 Endpoints', link: '/p09_endpoints' },
+                    { text: '💻 Desarrollo del Frontend', link: '/p10_frontend' },
+                    { text: '📋 Aplicación para documentación', link: '/p11_app_documentacion' }
                 ]
             },
             {
