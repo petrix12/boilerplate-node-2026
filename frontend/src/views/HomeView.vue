@@ -5,6 +5,9 @@
     const authStore = useAuthStore();
     const hasLogoError = ref(false);
 
+    // Capturamos la variable de entorno de Vite de forma segura
+    const docsUrl = import.meta.env.VITE_DOCS_URL || '';
+
     const handleLogoError = () => {
         hasLogoError.value = true;
     };
@@ -27,8 +30,19 @@
                 <span class="font-bold text-lg sm:text-xl text-emerald-400 whitespace-nowrap">{{ $appName }}</span>
             </router-link>
 
-            <!-- Acciones de Usuario -->
-            <div class="flex items-center justify-center shrink-0">
+            <!-- Acciones de Usuario y Enlaces Externos -->
+            <div class="flex items-center justify-center gap-4 shrink-0">
+                <!-- Enlace condicional a la documentación de VitePress -->
+                <a 
+                    v-if="docsUrl" 
+                    :href="docsUrl" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                    <span>📖 Documentación</span>
+                </a>
+
                 <router-link
                     v-if="authStore.isAuthenticated"
                     to="/dashboard"
@@ -77,13 +91,33 @@
             <p class="text-slate-400 text-lg mb-8 max-w-xl">
                 Base arquitectónica moderna lista para producción con Node.js, Express, Prisma ORM, PostgreSQL y Vue 3 con Tailwind CSS.
             </p>
-            <div class="flex gap-4">
+            
+            <div class="flex flex-wrap items-center justify-center gap-4">
                 <router-link
-                    :to="authStore.isAuthenticated ? '/dashboard' : '/register'"
+                    v-if="!authStore.isAuthenticated"
+                    to="/register"
                     class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl shadow-lg transition-colors"
                 >
-                    {{ authStore.isAuthenticated ? 'Ir a mi Panel' : 'Comenzar Ahora' }}
+                    Comenzar Ahora
                 </router-link>
+                <router-link
+                    v-else
+                    to="/dashboard"
+                    class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl shadow-lg transition-colors"
+                >
+                    Ir a mi Panel
+                </router-link>
+
+                <!-- Botón secundario opcional en el Hero hacia la Docs -->
+                <a 
+                    v-if="docsUrl"
+                    :href="docsUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 transition-colors"
+                >
+                    Ver Guías y Docs
+                </a>
             </div>          
         </main>
 

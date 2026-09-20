@@ -130,5 +130,17 @@
     # ==========================================
     # VITE_API_BASE_URL=https://tu-proyecto.onrender.com/api/v1
     # VITE_APP_NAME="Node|Vue Boilerplate"
+
+    # ===================================================================================================
+    # URL DE LA DOCUMENTACIÓN DE LA API
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL - - -
+    # ==========================================
+    VITE_DOCS_URL=http://docs.boilerplate.test
+    # ==========================================
+    # - - - PRODUCCIÓN - - -
+    # ==========================================
+    # VITE_DOCS_URL=https://boilerplate-node-2026-docs-docs.vercel.app
     ```
 2. Actualizar variables de entorno en `https://vercel.com`.
