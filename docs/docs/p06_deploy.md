@@ -1,6 +1,6 @@
 # 🚀 Despliegue en Producción (CI/CD $0 USD)
 
-## Persistencia de Datos (Supabase PostgreSQL)
+## 🗄️ Persistencia de Datos (Supabase PostgreSQL)
 1. Crear un nuevo proyecto en Supabase.
 2. Ir a `Project Settings` > `Database` y copiar la cadena de conexión URI (modo Transaction o Session).
 3. Aplicar las migraciones desde tu entorno local hacia la base de datos de producción:
@@ -17,7 +17,7 @@
         + DATABASE_URL (Puerto 6543): Conexión en modo Transaction (?pgbouncer=true) utilizada por la aplicación Node.js en producción.
         + DIRECT_URL (Puerto 5432): Conexión en modo Session que requiere Prisma CLI para ejecutar migraciones directas sin pasar por PgBouncer.
 
-## Ejecutar seeder en producción (Supabase)
+## 🌱 Ejecutar seeder en producción (Supabase)
 1. Abre la terminal en la carpeta de tu `backend`.
 2. Ejecuta el comando de seed pasando la cadena de conexión de producción de Supabase:
     ```bash
@@ -26,7 +26,7 @@
     ```
     + Asegúrate de reemplazar las credenciales por las reales de Supabase, tal como hiciste al aplicar las migraciones.
 
-## API Backend (Render Web Service)
+## ⚙️ API Backend (Render Web Service)
 1. Creación de Cuenta y Vinculación con GitHub:
     + Accede a [render.com](https://render.com/) y haz clic en Get Started.
     + Selecciona Sign Up with GitHub para autorizar el acceso a tus repositorios.
@@ -55,7 +55,8 @@
         ```bash
         curl https://boilerplate-node-2026.onrender.com/api/health
         ```
-## Configuración de Enrutamiento SPA en Vercel
+
+## 🧭 Configuración de Enrutamiento SPA en Vercel
 1. Crea un archivo llamado `vercel.json` en la raíz de tu proyecto frontend (`frontend/vercel.json`) con el siguiente contenido:
     ```json
     {
@@ -74,7 +75,7 @@
     git push origin main
     ```
 
-## Capa de Presentación (Vercel)
+## 🎨 Capa de Presentación (Vercel)
 1. Creación de Cuenta:
     + Accede a vercel.com mediante Continue with GitHub.
     + En el onboarding, selecciona "I'm working on personal projects" para habilitar el plan Hobby 100% gratuito (sin tarjeta).
@@ -95,7 +96,7 @@
 5. Despliegue Final:
     + Haz clic en Deploy. Tras guardar o cambiar variables de entorno, ejecuta siempre un Redeploy (sin usar Build Cache) para inyectar la URL de la API en los archivos estáticos de React/Vite.
 
-## Proyecto de documentación (Vercel)
+## 📖 Proyecto de documentación (Vercel)
 1. Importación y Despliegue de VitePress:
     + En el Dashboard, haz clic en `Add New... > Project`.
     + Importa el repositorio del frontend (`boilerplate-node-2026`).

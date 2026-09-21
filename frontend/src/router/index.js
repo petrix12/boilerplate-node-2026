@@ -4,9 +4,9 @@ import { useAuthStore } from '../stores/auth.store';
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
-        { path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
-        { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { requiresGuest: true } },
-        { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { requiresGuest: true } },
+        { path: '/', name: 'home', component: () => import('@/views/HomeView.vue'), meta: { title: 'Inicio' } },
+        { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { requiresGuest: true, title: 'Iniciar Sesión' } },
+        { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { requiresGuest: true, title: 'Registro' } },
         {
             // Rutas protegidas que comparten el mismo Navbar sin pestañeos
             path: '/',
@@ -56,15 +56,19 @@ const router = createRouter({
                     meta: { title: 'Diagnóstico del Sistema', requiresAuth: true, requiresPermission: 'system:logs:read' }
                 }                
             ]
-        },                
-        { path: '/403', name: 'forbidden', component: () => import('@/views/errors/ForbiddenView.vue'), meta: { requiresAuth: true } },
-        { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/errors/NotFoundView.vue') },
+        },               
+        { path: '/403', name: 'forbidden', component: () => import('@/views/errors/ForbiddenView.vue'), meta: { requiresAuth: true, title: 'Acceso Denegado' } },
+        { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/errors/NotFoundView.vue'), meta: { title: 'Página no encontrada' } },
     ],
 });
 
 // Navigation Guard Global
 router.beforeEach(async (to) => {
     const authStore = useAuthStore();
+
+    // 1. Asignar título dinámico a la pestaña del navegador
+    const appName = 'Boilerplate Node 2026';
+    document.title = to.meta.title ? `${to.meta.title} | ${appName}` : appName;
 
     // Cargar perfil si hay token activo
     if (authStore.token && !authStore.user) {
@@ -73,24 +77,24 @@ router.beforeEach(async (to) => {
 
     const isAuthenticated = authStore.isAuthenticated;
 
-    // 1. Verificar si la ruta requiere autenticación
+    // 2. Verificar si la ruta requiere autenticación
     if (to.meta.requiresAuth && !isAuthenticated) {
         return { name: 'login' };
     }
 
-    // 2. Verificar rutas solo para invitados (Login/Register)
+    // 3. Verificar rutas solo para invitados (Login/Register)
     if (to.meta.requiresGuest && isAuthenticated) {
         return { name: 'dashboard' };
     }
 
-    // 3. Validación de Permisos (Redirige a 403 Forbidden)
+    // 4. Validación de Permisos (Redirige a 403 Forbidden)
     if (to.meta.requiresPermission) {
         if (!authStore.hasPermission(to.meta.requiresPermission)) {
             return { name: 'forbidden' };
         }
     }
 
-    // 4. Validación de Roles (Redirige a 403 Forbidden)
+    // 5. Validación de Roles (Redirige a 403 Forbidden)
     if (to.meta.requiresRole) {
         const userRoles = authStore.userRoles;
         if (!userRoles.includes('SUPER_ADMIN') && !userRoles.includes(to.meta.requiresRole)) {

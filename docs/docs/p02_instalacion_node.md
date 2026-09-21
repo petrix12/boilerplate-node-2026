@@ -11,14 +11,14 @@
     source ~/.bashrc
     ```
 
-## 🛠️ Paso 2: Instalar la versión estable de Node.js (LTS)
+## 🚀 Paso 2: Instalar la versión estable de Node.js (LTS)
 + Con NVM activo, instala la última versión con soporte extendido (LTS) de `Node.js` y `npm`:
     ```bash
     nvm install --lts
     ```
 + NVM la configurará automáticamente como la versión por defecto de tu sistema.
 
-## 🛠️ Paso 3: Verificar la Instalación
+## ✅ Paso 3: Verificar la Instalación
 + Comprueba que tanto `node` como `npm` están disponibles en tu terminal:
     ```bash
     node -v

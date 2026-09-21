@@ -34,7 +34,7 @@ GOOGLE_CLIENT_ID=aqui-pegas-tu-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=aqui-pegas-tu-client-secret
 ```
 
-## GitHub.
+## GitHub
 ## Microsoft (Microsoft Entra ID / Outlook / Azure).
 ## Apple (Sign in with Apple).
 ## Meta (Facebook Login) / Instagram.

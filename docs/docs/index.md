@@ -134,8 +134,10 @@
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
 + ◻️ Modalidad modo oscuro y modo claro.
++ ◻️ Colocar la opción de mostrar password en login, register y en donde aplique.
++ ◻️ Personalizar el heder de la página principal (Protocolo Open Graph).
 + ◻️ Login con redes sociales.
-    + ◻️ Google (OAuth 2.0 / OpenID Connect).
+    + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ◻️ GitHub.
     + ◻️ Microsoft (Microsoft Entra ID / Outlook / Azure).
     + ◻️ Apple (Sign in with Apple).

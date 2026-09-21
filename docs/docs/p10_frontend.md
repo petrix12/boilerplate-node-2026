@@ -1,5 +1,62 @@
 # 💻 Desarrollo del Frontend
 
+## 🧹 Limpieza del proyecto Vue
+1. Elimimar los siguientes archivos:
+    + `frontend/src/assets/logo.svg`.
+    + `frontend/src/components/icons/IconCommunity.vue`.
+    + `frontend/src/components/icons/IconDocumentation.vue`.
+    + `frontend/src/components/icons/IconEcosystem.vue`.
+    + `frontend/src/components/icons/IconSupport.vue`.
+    + `frontend/src/components/icons/IconTooling.vue`.
+    + `frontend/src/components/HelloWorld.vue`.
+    + `frontend/src/components/WelcomeItem.vue`.
+    + `frontend/src/stores/counter.js`.
+    + `frontend/src/views/AboutView.vue`.
+
+## 👁️‍🗨️ Implementar el Protocolo Open Graph
+1. Diseñar tu imagen Open Graph (`og:image`):
+    + Las redes sociales (WhatsApp, LinkedIn, Twitter, etc.) exigen unas medidas estándar para que las previsualizaciones se vean perfectas y no salgan recortadas.
+        + Medida ideal: `1200 x 630` píxeles.
+        + Formato: PNG o JPG optimizado (pesando menos de 1 MB).
+        + Dónde ubicarla: Coloca esta imagen dentro de tu carpeta `public/` en el proyecto (por ejemplo, `public/og-image.png`). De este modo, en producción estará accesible directamente en [https://tudominio.com/og-image.png](https://tudominio.com/og-image.png).
+2. Configurar las etiquetas estáticas en `index.html`:
+    + Abre tu archivo `frontend/index.html` en la raíz del proyecto. Vamos a estructurar la sección `<head>` para incluir tanto los metadatos generales como los bloques completos de Open Graph y Twitter Cards.
+    + Reemplaza o adapta el contenido de tu `<head>` con esta estructura profesional:
+        ```html
+        <head>
+            <meta charset="UTF-8" />
+            <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            
+            <!-- Título y descripción por defecto -->
+            <title>Boilerplate Node.js | Vue.js 2026</title>
+            <meta name="description" content="Plataforma moderna desarrollada con Vue, Node.js y arquitectura robusta." />
+
+            <!-- ========================================== -->
+            <!-- PROTOCOLOS OPEN GRAPH (Facebook, WhatsApp, LinkedIn) -->
+            <!-- ========================================== -->
+            <meta property="og:type" content="website" />
+            <!-- IMPORTANTE: Cambia esta URL por la URL real de tu dominio en producción en Vercel -->
+            <meta property="og:url" content="https://boilerplate-node-2026.vercel.app/" />
+            <meta property="og:title" content="Boilerplate Node.js | Vue.js 2026" />
+            <meta property="og:description" content="Plataforma moderna desarrollada con Vue, Node.js y arquitectura robusta." />
+            <!-- IMPORTANTE: Usa siempre una URL absoluta para la imagen -->
+            <meta property="og:image" content="https://boilerplate-node-2026.vercel.app/logo.png" />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta property="og:locale" content="es_ES" />
+
+            <!-- ========================================== -->
+            <!-- TWITTER CARDS (Twitter / X) -->
+            <!-- ========================================== -->
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:url" content="https://boilerplate-node-2026.vercel.app/" />
+            <meta name="twitter:title" content="Boilerplate Node.js | Vue.js 2026" />
+            <meta name="twitter:description" content="Plataforma moderna desarrollada con Vue, Node.js y arquitectura robusta." />
+            <meta name="twitter:image" content="https://boilerplate-node-2026.vercel.app/logo.png" />
+        </head>        
+        ```
+
 ## 📦 Instalación de Dependencias
 1. Instalamos Axios para las peticiones HTTP y el plugin oficial de Tailwind CSS v4 para Vite entre otras:
     ```bash
@@ -333,9 +390,9 @@
         const router = createRouter({
             history: createWebHistory(import.meta.env.BASE_URL),
             routes: [
-                { path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
-                { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { requiresGuest: true } },
-                { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { requiresGuest: true } },
+                { path: '/', name: 'home', component: () => import('@/views/HomeView.vue'), meta: { title: 'Inicio' } },
+                { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { requiresGuest: true, title: 'Iniciar Sesión' } },
+                { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { requiresGuest: true, title: 'Registro' } },
                 {
                     // Rutas protegidas que comparten el mismo Navbar sin pestañeos
                     path: '/',
@@ -385,15 +442,19 @@
                             meta: { title: 'Diagnóstico del Sistema', requiresAuth: true, requiresPermission: 'system:logs:read' }
                         }                
                     ]
-                },                
-                { path: '/403', name: 'forbidden', component: () => import('@/views/errors/ForbiddenView.vue'), meta: { requiresAuth: true } },
-                { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/errors/NotFoundView.vue') },
+                },               
+                { path: '/403', name: 'forbidden', component: () => import('@/views/errors/ForbiddenView.vue'), meta: { requiresAuth: true, title: 'Acceso Denegado' } },
+                { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/errors/NotFoundView.vue'), meta: { title: 'Página no encontrada' } },
             ],
         });
 
         // Navigation Guard Global
         router.beforeEach(async (to) => {
             const authStore = useAuthStore();
+
+            // 1. Asignar título dinámico a la pestaña del navegador
+            const appName = 'Boilerplate Node 2026';
+            document.title = to.meta.title ? `${to.meta.title} | ${appName}` : appName;
 
             // Cargar perfil si hay token activo
             if (authStore.token && !authStore.user) {
@@ -402,24 +463,24 @@
 
             const isAuthenticated = authStore.isAuthenticated;
 
-            // 1. Verificar si la ruta requiere autenticación
+            // 2. Verificar si la ruta requiere autenticación
             if (to.meta.requiresAuth && !isAuthenticated) {
                 return { name: 'login' };
             }
 
-            // 2. Verificar rutas solo para invitados (Login/Register)
+            // 3. Verificar rutas solo para invitados (Login/Register)
             if (to.meta.requiresGuest && isAuthenticated) {
                 return { name: 'dashboard' };
             }
 
-            // 3. Validación de Permisos (Redirige a 403 Forbidden)
+            // 4. Validación de Permisos (Redirige a 403 Forbidden)
             if (to.meta.requiresPermission) {
                 if (!authStore.hasPermission(to.meta.requiresPermission)) {
                     return { name: 'forbidden' };
                 }
             }
 
-            // 4. Validación de Roles (Redirige a 403 Forbidden)
+            // 5. Validación de Roles (Redirige a 403 Forbidden)
             if (to.meta.requiresRole) {
                 const userRoles = authStore.userRoles;
                 if (!userRoles.includes('SUPER_ADMIN') && !userRoles.includes(to.meta.requiresRole)) {
@@ -616,6 +677,7 @@
     export { auditService } from './audit.service';
     export { diagnosticService } from './diagnostic.service';
     ```
+
 ## 🧩 Componentes
 1. Componente Navbar Reutilizable:
     + Crea el archivo `frontend/src/components/Navbar.vue`:

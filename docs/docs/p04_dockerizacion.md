@@ -1,5 +1,6 @@
 # 🐳 Dockerización
-## Paso 1: Mapear el dominio local en tu Sistema Operativo
+
+## Paso 1: 🗺️ Mapear el dominio local en tu Sistema Operativo
   + Abre el archivo hosts de tu sistema con permisos de administrador:
       + Windows (WSL): `C:\Windows\System32\drivers\etc\hosts`.
       + Linux/WSL: `/etc/hosts`.
@@ -8,7 +9,8 @@
       127.0.0.1   boilerplate-localhost.com
       127.0.0.1   docs.boilerplate-localhost.com
       ```
-## Paso 2: Dockerización del Backend
+
+## Paso 2: 🧱 Dockerización del Backend
   + Crea `backend/.dockerignore`:
       ```docker
       node_modules
@@ -40,7 +42,8 @@
 
       CMD ["npm", "run", "dev"]
       ```
-## Paso 3: Dockerización del Frontend
+
+## Paso 3: 🌐 Dockerización del Frontend
   + Crea `frontend/.dockerignore`:
       ```docker
       node_modules
@@ -65,7 +68,8 @@
 
       CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
       ```
-## Paso 4: Generar un certificado SSL autofirmado para `boilerplate-localhost.com`
+
+## Paso 4: 🛡️ Generar un certificado SSL autofirmado
 Puedes usar herramientas como mkcert (la forma más recomendada y limpia para entornos de desarrollo local, ya que evita las advertencias de seguridad del navegador):
 1. Si no tienes `mkcert`, instálalo (en Windows con Chocolatey: `choco install mkcert`, o en Linux según tu gestor de paquetes):
   ```bash
@@ -93,7 +97,7 @@ Puedes usar herramientas como mkcert (la forma más recomendada y limpia para en
     + `boilerplate-localhost.com+3.pem`.
   + Estos archivos deben ser incluidos en el `.gitignore`.
 
-## Paso 5: Configurar Nginx Reverse Proxy
+## Paso 5: 🔀 Configurar Nginx Reverse Proxy
   + Crea una carpeta nginx en la raíz del proyecto con el archivo `nginx/default.conf`:
     ```nginx
     # 1. Redirección global de HTTP a HTTPS para boilerplate-localhost.com y docs
@@ -155,7 +159,8 @@ Puedes usar herramientas como mkcert (la forma más recomendada y limpia para en
         }
     } 
     ```
-## Paso 6: Orquestación de Infraestructura Local con `docker-compose.yml`
+
+## Paso 6: 🎼 Orquestación de Infraestructura Local
 + Crea el archivo `docker-compose.yml` en la raíz del proyecto:
 ```yaml
 services:
@@ -302,7 +307,8 @@ volumes:
   postgres_data:
   minio_data:
 ```
-## Paso 7: Ajustar `.env` en el Backend
+
+## Paso 7: 📝 Ajustar variables de entorno en el Backend
   + Actualiza tu archivo `backend/.env` para usar el nombre del contenedor de la base de datos:
       ```ini
       # ==========================================
@@ -323,7 +329,8 @@ volumes:
       # ==========================================
       S3_ENDPOINT="http://minio:9000"
       ```
-## Paso 8: Comandos de Ejecución
+
+## Paso 8: 🚀 Comandos de Ejecución
   + Levantar todo el entorno:
       ```bash
       # Levantar todos los servicios
