@@ -288,7 +288,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         server: {
             host: true,
             allowedHosts: [
-                'boilerplate.test',
+                'boilerplate-localhost.com',
                 '.test' // O usa true para permitir cualquier dominio local
             ]
         }  

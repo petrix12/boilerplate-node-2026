@@ -5,8 +5,8 @@
       + Linux/WSL: `/etc/hosts`.
   + Agrega estas líneas al final:
       ```text
-      127.0.0.1   boilerplate.test
-      127.0.0.1   docs.boilerplate.test
+      127.0.0.1   boilerplate-localhost.com
+      127.0.0.1   docs.boilerplate-localhost.com
       ```
 ## Paso 2: Dockerización del Backend
   + Crea `backend/.dockerignore`:
@@ -65,13 +65,54 @@
 
       CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
       ```
-## Paso 4: Configurar Nginx Reverse Proxy
+## Paso 4: Generar un certificado SSL autofirmado para `boilerplate-localhost.com`
+Puedes usar herramientas como mkcert (la forma más recomendada y limpia para entornos de desarrollo local, ya que evita las advertencias de seguridad del navegador):
+1. Si no tienes `mkcert`, instálalo (en Windows con Chocolatey: `choco install mkcert`, o en Linux según tu gestor de paquetes):
+  ```bash
+  # Instalar dependencias necesarias
+  sudo apt update
+  sudo apt install libnss3-tools wget -y
+
+  # Descargar e instalar mkcert
+  # Descargar el binario para Linux
+  sudo curl -L -o /usr/local/bin/mkcert "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64"
+
+  # Darle permisos de ejecución
+  sudo chmod +x /usr/local/bin/mkcert
+  ```
+2. Instala la CA local en tu sistema:
+  ```bash
+  mkcert -install
+  ```
+3. Genera los certificados para tu dominio local dentro de la carpeta de tu proyecto o en un directorio seguro:
+  ```bash
+  mkcert boilerplate-localhost.com "*.boilerplate-localhost.com" localhost 127.0.0.1
+  ```
+  + Esta acción generar estos archivos:
+    + `boilerplate-localhost.com+3-key.pem`.
+    + `boilerplate-localhost.com+3.pem`.
+  + Estos archivos deben ser incluidos en el `.gitignore`.
+
+## Paso 5: Configurar Nginx Reverse Proxy
   + Crea una carpeta nginx en la raíz del proyecto con el archivo `nginx/default.conf`:
     ```nginx
-    # 1. Servidor para la Aplicación Principal (Frontend y Backend API)
+    # 1. Redirección global de HTTP a HTTPS para boilerplate-localhost.com y docs
     server {
         listen 80;
-        server_name boilerplate.test;
+        server_name boilerplate-localhost.com docs.boilerplate-localhost.com;
+        return 301 https://$host$request_uri;
+    }
+
+    # 2. Servidor Seguro HTTPS para la Aplicación Principal (Frontend y Backend API)
+    server {
+        listen 443 ssl;
+        server_name boilerplate-localhost.com;
+
+        ssl_certificate /etc/nginx/certs/boilerplate-localhost.com+3.pem;
+        ssl_certificate_key /etc/nginx/certs/boilerplate-localhost.com+3-key.pem;
+
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
 
         # Enrutamiento al Frontend (Vue 3 / Vite)
         location / {
@@ -89,13 +130,20 @@
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
         }
     }
 
-    # 2. Servidor para la Documentación (VitePress)
+    # 3. Servidor Seguro HTTPS para la Documentación (VitePress)
     server {
-        listen 80;
-        server_name docs.boilerplate.test;
+        listen 443 ssl;
+        server_name docs.boilerplate-localhost.com;
+
+        ssl_certificate /etc/nginx/certs/boilerplate-localhost.com+3.pem;
+        ssl_certificate_key /etc/nginx/certs/boilerplate-localhost.com+3-key.pem;
+
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
 
         location / {
             proxy_pass http://boilerplate_docs:5173;
@@ -105,9 +153,9 @@
             proxy_set_header Host $host;
             proxy_cache_bypass $http_upgrade;
         }
-    }
+    } 
     ```
-## Paso 5: Orquestación de Infraestructura Local con `docker-compose.yml`
+## Paso 6: Orquestación de Infraestructura Local con `docker-compose.yml`
 + Crea el archivo `docker-compose.yml` en la raíz del proyecto:
 ```yaml
 services:
@@ -118,8 +166,10 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./:/etc/nginx/certs/
     depends_on:
       - frontend
       - backend
@@ -177,7 +227,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - APP_URL=http://boilerplate.test
+      - APP_URL=https://boilerplate-localhost.com
     env_file:
       - ./backend/.env
     volumes:
@@ -200,7 +250,7 @@ services:
     container_name: boilerplate_frontend
     restart: always
     environment:
-      - VITE_API_URL=http://boilerplate.test/api
+      - VITE_API_URL=https://boilerplate-localhost.com/api
     volumes:
       - ./frontend:/usr/src/app
       - /usr/src/app/node_modules
@@ -252,14 +302,14 @@ volumes:
   postgres_data:
   minio_data:
 ```
-## Paso 6: Ajustar `.env` en el Backend
+## Paso 7: Ajustar `.env` en el Backend
   + Actualiza tu archivo `backend/.env` para usar el nombre del contenedor de la base de datos:
       ```ini
       # ==========================================
       # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
       # ==========================================
       PORT=3000
-      APP_URL=http://boilerplate.test
+      APP_URL=https://boilerplate-localhost.com
       NODE_ENV=development
 
       # ==========================================
@@ -273,7 +323,7 @@ volumes:
       # ==========================================
       S3_ENDPOINT="http://minio:9000"
       ```
-## Paso 7: Comandos de Ejecución
+## Paso 8: Comandos de Ejecución
   + Levantar todo el entorno:
       ```bash
       # Levantar todos los servicios
@@ -284,8 +334,8 @@ volumes:
       docker compose up -d --build frontend
       ```
   + Verificar acceso:
-      + Frontend: `http://boilerplate.test`
-      + API Health Check: `http://boilerplate.test/api/health`
+      + Frontend: `https://boilerplate-localhost.com`
+      + API Health Check: `https://boilerplate-localhost.com/api/health`
       + MinIO Console: `http://localhost:9001`
       + Prisma Studio: `http://localhost:5555`
   + Ver logs del sistema:
@@ -302,3 +352,4 @@ volumes:
       # Estado de los contenedores
       docker compose ps
       ```
+

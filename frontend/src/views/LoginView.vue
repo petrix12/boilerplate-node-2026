@@ -1,31 +1,31 @@
 <script setup>
-    import { ref } from 'vue';
-    import { useRouter } from 'vue-router';
-    import { useAuthStore } from '../stores/auth.store';
-    import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth.store';
+import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 
-    const authStore = useAuthStore();
-    const router = useRouter();
+const authStore = useAuthStore();
+const router = useRouter();
 
-    const hasLogoError = ref(false);
+const hasLogoError = ref(false);
 
-    const handleLogoError = () => {
-        hasLogoError.value = true;
-    };
+const handleLogoError = () => {
+    hasLogoError.value = true;
+};
 
-    const form = ref({
-        email: '',
-        password: '',
-    });
+const form = ref({
+    email: '',
+    password: '',
+});
 
-    const handleSubmit = async () => {
-        try {
-            await authStore.login(form.value);
-            router.push({ name: 'dashboard' });
-        } catch (err) {
-            console.error('Error al iniciar sesión:', err);
-        }
-    };
+const handleSubmit = async () => {
+    try {
+        await authStore.login(form.value);
+        router.push({ name: 'dashboard' });
+    } catch (err) {
+        console.error('Error al iniciar sesión:', err);
+    }
+};
 </script>
 
 <template>

@@ -55,7 +55,7 @@ Starter kit profesional desacoplado (Decoupled Architecture) para aplicaciones w
 1. Mapear el dominio local
 Edita tu archivo hosts (`/etc/hosts` en Linux/WSL o `C:\Windows\System32\drivers\etc\hosts` en Windows):
     ```Plaintext
-    127.0.0.1   boilerplate.test
+    127.0.0.1   boilerplate-localhost.com
     ```
 
 2. Configurar variables de entorno
@@ -145,7 +145,7 @@ Crea el archivo `backend/.env` basándote en la configuración de Docker:
     # ==========================================
     # - - - LOCAL - - -
     # ==========================================
-    FRONTEND_URL=http://boilerplate.test
+    FRONTEND_URL=https://boilerplate-localhost.com
     FRONTEND_URL_LOCAL_VITE=http://localhost:5173
     FRONTEND_URL_LOCAL_VUE_CLI=http://localhost:8080
     # ==========================================
@@ -165,8 +165,8 @@ Crea el archivo `backend/.env` basándote en la configuración de Docker:
     ```
 
 4. Puntos de acceso local
-    + Aplicación Web (Frontend): `http://boilerplate.test`.
-    + API Health Check: `http://boilerplate.test/api/health`.
+    + Aplicación Web (Frontend): `https://boilerplate-localhost.com`.
+    + API Health Check: `https://boilerplate-localhost.com/api/health`.
     + Prisma Studio (GUI de BD): `http://localhost:5555`.
     + MinIO Console (S3 Local): http://localhost:9001 (User: `minio_admin` | Pass: `minio_password123`)
 

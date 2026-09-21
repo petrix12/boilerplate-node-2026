@@ -2869,6 +2869,7 @@
 6. Ejecutar seeders:
     + Local (Docker):
         ```bash
+        docker compose exec backend node src/seeders/role-permission.seeder.js
         docker compose exec backend node src/seeders/superadmin.seeder.js
         docker compose exec backend node src/seeders/users.seeder.js
         docker compose exec backend node src/seeders/audit.seeder.js

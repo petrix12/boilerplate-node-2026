@@ -170,13 +170,12 @@
             },
 
             actions: {
-                // 1. Iniciar Sesión
+                // 1. Iniciar Sesión Tradicional
                 async login(credentials) {
                     this.loading = true;
                     this.error = null;
                     try {
                         const response = await api.post('/auth/login', credentials);
-                        // Verificación defensiva de la estructura
                         const data = response.data?.data || response.data;
                         
                         this.token = data.token;
@@ -189,6 +188,35 @@
                         return response.data;
                     } catch (err) {
                         this.error = err.response?.data?.message || 'Error al iniciar sesión';
+                        throw err;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                // 1.1 Iniciar Sesión con Google (NUEVO)
+                async loginWithGoogle(idToken) {
+                    this.loading = true;
+                    this.error = null;
+                    try {
+                        const response = await api.post('/auth/google', { idToken });
+
+                        // Imprime esto en consola una vez para verificar la estructura exacta que llega:
+                        console.log('Respuesta del backend Google:', response.data);
+
+                        // Ajusta esto según cómo devuelva los datos tu API:
+                        const data = response.data?.data || response.data;
+
+                        this.token = data.token;
+                        this.user = {
+                            ...data.user,
+                            ...(data.features || {})
+                        };
+                        localStorage.setItem('token', data.token);
+
+                        return response.data;
+                    } catch (err) {
+                        this.error = err.response?.data?.message || 'Error en la autenticación con Google';
                         throw err;
                     } finally {
                         this.loading = false;
@@ -240,7 +268,7 @@
                 async logout() {
                     try {
                         if (this.token) {
-                        await api.post('/auth/logout');
+                            await api.post('/auth/logout');
                         }
                     } catch (err) {
                         console.warn('Error respondiendo al servidor en logout:', err);
@@ -252,22 +280,6 @@
                 },
             },
         });
-
-        const loginWithGoogle = async (idToken) => {
-            try {
-                const response = await axios.post('/auth/google', { idToken });
-                const { token, user } = response.data.data;
-                
-                this.token = token;
-                this.user = user;
-                localStorage.setItem('token', token);
-                
-                // Configurar headers globales de axios si es necesario
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            } catch (error) {
-                throw error.response?.data?.message || 'Error en la autenticación con Google';
-            }
-        };
         ```
 4. Store de Diagnóstico por IA con Pinia (`src/stores/diagnostic.store.js`)
     + Crea o reemplaza el archivo en `frontend/src/stores/diagnostic.store.js`:
@@ -790,7 +802,80 @@
 2. Componente para login con Google:
     + Cera el archivo `frontend/src/components/auth/GoogleAuthButton.vue`:
         ```vue
-        
+        <script setup>
+        import { ref, onMounted } from 'vue';
+        import { useRouter } from 'vue-router';
+        import { useAuthStore } from '@/stores/auth.store';
+
+        defineProps({
+            text: {
+                type: String,
+                default: 'Continuar con Google'
+            }
+        });
+
+        const authStore = useAuthStore();
+        const router = useRouter();
+        const loading = ref(false);
+        const googleButtonRef = ref(null);
+
+        onMounted(() => {
+            const scriptId = 'google-gsi-script';
+            if (!document.getElementById(scriptId)) {
+                const script = document.createElement('script');
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.id = scriptId;
+                script.async = true;
+                script.defer = true;
+                script.onload = initGoogleClient;
+                document.head.appendChild(script);
+            } else {
+                initGoogleClient();
+            }
+        });
+
+        const initGoogleClient = () => {
+            if (window.google) {
+                window.google.accounts.id.initialize({
+                    client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+                    callback: handleCredentialResponse,
+                    use_fedcm_for_prompt: true
+                });
+
+                if (googleButtonRef.value) {
+                    // Renderizamos el botón oficial de Google adaptado al contenedor
+                    window.google.accounts.id.renderButton(googleButtonRef.value, {
+                        type: 'standard',
+                        theme: 'filled_black', // 'outline' o 'filled_black' para combinar con dark mode
+                        size: 'large',
+                        text: 'continue_with',
+                        shape: 'rectangular',
+                        logo_alignment: 'left'
+                    });
+                }
+            }
+        };
+
+        const handleCredentialResponse = async (response) => {
+            loading.value = true;
+            try {
+                const idToken = response.credential; // El token exacto que espera tu backend
+                await authStore.loginWithGoogle(idToken);
+                router.push({ name: 'dashboard' });
+            } catch (err) {
+                console.error('Error al autenticar con el backend:', err);
+            } finally {
+                loading.value = false;
+            }
+        };
+        </script>
+
+        <template>
+            <div class="w-full relative">
+                <!-- Contenedor donde Google inyectará su botón interactivo y seguro -->
+                <div ref="googleButtonRef" class="w-full flex justify-center overflow-hidden rounded-lg"></div>
+            </div>
+        </template>        
         ```
 
 ## 🎨 Vistas de Autenticación y Dashboard (`src/views/`)
@@ -801,32 +886,33 @@
     + Crea el archivo `frontend/src/views/LoginView.vue`:
         ```vue
         <script setup>
-            import { ref } from 'vue';
-            import { useRouter } from 'vue-router';
-            import { useAuthStore } from '../stores/auth.store';
+        import { ref } from 'vue';
+        import { useRouter } from 'vue-router';
+        import { useAuthStore } from '../stores/auth.store';
+        import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 
-            const authStore = useAuthStore();
-            const router = useRouter();
+        const authStore = useAuthStore();
+        const router = useRouter();
 
-            const hasLogoError = ref(false);
+        const hasLogoError = ref(false);
 
-            const handleLogoError = () => {
-                hasLogoError.value = true;
-            };
+        const handleLogoError = () => {
+            hasLogoError.value = true;
+        };
 
-            const form = ref({
-                email: '',
-                password: '',
-            });
+        const form = ref({
+            email: '',
+            password: '',
+        });
 
-            const handleSubmit = async () => {
-                try {
-                    await authStore.login(form.value);
-                    router.push({ name: 'dashboard' });
-                } catch (err) {
-                    console.error('Error al iniciar sesión:', err);
-                }
-            };
+        const handleSubmit = async () => {
+            try {
+                await authStore.login(form.value);
+                router.push({ name: 'dashboard' });
+            } catch (err) {
+                console.error('Error al iniciar sesión:', err);
+            }
+        };
         </script>
 
         <template>
@@ -886,46 +972,56 @@
                         </button>
                     </form>
 
+                    <!-- Divisor visual -->
+                    <div class="relative my-6">
+                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+                        <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-800 px-2 text-slate-400">O</span></div>
+                    </div>
+
+                    <!-- Botón de Google aislado -->
+                    <GoogleAuthButton text="Iniciar sesión con Google" />            
+
                     <p class="mt-6 text-center text-sm text-slate-400">
                         ¿No tienes cuenta?
                         <router-link to="/register" class="text-emerald-400 hover:underline">Regístrate aquí</router-link>
                     </p>
                 </div>
             </div>
-        </template> 
+        </template>
         ```
 3. Formulario de Registro:
     + Crea el archivo `frontend/src/views/RegisterView.vue`:
         ```vue
         <script setup>
-            import { ref } from 'vue';
-            import { useRouter } from 'vue-router';
-            import { useAuthStore } from '../stores/auth.store';
+        import { ref } from 'vue';
+        import { useRouter } from 'vue-router';
+        import { useAuthStore } from '../stores/auth.store';
+        import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 
-            const authStore = useAuthStore();
-            const router = useRouter();
+        const authStore = useAuthStore();
+        const router = useRouter();
 
-            const hasLogoError = ref(false);
+        const hasLogoError = ref(false);
 
-            const handleLogoError = () => {
-                hasLogoError.value = true;
-            };
+        const handleLogoError = () => {
+            hasLogoError.value = true;
+        };
 
-            const form = ref({
-                firstName: '',
-                lastName: '',
-                email: '',
-                password: '',
-            });
+        const form = ref({
+            firstName: '',
+            lastName: '',
+            email: '',
+            password: '',
+        });
 
-            const handleSubmit = async () => {
-                try {
-                    await authStore.register(form.value);
-                    router.push({ name: 'dashboard' });
-                } catch (err) {
-                    console.error('Error en registro:', err);
-                }
-            };
+        const handleSubmit = async () => {
+            try {
+                await authStore.register(form.value);
+                router.push({ name: 'dashboard' });
+            } catch (err) {
+                console.error('Error en registro:', err);
+            }
+        };
         </script>
 
         <template>
@@ -1007,6 +1103,15 @@
                             {{ authStore.loading ? 'Registrando...' : 'Registrarse' }}
                         </button>
                     </form>
+
+                    <!-- Divisor visual -->
+                    <div class="relative my-6">
+                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+                        <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-800 px-2 text-slate-400">O</span></div>
+                    </div>
+
+                    <!-- Mismo componente reutilizado con otro texto -->
+                    <GoogleAuthButton text="Registrarse con Google" />            
 
                     <p class="mt-6 text-center text-sm text-slate-400">
                         ¿Ya tienes cuenta?

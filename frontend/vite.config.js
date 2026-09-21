@@ -12,7 +12,7 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 5173,
         // Permite el dominio personalizado o todos los dominios locales .test
-        allowedHosts: ['boilerplate.test', '.test'],
+        allowedHosts: ['boilerplate-localhost.com', '.test'],
     },    
     resolve: {
         alias: {

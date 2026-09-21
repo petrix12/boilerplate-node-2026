@@ -59,13 +59,12 @@ export const useAuthStore = defineStore('auth', {
     },
 
     actions: {
-        // 1. Iniciar Sesión
+        // 1. Iniciar Sesión Tradicional
         async login(credentials) {
             this.loading = true;
             this.error = null;
             try {
                 const response = await api.post('/auth/login', credentials);
-                // Verificación defensiva de la estructura
                 const data = response.data?.data || response.data;
                 
                 this.token = data.token;
@@ -78,6 +77,35 @@ export const useAuthStore = defineStore('auth', {
                 return response.data;
             } catch (err) {
                 this.error = err.response?.data?.message || 'Error al iniciar sesión';
+                throw err;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // 1.1 Iniciar Sesión con Google (NUEVO)
+        async loginWithGoogle(idToken) {
+            this.loading = true;
+            this.error = null;
+            try {
+                const response = await api.post('/auth/google', { idToken });
+
+                // Imprime esto en consola una vez para verificar la estructura exacta que llega:
+                console.log('Respuesta del backend Google:', response.data);
+
+                // Ajusta esto según cómo devuelva los datos tu API:
+                const data = response.data?.data || response.data;
+
+                this.token = data.token;
+                this.user = {
+                    ...data.user,
+                    ...(data.features || {})
+                };
+                localStorage.setItem('token', data.token);
+
+                return response.data;
+            } catch (err) {
+                this.error = err.response?.data?.message || 'Error en la autenticación con Google';
                 throw err;
             } finally {
                 this.loading = false;
@@ -129,7 +157,7 @@ export const useAuthStore = defineStore('auth', {
         async logout() {
             try {
                 if (this.token) {
-                await api.post('/auth/logout');
+                    await api.post('/auth/logout');
                 }
             } catch (err) {
                 console.warn('Error respondiendo al servidor en logout:', err);
@@ -141,19 +169,3 @@ export const useAuthStore = defineStore('auth', {
         },
     },
 });
-
-const loginWithGoogle = async (idToken) => {
-    try {
-        const response = await axios.post('/auth/google', { idToken });
-        const { token, user } = response.data.data;
-        
-        this.token = token;
-        this.user = user;
-        localStorage.setItem('token', token);
-        
-        // Configurar headers globales de axios si es necesario
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } catch (error) {
-        throw error.response?.data?.message || 'Error en la autenticación con Google';
-    }
-};

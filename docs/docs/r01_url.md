@@ -1,12 +1,12 @@
 # 🔗 URL de interes
 ---
 ## URL Develops
-+ Frontend: [http://boilerplate.test](http://boilerplate.test).
++ Frontend: [https://boilerplate-localhost.com](https://boilerplate-localhost.com).
 + Backend: [http://localhost:3000/api/v1](http://localhost:3000/api/v1).
-+ API Health Check: [http://boilerplate.test/api/health](http://boilerplate.test/api/health).
++ API Health Check: [https://boilerplate-localhost.com/api/health](https://boilerplate-localhost.com/api/health).
 + MinIO Console: [http://localhost:9001](http://localhost:9001).
 + Prisma Studio: [http://localhost:5555](http://localhost:5555).
-+ Docs: [http://docs.boilerplate.test](http://docs.boilerplate.test).
++ Docs: [http://docs.boilerplate-localhost.com](http://docs.boilerplate-localhost.com).
 
 
 ## URL Producción

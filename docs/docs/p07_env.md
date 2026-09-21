@@ -90,7 +90,7 @@
     # ==========================================
     # - - - LOCAL - - -
     # ==========================================
-    FRONTEND_URL=http://boilerplate.test
+    FRONTEND_URL=https://boilerplate-localhost.com
     FRONTEND_URL_LOCAL_VITE=http://localhost:5173
     FRONTEND_URL_LOCAL_VUE_CLI=http://localhost:8080
     # ==========================================
@@ -130,7 +130,7 @@
     # - - - LOCAL - - -
     # ==========================================
     # Con Docker
-    VITE_API_BASE_URL=http://boilerplate.test/api/v1
+    VITE_API_BASE_URL=https://boilerplate-localhost.com/api/v1
     # Sin Docker
     # VITE_API_BASE_URL=http://localhost:3000/api/v1
     VITE_APP_NAME="NodeVue Boilerplate | Dev"
@@ -154,7 +154,7 @@
     # ==========================================
     # - - - LOCAL - - -
     # ==========================================
-    VITE_DOCS_URL=http://docs.boilerplate.test
+    VITE_DOCS_URL=http://docs.boilerplate-localhost.com
     # ==========================================
     # - - - PRODUCCIÓN - - -
     # ==========================================

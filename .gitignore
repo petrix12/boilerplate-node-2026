@@ -2,3 +2,5 @@ node_modules/
 temporal/
 .env
 credentials.md
+boilerplate-localhost.com+3-key.pem
+boilerplate-localhost.com+3.pem
