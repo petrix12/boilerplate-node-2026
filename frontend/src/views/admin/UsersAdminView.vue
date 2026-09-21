@@ -249,13 +249,23 @@
                             <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">
                                 Contraseña {{ targetUser ? '(Opcional / Dejar en blanco)' : '' }}
                             </label>
-                            <input
-                                v-model="userForm.password"
-                                type="password"
-                                :required="!targetUser"
-                                placeholder="••••••••"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            />
+                            <div class="relative">
+                                <input
+                                    v-model="userForm.password"
+                                    :type="showUserPassword ? 'text' : 'password'"
+                                    :required="!targetUser"
+                                    placeholder="••••••••"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                                <button 
+                                    type="button"
+                                    @click="showUserPassword = !showUserPassword"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                                >
+                                    <EyeIcon v-if="!showUserPassword" class="w-5 h-5" />
+                                    <EyeSlashIcon v-else class="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Contenedor principal con eventos de Drag & Drop -->
@@ -334,7 +344,7 @@
 </template>
 
 <script setup>
-import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, ChevronLeftIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
+import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, ChevronLeftIcon, MagnifyingGlassIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import Swal from 'sweetalert2';
 import { ref, onMounted } from 'vue';
 import { userService, roleService } from '@/services';
@@ -362,6 +372,7 @@ const targetUser = ref(null);
 const fileInputRef = ref(null);
 const uploadingAvatar = ref(false);
 const isDragging = ref(false);
+const showUserPassword = ref(false);
 
 const userForm = ref({
     name: '',

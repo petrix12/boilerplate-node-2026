@@ -128,14 +128,12 @@
 + ◻️ Realizar pruebas unitarias.
 + ◻️ Asegurar que los endpoints en el backend se puedan ejecutar según los permisos que les corresponde.
 + ◻️ Crear example.env o como se llame.
-+ ◻️ Limpiar proyecto frontend de archivos que no se usan.
 + ◻️ Implementar mensaje sweetalert en todos los lugares que haga falta.
 + ◻️ Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
 + ◻️ Modalidad modo oscuro y modo claro.
-+ ◻️ Colocar la opción de mostrar password en login, register y en donde aplique.
-+ ◻️ Personalizar el heder de la página principal (Protocolo Open Graph).
++ ◻️ Si el usuario ya esta registrado que no le permita registrarse otra vez, sino que lo notifique y lo mande al login.
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ◻️ GitHub.
@@ -156,6 +154,9 @@
 + ✅ Que aparezca la manito cuando el maouse se posicione sobre un botón, o algo por el estilo.
 + ✅ Incluir ruta de documentación (Variable de entorno APP_DOC_VITEPRESS y agregrar enlace en la app.).
 + ✅ Verificar si es necesario variable de entorno IA_ACTIVE.
++ ✅ Personalizar el heder de la página principal (Protocolo Open Graph).
++ ✅ Colocar la opción de mostrar password en login, register y en donde aplique.
++ ✅ Limpiar proyecto frontend de archivos que no se usan.
 
 
 

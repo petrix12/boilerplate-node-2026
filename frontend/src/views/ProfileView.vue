@@ -2,10 +2,12 @@
 import { ref, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth.store';
 import { userService } from '@/services';
-import { UserIcon, KeyIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
+import { UserIcon, KeyIcon, ChevronLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import Swal from 'sweetalert2';
 
 const authStore = useAuthStore();
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false)
 const fileInputRef = ref(null);
 const saving = ref(false);
 
@@ -372,24 +374,46 @@ const handleDrop = (event) => {
                 </h3>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Contraseña Actual -->
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Contraseña Actual</label>
-                        <input 
-                            v-model="profileForm.currentPassword" 
-                            type="password" 
-                            placeholder="••••••••" 
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" 
-                        />
+                        <div class="relative">
+                            <input 
+                                v-model="profileForm.currentPassword" 
+                                :type="showCurrentPassword ? 'text' : 'password'" 
+                                placeholder="••••••••" 
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                            />
+                            <button 
+                                type="button"
+                                @click="showCurrentPassword = !showCurrentPassword"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                            >
+                                <EyeIcon v-if="!showCurrentPassword" class="w-5 h-5" />
+                                <EyeSlashIcon v-else class="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
+                    <!-- Nueva Contraseña -->
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nueva Contraseña</label>
-                        <input 
-                            v-model="profileForm.newPassword" 
-                            type="password" 
-                            placeholder="••••••••" 
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" 
-                        />
+                        <div class="relative">
+                            <input 
+                                v-model="profileForm.newPassword" 
+                                :type="showNewPassword ? 'text' : 'password'" 
+                                placeholder="••••••••" 
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                            />
+                            <button 
+                                type="button"
+                                @click="showNewPassword = !showNewPassword"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                            >
+                                <EyeIcon v-if="!showNewPassword" class="w-5 h-5" />
+                                <EyeSlashIcon v-else class="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
