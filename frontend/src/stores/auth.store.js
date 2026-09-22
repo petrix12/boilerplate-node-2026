@@ -133,17 +133,23 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
-        // 3. Verificar Sesión al recargar la página
+        // 3. Verificar Sesión al recargar la página o al navegar
         async fetchUser() {
             if (!this.token) return;
 
             this.loading = true;
             try {
                 const response = await api.get('/auth/me');
-                const { user, features } = response.data.data;
+                
+                // Aseguramos capturar la data tanto si viene anidada como directa
+                const responseData = response.data?.data || response.data;
+                const user = responseData.user || responseData;
+                const features = responseData.features || {};
+
+                // Fusión limpia idéntica al login
                 this.user = {
                     ...user,
-                    ...(features || {})
+                    ...features
                 };
             } catch (err) {
                 console.error('Sesión expirada o token inválido:', err);

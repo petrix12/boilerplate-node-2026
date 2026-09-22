@@ -89,10 +89,18 @@
 </template>
 
 <script setup>
-    import { computed } from 'vue';
+    import { computed, onMounted } from 'vue';
     import { useAuthStore } from '@/stores/auth.store';
     import { ChevronLeftIcon, UsersIcon, ShieldCheckIcon, DocumentChartBarIcon, CpuChipIcon } from '@heroicons/vue/24/outline';
 
     const authStore = useAuthStore();
+
+    // Aseguramos que si por alguna razón el user no está completo al entrar, se consulte al backend
+    onMounted(async () => {
+        if (authStore.token && (!authStore.user || !authStore.user.hasOwnProperty('aiDiagnostic'))) {
+            await authStore.fetchUser();
+        }
+    });
+
     const isAiActive = computed(() => authStore.aiDiagnosticActive);
 </script>

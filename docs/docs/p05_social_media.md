@@ -33,9 +33,3 @@ Copia ambos códigos y llévalos a tu archivo .env en el backend de esta manera:
 GOOGLE_CLIENT_ID=aqui-pegas-tu-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=aqui-pegas-tu-client-secret
 ```
-
-## GitHub
-## Microsoft (Microsoft Entra ID / Outlook / Azure).
-## Apple (Sign in with Apple).
-## Meta (Facebook Login) / Instagram.
-## X (antes Twitter) / LinkedIn.

@@ -246,14 +246,19 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                                Contraseña {{ targetUser ? '(Opcional / Dejar en blanco)' : '' }}
-                            </label>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-semibold uppercase text-slate-400">
+                                    Contraseña {{ targetUser ? '(Opcional / Dejar en blanco)' : '' }}
+                                </label>
+                                <!-- Nota informativa dinámica solo para la creación -->
+                                <span v-if="!targetUser" class="text-[11px] text-amber-400/90 font-medium">
+                                    Si se deja vacía, será: <code class="bg-slate-900 px-1.5 py-0.5 rounded text-amber-300 font-mono">{{ DEFAULT_PASSWORD }}</code>
+                                </span>
+                            </div>
                             <div class="relative">
                                 <input
                                     v-model="userForm.password"
                                     :type="showUserPassword ? 'text' : 'password'"
-                                    :required="!targetUser"
                                     placeholder="••••••••"
                                     class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                 />
@@ -318,7 +323,7 @@
                                     <span class="text-emerald-400 font-medium">Arrastra una imagen</span> o usa el botón (Máx. 2MB).
                                 </p>
                             </div>
-                        </div>                      
+                        </div>                       
 
                         <div class="flex justify-end gap-3 pt-2">
                             <button
@@ -373,6 +378,7 @@ const fileInputRef = ref(null);
 const uploadingAvatar = ref(false);
 const isDragging = ref(false);
 const showUserPassword = ref(false);
+const DEFAULT_PASSWORD = 'Password123*';
 
 const userForm = ref({
     name: '',
@@ -481,8 +487,31 @@ const saveUserRoles = async () => {
         await userService.updateUserRoles(selectedUser.value.id, modalRoles.value);
         selectedUser.value.roles = [...modalRoles.value];
         selectedUser.value = null;
+
+        // Notificación profesional de éxito al actualizar roles
+        Swal.fire({
+            title: '¡Roles actualizados!',
+            text: 'Los permisos del usuario se han modificado correctamente.',
+            icon: 'success',
+            timer: 2200,
+            showConfirmButton: false,
+            background: '#1e293b', // Slate-800
+            color: '#f8fafc',       // Slate-50
+            customClass: {
+                popup: 'rounded-xl border border-slate-700 shadow-2xl'
+            }
+        });
     } catch (err) {
-        alert('Error al guardar los roles');
+        Swal.fire({
+            title: 'Error',
+            text: err.response?.data?.message || 'Error al guardar los roles del usuario.',
+            icon: 'error',
+            background: '#1e293b',
+            color: '#f8fafc',
+            customClass: {
+                popup: 'rounded-xl border border-slate-700 shadow-2xl'
+            }
+        });
     } finally {
         saving.value = false;
     }
@@ -510,28 +539,45 @@ const saveUserData = async () => {
     saving.value = true;
     try {
         if (targetUser.value) {
-            // Edición de datos básicos
+            // --- MODO EDICIÓN ---
             const payload = { 
                 name: userForm.value.name, 
                 email: userForm.value.email 
             };
+            // Solo se envía la contraseña si se escribió una nueva
             if (userForm.value.password) payload.password = userForm.value.password;
 
             const res = await userService.updateUser(targetUser.value.id, payload);
             
             targetUser.value.name = res.data.user.name;
             targetUser.value.email = res.data.user.email;
+
+            Swal.fire({
+                title: '¡Actualizado!',
+                text: 'Los datos del usuario han sido actualizados correctamente.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false,
+                background: '#1e293b',
+                color: '#f8fafc',
+                customClass: { popup: 'rounded-xl border border-slate-700' }
+            });
         } else {
-            // 1. Crear nuevo usuario
+            // --- MODO CREACIÓN ---
+            // Si el input de contraseña está vacío, asignamos una por defecto
+            const passwordToUse = userForm.value.password.trim() !== '' 
+                ? userForm.value.password 
+                : DEFAULT_PASSWORD;
+
             const res = await userService.createUser({
                 name: userForm.value.name,
                 email: userForm.value.email,
-                password: userForm.value.password
+                password: passwordToUse
             });
 
             const newUserId = res.data.user.id;
 
-            // 2. Si seleccionó un avatar en la creación, subirlo ahora con el nuevo ID
+            // Si seleccionó un avatar en la creación, subirlo ahora con el nuevo ID
             if (userForm.value.avatarFile && newUserId) {
                 const formData = new FormData();
                 formData.append('avatar', userForm.value.avatarFile);
@@ -539,6 +585,28 @@ const saveUserData = async () => {
             }
 
             await fetchUsers(1);
+
+            // Mensaje informativo que indica si usó la contraseña por defecto
+            const usedDefault = !userForm.value.password.trim();
+            const passwordInfo = usedDefault 
+                ? '<br><span class="text-xs text-amber-400 mt-1 block">Contraseña asignada por defecto: <strong>Password123*</strong></span>' 
+                : '';
+
+            Swal.fire({
+                title: '¡Usuario creado exitosamente!',
+                html: `Se ha registrado a <strong>${userForm.value.name}</strong> en el sistema.${passwordInfo}`,
+                icon: 'success',
+                showConfirmButton: usedDefault, // Si usó la por defecto, dejamos un botón para que el admin lo note
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#4f46e5', // Indigo-600
+                timer: usedDefault ? undefined : 2500, // Si usa la por defecto, no se cierra solo para que la lea
+                background: '#1e293b',
+                color: '#f8fafc',
+                customClass: {
+                    popup: 'rounded-xl border border-slate-700 shadow-2xl',
+                    confirmButton: 'px-4 py-2 rounded-lg font-medium text-sm'
+                }
+            });
         }
         isUserModalOpen.value = false;
     } catch (err) {
