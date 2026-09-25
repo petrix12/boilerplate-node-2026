@@ -108,3 +108,148 @@
 + ✅ Limpiar proyecto frontend de archivos que no se usan.
 + ✅ Implementar mensaje sweetalert en todos los lugares que haga falta.
 
+
+
+## Estructura del proyecto
+.
+├── backend
+│   ├── prisma
+│   │   ├── schema.prisma
+│   │   └── seed.js
+│   ├── src
+│   │   ├── config
+│   │   │   ├── prisma.js
+│   │   │   └── s3.js
+│   │   ├── controllers
+│   │   │   ├── audit.controller.js
+│   │   │   ├── auth.controller.js
+│   │   │   ├── diagnostic.controller.js
+│   │   │   ├── googleAuth.controller.js
+│   │   │   ├── profile.controller.js
+│   │   │   ├── role.controller.js
+│   │   │   ├── systemLog.controller.js
+│   │   │   └── user.controller.js
+│   │   ├── middlewares
+│   │   │   ├── auditContext.middleware.js
+│   │   │   ├── auth.middleware.js
+│   │   │   ├── error.middleware.js
+│   │   │   ├── googleEnabled.middleware.js
+│   │   │   ├── role.middleware.js
+│   │   │   ├── upload.middleware.js
+│   │   │   └── validate.middleware.js
+│   │   ├── routes
+│   │   │   ├── audit.routes.js
+│   │   │   ├── auth.routes.js
+│   │   │   ├── diagnostic.routes.js
+│   │   │   ├── googleAuth.routes.js
+│   │   │   ├── index.js
+│   │   │   ├── role.routes.js
+│   │   │   ├── systemLog.routes.js
+│   │   │   └── user.routes.js
+│   │   ├── seeders
+│   │   │   ├── audit.seeder.js
+│   │   │   ├── role-permission.seeder.js
+│   │   │   ├── superadmin.seeder.js
+│   │   │   └── users.seeder.js
+│   │   ├── services
+│   │   │   ├── ai.service.js
+│   │   │   ├── audit.service.js
+│   │   │   ├── cron.service.js
+│   │   │   ├── diagnosticAggregator.service.js
+│   │   │   ├── googleAuth.service.js
+│   │   │   └── systemLog.service.js
+│   │   ├── utils
+│   │   │   └── request.utils.js
+│   │   ├── app.js
+│   │   └── server.js
+│   ├── Dockerfile
+│   ├── nodemon.json
+│   ├── package-lock.json
+│   └── package.json
+├── docs
+│   ├── docs
+│   │   ├── public
+│   │   │   └── favicon.ico
+│   │   ├── amano.md
+│   │   ├── index.md
+│   │   ├── p01_incepcion.md
+│   │   ├── p02_instalacion_node.md
+│   │   ├── p03_estructuracion.md
+│   │   ├── p04_dockerizacion.md
+│   │   ├── p05_social_media.md
+│   │   ├── p06_deploy.md
+│   │   ├── p07_env.md
+│   │   ├── p08_backend.md
+│   │   ├── p09_endpoints.md
+│   │   ├── p10_frontend.md
+│   │   ├── p11_app_documentacion.md
+│   │   ├── r01_url.md
+│   │   └── r02_guion_video.md
+│   ├── package-lock.json
+│   └── package.json
+├── frontend
+│   ├── public
+│   │   ├── favicon.ico
+│   │   └── logo.png
+│   ├── src
+│   │   ├── api
+│   │   │   └── axios.js
+│   │   ├── assets
+│   │   │   ├── base.css
+│   │   │   └── main.css
+│   │   ├── components
+│   │   │   ├── auth
+│   │   │   │   └── GoogleAuthButton.vue
+│   │   │   ├── icons
+│   │   │   └── Navbar.vue
+│   │   ├── layouts
+│   │   │   └── AppLayout.vue
+│   │   ├── router
+│   │   │   └── index.js
+│   │   ├── services
+│   │   │   ├── audit.service.js
+│   │   │   ├── auth.service.js
+│   │   │   ├── diagnostic.service.js
+│   │   │   ├── index.js
+│   │   │   ├── role.service.js
+│   │   │   └── user.service.js
+│   │   ├── stores
+│   │   │   ├── auth.store.js
+│   │   │   └── diagnostic.store.js
+│   │   ├── views
+│   │   │   ├── admin
+│   │   │   │   ├── AdminDashboardView.vue
+│   │   │   │   ├── AuditLogsView.vue
+│   │   │   │   ├── RolesAdminView.vue
+│   │   │   │   ├── SystemDiagnosticView.vue
+│   │   │   │   └── UsersAdminView.vue
+│   │   │   ├── errors
+│   │   │   │   ├── ForbiddenView.vue
+│   │   │   │   └── NotFoundView.vue
+│   │   │   ├── DashboardView.vue
+│   │   │   ├── HomeView.vue
+│   │   │   ├── LoginView.vue
+│   │   │   ├── ProfileView.vue
+│   │   │   └── RegisterView.vue
+│   │   ├── App.vue
+│   │   └── main.js
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── jsconfig.json
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── vercel.json
+│   └── vite.config.js
+├── nginx
+│   └── default.conf
+├── LICENSE
+├── README.md
+├── boilerplate-localhost.com+3-key.pem
+├── boilerplate-localhost.com+3.pem
+├── credentials.md
+└── docker-compose.yml
+
+30 directories, 109 files
+

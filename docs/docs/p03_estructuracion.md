@@ -52,7 +52,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         npm install express @prisma/client @prisma/adapter-pg pg bcryptjs jsonwebtoken dotenv cors multer @aws-sdk/client-s3 express-validator
 
         # 4. Instalar dependencias de desarrollo
-        npm install -D prisma nodemon @faker-js/faker
+        npm install -D prisma nodemon @faker-js/faker vitest supertest
         ```
     + Desglose de Paquetes Instalados
         Paquete                 | Tipo          | Propósito
@@ -71,6 +71,8 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         prisma	                | Desarrollo    | CLI de Prisma para ejecutar migraciones, inspeccionar esquemas y generar el cliente.
         nodemon	                | Desarrollo    | Reinicio automático del servidor Node.js ante cambios de código en desarrollo.
         @faker-js/faker	        | Desarrollo    | Generación de datos de prueba (seeders/factories) para poblar la base de datos.
+        vitest	                | Desarrollo	| Motor de pruebas unitarias y de integración ultrarrápido.
+        supertest	            | Desarrollo	| Librería para simular peticiones HTTP y probar endpoints de Express de forma aislada.
 2. Limpiar vulnerabilidades:
     ```bash
     # 1. Reparación automática de NPM | Este comando actualizará las sub-dependencias que tengan vulnerabilidades a versiones parcheadas seguras sin realizar cambios disruptivos (non-breaking).

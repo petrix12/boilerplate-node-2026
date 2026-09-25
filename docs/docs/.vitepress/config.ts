@@ -36,7 +36,8 @@ export default defineConfig({
             {
                 text: 'Recursos',
                 items: [
-                    { text: '🔗 URL de interés', link: '/r01_url' }
+                    { text: '🔗 URL de interés', link: '/r01_url' },
+                    { text: '🧪 Pruebas unitarias', link: '/r02_test' }
                 ]
             }
         ],

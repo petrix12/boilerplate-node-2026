@@ -2671,8 +2671,38 @@
     }
      ```
 
-## 🚀 Paso 10: Punto de Entrada de la Aplicación (`src/app.js`)
-1. Crea `backend/src/app.js` unificando toda la arquitectura:
+## 🚀 Paso 10: Punto de Entrada (`src/server.js`) y nucleo (`src/app.js`) de la Aplicación
+1. Crea `backend/src/server.js`:
+    ```js
+    require('dotenv').config();
+    const app = require('./app');
+
+    const PORT = process.env.PORT || 3000;
+    const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
+
+    // Inicialización del Servidor
+    const server = app.listen(PORT, () => {
+        console.log(`🚀 Servidor ejecutándose en ${APP_URL}`);
+        console.log(`📌 Entorno: ${process.env.NODE_ENV || 'development'}`);
+    });
+
+    // Inicializar el Servicio de Limpieza de Logs Antiguos
+    const { initSystemCleanup } = require('./services/cron.service');
+    initSystemCleanup();
+
+    // Cierre Limpio (Graceful Shutdown) para liberar el puerto
+    const gracefulShutdown = (signal) => {
+        console.log(`\nRecibida señal ${signal}. Cerrando servidor limpiamente...`);
+        server.close(() => {
+            console.log('Servidor Express cerrado. Puerto liberado.');
+            process.exit(0);
+        });
+    };
+
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));    
+    ```
+2. Crea `backend/src/app.js` unificando toda la arquitectura:
     ```js
     const express = require('express');
     const cors = require('cors');
@@ -2687,8 +2717,6 @@
     const routes = require('./routes');
 
     const app = express();
-    const PORT = process.env.PORT || 3000;
-    const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
     // Middlewares Globales
     const allowedOrigins = [
@@ -2749,27 +2777,8 @@
         console.error('🔥 [CRITICAL] Excepción no controlada (uncaughtException):', error);
     });
 
-    // Inicialización del Servidor (Asignado a constante server)
-    const server = app.listen(PORT, () => {
-        console.log(`🚀 Servidor ejecutándose en ${APP_URL}`);
-        console.log(`📌 Entorno: ${process.env.NODE_ENV || 'development'}`);
-    });
-
-    // Inicializar el Servicio de Limpieza de Logs Antiguos
-    const { initSystemCleanup } = require('./services/cron.service');
-    initSystemCleanup();
-
-    // Cierre Limpio (Graceful Shutdown)
-    const gracefulShutdown = (signal) => {
-        console.log(`\nRecibida señal ${signal}. Cerrando servidor limpiamente...`);
-        server.close(() => {
-            console.log('Servidor Express cerrado. Puerto liberado.');
-            process.exit(0);
-        });
-    };
-
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    // Exportamos la app configurada para que el servidor o las pruebas la utilicen
+    module.exports = app;
     ```
     + Funciones:
         + Carga de variables de entorno (dotenv).
@@ -2778,7 +2787,7 @@
         + Registro de routers de /src/routes/.
         + Middleware global de manejo de errores (error.middleware.js).
         + Arranque del servidor (app.listen).
-2. Actualizar las referencias en el `backend/package.json` para que tanto node como nodemon apunten al archivo correcto:
+3. Actualizar las referencias en el `backend/package.json` para que tanto node como nodemon apunten al archivo correcto:
     ```json
     {
         "name": "boilerplate-node-2026-backend",
@@ -2787,10 +2796,10 @@
         "main": "src/app.js",
         "type": "commonjs",
         "scripts": {
-            "start": "node src/app.js",
-            "start:prod": "npx prisma migrate deploy && node src/app.js",
-            "dev": "nodemon src/app.js",
-            "test": "echo \"Error: no test specified\" && exit 1",
+            "start": "node src/server.js",
+            "start:prod": "npx prisma migrate deploy && node src/server.js",
+            "dev": "nodemon src/server.js",
+            "test": "vitest run",
             "seed": "node prisma/seed.js",
             "db:reset": "prisma migrate reset --force"
         },
@@ -2825,7 +2834,9 @@
         "devDependencies": {
             "@faker-js/faker": "^10.6.0",
             "nodemon": "^3.1.14",
-            "prisma": "^6.4.0"
+            "prisma": "^6.4.0",
+            "supertest": "^7.3.0",
+            "vitest": "^5.0.1"
         },
         "allowScripts": {
             "@prisma/client@6.4.0": true,
@@ -2835,16 +2846,16 @@
         }
     }
     ```
-3. Regenerar el cliente de Prisma:
+4. Regenerar el cliente de Prisma:
     ```bash
     docker compose exec backend npx prisma generate
     ```
     + Ejecuta este comando en la terminal para que Prisma compile de nuevo sus tipos e incluya el soporte para el adaptador de base de datos.
-4. Reiniciar el servicio de backend:
+5. Reiniciar el servicio de backend:
     ```bash
     docker compose restart backend
     ```
-5. Ejecutar migraciones:
+6. Ejecutar migraciones:
     + Local (Docker):
         ```bash
         docker compose exec backend npx prisma migrate reset
@@ -2866,7 +2877,7 @@
         ```bash
         DATABASE_URL="postgresql://postgres.<Project ID>:<Password>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" npx prisma migrate deploy
         ```
-6. Ejecutar seeders:
+7. Ejecutar seeders:
     + Local (Docker):
         ```bash
         docker compose exec backend node src/seeders/role-permission.seeder.js
