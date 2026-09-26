@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 
@@ -15,16 +15,18 @@ const handleLogoError = () => {
 };
 
 const form = ref({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
 });
 
 const handleSubmit = async () => {
     try {
-        await authStore.login(form.value);
+        await authStore.register(form.value);
         router.push({ name: 'dashboard' });
     } catch (err) {
-        console.error('Error al iniciar sesión:', err);
+        console.error('Error en registro:', err);
     }
 };
 </script>
@@ -48,13 +50,36 @@ const handleSubmit = async () => {
                 </router-link>
             </div>
 
-            <h2 class="text-xl font-bold text-center text-slate-100 mb-6">Iniciar Sesión</h2>
+            <h2 class="text-xl font-bold text-center text-slate-100 mb-6">Crear Cuenta</h2>
 
             <div v-if="authStore.error" class="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
                 {{ authStore.error }}
             </div>
 
             <form @submit.prevent="handleSubmit" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Nombre</label>
+                        <input
+                            v-model="form.firstName"
+                            type="text"
+                            required
+                            class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-200"
+                            placeholder="Juan"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Apellido</label>
+                        <input
+                            v-model="form.lastName"
+                            type="text"
+                            required
+                            class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-200"
+                            placeholder="Pérez"
+                        />
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium mb-1">Correo Electrónico</label>
                     <input
@@ -93,7 +118,7 @@ const handleSubmit = async () => {
                     :disabled="authStore.loading"
                     class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-lg shadow-md transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                    {{ authStore.loading ? 'Cargando...' : 'Entrar' }}
+                    {{ authStore.loading ? 'Registrando...' : 'Registrarse' }}
                 </button>
             </form>
 
@@ -103,12 +128,12 @@ const handleSubmit = async () => {
                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-800 px-2 text-slate-400">O</span></div>
             </div>
 
-            <!-- Botón de Google aislado -->
-            <GoogleAuthButton text="Iniciar sesión con Google" />            
+            <!-- Mismo componente reutilizado con otro texto -->
+            <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
 
             <p class="mt-6 text-center text-sm text-slate-400">
-                ¿No tienes cuenta?
-                <router-link to="/register" class="text-emerald-400 hover:underline">Regístrate aquí</router-link>
+                ¿Ya tienes cuenta?
+                <router-link to="/login" class="text-emerald-400 hover:underline">Inicia sesión</router-link>
             </p>
         </div>
     </div>

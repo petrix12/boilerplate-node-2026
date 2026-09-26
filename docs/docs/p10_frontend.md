@@ -377,8 +377,8 @@
             history: createWebHistory(import.meta.env.BASE_URL),
             routes: [
                 { path: '/', name: 'home', component: () => import('@/views/HomeView.vue'), meta: { title: 'Inicio' } },
-                { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { requiresGuest: true, title: 'Iniciar Sesión' } },
-                { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { requiresGuest: true, title: 'Registro' } },
+                { path: '/login', name: 'login', component: () => import('@/views/auth/LoginView.vue'), meta: { requiresGuest: true, title: 'Iniciar Sesión' } },
+                { path: '/register', name: 'register', component: () => import('@/views/auth/RegisterView.vue'), meta: { requiresGuest: true, title: 'Registro' } },
                 {
                     // Rutas protegidas que comparten el mismo Navbar sin pestañeos
                     path: '/',
@@ -969,12 +969,12 @@
     + Icono: `frontend/public/favicon.ico`.
     + Logo: `frontend/public/logo.png`.
 2. Formulario de Inicio de Sesión:
-    + Crea el archivo `frontend/src/views/LoginView.vue`:
+    + Crea el archivo `frontend/src/views/auth/LoginView.vue`:
         ```vue
         <script setup>
         import { ref } from 'vue';
         import { useRouter } from 'vue-router';
-        import { useAuthStore } from '../stores/auth.store';
+        import { useAuthStore } from '@/stores/auth.store';
         import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 
@@ -1088,12 +1088,12 @@
         </template>
         ```
 3. Formulario de Registro:
-    + Crea el archivo `frontend/src/views/RegisterView.vue`:
+    + Crea el archivo `frontend/src/views/auth/RegisterView.vue`:
         ```vue
         <script setup>
         import { ref } from 'vue';
         import { useRouter } from 'vue-router';
-        import { useAuthStore } from '../stores/auth.store';
+        import { useAuthStore } from '@/stores/auth.store';
         import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 
