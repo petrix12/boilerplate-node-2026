@@ -141,3 +141,5 @@
 
 ## Páginas de interes:
 + Convertir texto a voz: `https://elevenlabs.io/app/speech-synthesis/text-to-speech`.
+Miguel - Warm, Confident, Inspiring | Venezuela
+El Faraon - Full, Clear, Mellow | Mexico

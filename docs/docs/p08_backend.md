@@ -959,8 +959,11 @@
                 }
             });
 
+            let isNewUser = false;
+
             // Si no existe, lo registramos automáticamente con el rol por defecto 'USER'
             if (!user) {
+                isNewUser = true;
                 const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
                 const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
 
@@ -1003,6 +1006,7 @@
             const token = generateToken(user, userRoles, userPermissions);
 
             return {
+                isNewUser,
                 user: {
                     id: user.id,
                     email: user.email,
@@ -1016,7 +1020,7 @@
         }
     };
 
-    module.exports = googleAuthService;    
+    module.exports = googleAuthService;   
     ```
     + Este archivo contendrá toda la lógica de validación con Google, gestión de usuarios en Prisma y emisión de tokens.
 

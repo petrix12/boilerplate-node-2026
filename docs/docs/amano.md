@@ -82,7 +82,6 @@
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
 + ◻️ Modalidad modo oscuro y modo claro.
-+ ◻️ Si el usuario ya esta registrado que no le permita registrarse otra vez, sino que lo notifique y lo mande al login.
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ◻️ GitHub.
@@ -107,11 +106,11 @@
 + ✅ Colocar la opción de mostrar password en login, register y en donde aplique.
 + ✅ Limpiar proyecto frontend de archivos que no se usan.
 + ✅ Implementar mensaje sweetalert en todos los lugares que haga falta.
++ ✅ Si el usuario ya esta registrado que no le permita registrarse otra vez, sino que lo notifique y lo mande al login.
 
 
 
 ## Estructura del proyecto
-.
 ├── backend
 │   ├── prisma
 │   │   ├── schema.prisma
@@ -158,6 +157,9 @@
 │   │   │   ├── diagnosticAggregator.service.js
 │   │   │   ├── googleAuth.service.js
 │   │   │   └── systemLog.service.js
+│   │   ├── tests
+│   │   │   ├── app.test.js
+│   │   │   └── auth.test.js
 │   │   ├── utils
 │   │   │   └── request.utils.js
 │   │   ├── app.js
@@ -170,21 +172,8 @@
 │   ├── docs
 │   │   ├── public
 │   │   │   └── favicon.ico
-│   │   ├── amano.md
 │   │   ├── index.md
-│   │   ├── p01_incepcion.md
-│   │   ├── p02_instalacion_node.md
-│   │   ├── p03_estructuracion.md
-│   │   ├── p04_dockerizacion.md
-│   │   ├── p05_social_media.md
-│   │   ├── p06_deploy.md
-│   │   ├── p07_env.md
-│   │   ├── p08_backend.md
-│   │   ├── p09_endpoints.md
-│   │   ├── p10_frontend.md
-│   │   ├── p11_app_documentacion.md
-│   │   ├── r01_url.md
-│   │   └── r02_guion_video.md
+│   │   └── doc_inicial.md
 │   ├── package-lock.json
 │   └── package.json
 ├── frontend
@@ -246,10 +235,5 @@
 │   └── default.conf
 ├── LICENSE
 ├── README.md
-├── boilerplate-localhost.com+3-key.pem
-├── boilerplate-localhost.com+3.pem
-├── credentials.md
 └── docker-compose.yml
-
-30 directories, 109 files
 

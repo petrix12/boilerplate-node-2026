@@ -167,7 +167,7 @@
     + Crea o reemplaza el archivo en `frontend/src/stores/auth.store.js`:
         ```js
         import { defineStore } from 'pinia';
-        import api from '../api/axios';
+        import { authService } from '@/services/auth.service';
 
         export const useAuthStore = defineStore('auth', {
             state: () => ({
@@ -181,16 +181,11 @@
                 isAuthenticated: (state) => !!state.token && !!state.user,
                 userRoles: (state) => state.user?.roles || [],
 
-                // Devuelve la lista de permisos en formato de strings
                 userPermissions: (state) => {
                     if (!state.user) return [];
-
-                    // Si el backend envía el array plano de acciones ['read:users', 'write:users']
                     if (Array.isArray(state.user.permissions)) {
                         return state.user.permissions;
                     }
-
-                    // Fallback por si en alguna vista la propiedad 'roles' viene con objetos completos
                     if (Array.isArray(state.user.roles)) {
                         const permissionsFromRoles = state.user.roles.flatMap((role) => {
                             if (typeof role === 'object' && Array.isArray(role.permissions)) {
@@ -200,29 +195,21 @@
                         });
                         return [...new Set(permissionsFromRoles)];
                     }
-
                     return [];
                 },
 
-                // Retorna una función evaluadora utilizando 'this' para acceder al getter anterior
                 hasPermission() {
                     return (permission) => {
                         if (!this.user) return false;
-
-                        // Normaliza roles (soporta array de strings o array de objetos)
                         const roles = Array.isArray(this.user.roles)
                             ? this.user.roles.map((r) => (typeof r === 'object' ? r.name : r))
                             : [];
 
-                        // Bypass global para SUPER_ADMIN
                         if (roles.includes('SUPER_ADMIN')) return true;
-
-                        // Comprueba la existencia del permiso usando el getter corregido
                         return this.userPermissions.includes(permission);
                     };
                 },
 
-                // Indica si la funcionalidad de diagnóstico por IA está activa según la respuesta del backend
                 aiDiagnosticActive: (state) => !!state.user?.aiDiagnostic,
             },
 
@@ -232,8 +219,8 @@
                     this.loading = true;
                     this.error = null;
                     try {
-                        const response = await api.post('/auth/login', credentials);
-                        const data = response.data?.data || response.data;
+                        const res = await authService.login(credentials);
+                        const data = res.data || res; // Soporta tanto si viene envuelto en .data como plano
                         
                         this.token = data.token;
                         this.user = {
@@ -242,7 +229,7 @@
                         };
                         localStorage.setItem('token', data.token);
 
-                        return response.data;
+                        return res;
                     } catch (err) {
                         this.error = err.response?.data?.message || 'Error al iniciar sesión';
                         throw err;
@@ -251,18 +238,13 @@
                     }
                 },
 
-                // 1.1 Iniciar Sesión con Google (NUEVO)
+                // 1.1 Iniciar Sesión con Google
                 async loginWithGoogle(idToken) {
                     this.loading = true;
                     this.error = null;
                     try {
-                        const response = await api.post('/auth/google', { idToken });
-
-                        // Imprime esto en consola una vez para verificar la estructura exacta que llega:
-                        console.log('Respuesta del backend Google:', response.data);
-
-                        // Ajusta esto según cómo devuelva los datos tu API:
-                        const data = response.data?.data || response.data;
+                        const res = await authService.loginWithGoogle(idToken);
+                        const data = res.data || res;
 
                         this.token = data.token;
                         this.user = {
@@ -271,7 +253,8 @@
                         };
                         localStorage.setItem('token', data.token);
 
-                        return response.data;
+                        // Retornamos el objeto completo para que el componente lea 'isNewUser'
+                        return res;
                     } catch (err) {
                         this.error = err.response?.data?.message || 'Error en la autenticación con Google';
                         throw err;
@@ -285,14 +268,14 @@
                     this.loading = true;
                     this.error = null;
                     try {
-                        const response = await api.post('/auth/register', userData);
-                        const { user, token } = response.data.data;
+                        const res = await authService.register(userData);
+                        const data = res.data || res;
 
-                        this.token = token;
-                        this.user = user;
-                        localStorage.setItem('token', token);
+                        this.token = data.token;
+                        this.user = data.user;
+                        localStorage.setItem('token', data.token);
 
-                        return response.data;
+                        return res;
                     } catch (err) {
                         this.error = err.response?.data?.message || 'Error al registrar usuario';
                         throw err;
@@ -301,20 +284,17 @@
                     }
                 },
 
-                // 3. Verificar Sesión al recargar la página o al navegar
+                // 3. Verificar Sesión al recargar la página
                 async fetchUser() {
                     if (!this.token) return;
 
                     this.loading = true;
                     try {
-                        const response = await api.get('/auth/me');
-                        
-                        // Aseguramos capturar la data tanto si viene anidada como directa
-                        const responseData = response.data?.data || response.data;
+                        const res = await authService.getMe();
+                        const responseData = res.data || res;
                         const user = responseData.user || responseData;
                         const features = responseData.features || {};
 
-                        // Fusión limpia idéntica al login
                         this.user = {
                             ...user,
                             ...features
@@ -331,7 +311,7 @@
                 async logout() {
                     try {
                         if (this.token) {
-                            await api.post('/auth/logout');
+                            await authService.logout();
                         }
                     } catch (err) {
                         console.warn('Error respondiendo al servidor en logout:', err);
@@ -538,6 +518,12 @@
             return response.data;
         },
 
+        // Iniciar sesión con Google
+        async loginWithGoogle(idToken) {
+            const response = await api.post('/auth/google', { idToken });
+            return response.data;
+        },
+
         // Obtener perfil autenticado actual
         async getMe() {
             const response = await api.get('/auth/me');
@@ -549,7 +535,7 @@
             const response = await api.post('/auth/logout');
             return response.data;
         }
-    };    
+    };
     ```
     + Maneja únicamente la autenticación y la sesión del usuario actual.
 2. Crear servicio `frontend/src/services/user.service.js`:
@@ -874,11 +860,17 @@
         import { ref, onMounted } from 'vue';
         import { useRouter } from 'vue-router';
         import { useAuthStore } from '@/stores/auth.store';
+        import Swal from 'sweetalert2';
 
-        defineProps({
+        // Única llamada a defineProps combinando ambas propiedades
+        const props = defineProps({
             text: {
                 type: String,
                 default: 'Continuar con Google'
+            },
+            isRegisterContext: {
+                type: Boolean,
+                default: false
             }
         });
 
@@ -911,10 +903,9 @@
                 });
 
                 if (googleButtonRef.value) {
-                    // Renderizamos el botón oficial de Google adaptado al contenedor
                     window.google.accounts.id.renderButton(googleButtonRef.value, {
                         type: 'standard',
-                        theme: 'filled_black', // 'outline' o 'filled_black' para combinar con dark mode
+                        theme: 'filled_black',
                         size: 'large',
                         text: 'continue_with',
                         shape: 'rectangular',
@@ -927,11 +918,38 @@
         const handleCredentialResponse = async (response) => {
             loading.value = true;
             try {
-                const idToken = response.credential; // El token exacto que espera tu backend
-                await authStore.loginWithGoogle(idToken);
-                router.push({ name: 'dashboard' });
+                const idToken = response.credential;
+                const result = await authStore.loginWithGoogle(idToken);
+                
+                const resData = result.data || result;
+
+                // Redirigimos al dashboard primero
+                await router.push({ name: 'dashboard' });
+
+                // Si estamos en el flujo de registro y el backend indicó que la cuenta ya existía
+                if (props.isRegisterContext && resData.isNewUser === false) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: '¡Hola de nuevo!',
+                        text: 'Detectamos que ya tenías una cuenta registrada, por lo que hemos iniciado sesión directamente.',
+                        toast: true,
+                        position: 'center',
+                        showConfirmButton: false,
+                        timer: 7500,
+                        timerProgressBar: true,
+                        background: '#1e293b',
+                        color: '#f8fafc',
+                    });
+                }
             } catch (err) {
                 console.error('Error al autenticar con el backend:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de autenticación',
+                    text: authStore.error || 'No se pudo iniciar sesión con Google',
+                    background: '#1e293b',
+                    color: '#f8fafc',
+                });
             } finally {
                 loading.value = false;
             }
@@ -943,7 +961,7 @@
                 <!-- Contenedor donde Google inyectará su botón interactivo y seguro -->
                 <div ref="googleButtonRef" class="w-full flex justify-center overflow-hidden rounded-lg"></div>
             </div>
-        </template>        
+        </template>  
         ```
 
 ## 🎨 Vistas de Autenticación y Dashboard (`src/views/`)
@@ -1203,7 +1221,7 @@
                     </div>
 
                     <!-- Mismo componente reutilizado con otro texto -->
-                    <GoogleAuthButton text="Registrarse con Google" />            
+                    <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
 
                     <p class="mt-6 text-center text-sm text-slate-400">
                         ¿Ya tienes cuenta?

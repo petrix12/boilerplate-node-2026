@@ -13,6 +13,12 @@ export const authService = {
         return response.data;
     },
 
+    // Iniciar sesión con Google
+    async loginWithGoogle(idToken) {
+        const response = await api.post('/auth/google', { idToken });
+        return response.data;
+    },
+
     // Obtener perfil autenticado actual
     async getMe() {
         const response = await api.get('/auth/me');

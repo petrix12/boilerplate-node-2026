@@ -2,11 +2,17 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
+import Swal from 'sweetalert2';
 
-defineProps({
+// Única llamada a defineProps combinando ambas propiedades
+const props = defineProps({
     text: {
         type: String,
         default: 'Continuar con Google'
+    },
+    isRegisterContext: {
+        type: Boolean,
+        default: false
     }
 });
 
@@ -39,10 +45,9 @@ const initGoogleClient = () => {
         });
 
         if (googleButtonRef.value) {
-            // Renderizamos el botón oficial de Google adaptado al contenedor
             window.google.accounts.id.renderButton(googleButtonRef.value, {
                 type: 'standard',
-                theme: 'filled_black', // 'outline' o 'filled_black' para combinar con dark mode
+                theme: 'filled_black',
                 size: 'large',
                 text: 'continue_with',
                 shape: 'rectangular',
@@ -55,11 +60,38 @@ const initGoogleClient = () => {
 const handleCredentialResponse = async (response) => {
     loading.value = true;
     try {
-        const idToken = response.credential; // El token exacto que espera tu backend
-        await authStore.loginWithGoogle(idToken);
-        router.push({ name: 'dashboard' });
+        const idToken = response.credential;
+        const result = await authStore.loginWithGoogle(idToken);
+        
+        const resData = result.data || result;
+
+        // Redirigimos al dashboard primero
+        await router.push({ name: 'dashboard' });
+
+        // Si estamos en el flujo de registro y el backend indicó que la cuenta ya existía
+        if (props.isRegisterContext && resData.isNewUser === false) {
+            Swal.fire({
+                icon: 'info',
+                title: '¡Hola de nuevo!',
+                text: 'Detectamos que ya tenías una cuenta registrada, por lo que hemos iniciado sesión directamente.',
+                toast: true,
+                position: 'center',
+                showConfirmButton: false,
+                timer: 7500,
+                timerProgressBar: true,
+                background: '#1e293b',
+                color: '#f8fafc',
+            });
+        }
     } catch (err) {
         console.error('Error al autenticar con el backend:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de autenticación',
+            text: authStore.error || 'No se pudo iniciar sesión con Google',
+            background: '#1e293b',
+            color: '#f8fafc',
+        });
     } finally {
         loading.value = false;
     }

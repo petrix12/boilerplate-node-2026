@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import api from '../api/axios';
+import { authService } from '@/services/auth.service';
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
@@ -13,16 +13,11 @@ export const useAuthStore = defineStore('auth', {
         isAuthenticated: (state) => !!state.token && !!state.user,
         userRoles: (state) => state.user?.roles || [],
 
-        // Devuelve la lista de permisos en formato de strings
         userPermissions: (state) => {
             if (!state.user) return [];
-
-            // Si el backend envía el array plano de acciones ['read:users', 'write:users']
             if (Array.isArray(state.user.permissions)) {
                 return state.user.permissions;
             }
-
-            // Fallback por si en alguna vista la propiedad 'roles' viene con objetos completos
             if (Array.isArray(state.user.roles)) {
                 const permissionsFromRoles = state.user.roles.flatMap((role) => {
                     if (typeof role === 'object' && Array.isArray(role.permissions)) {
@@ -32,29 +27,21 @@ export const useAuthStore = defineStore('auth', {
                 });
                 return [...new Set(permissionsFromRoles)];
             }
-
             return [];
         },
 
-        // Retorna una función evaluadora utilizando 'this' para acceder al getter anterior
         hasPermission() {
             return (permission) => {
                 if (!this.user) return false;
-
-                // Normaliza roles (soporta array de strings o array de objetos)
                 const roles = Array.isArray(this.user.roles)
                     ? this.user.roles.map((r) => (typeof r === 'object' ? r.name : r))
                     : [];
 
-                // Bypass global para SUPER_ADMIN
                 if (roles.includes('SUPER_ADMIN')) return true;
-
-                // Comprueba la existencia del permiso usando el getter corregido
                 return this.userPermissions.includes(permission);
             };
         },
 
-        // Indica si la funcionalidad de diagnóstico por IA está activa según la respuesta del backend
         aiDiagnosticActive: (state) => !!state.user?.aiDiagnostic,
     },
 
@@ -64,8 +51,8 @@ export const useAuthStore = defineStore('auth', {
             this.loading = true;
             this.error = null;
             try {
-                const response = await api.post('/auth/login', credentials);
-                const data = response.data?.data || response.data;
+                const res = await authService.login(credentials);
+                const data = res.data || res; // Soporta tanto si viene envuelto en .data como plano
                 
                 this.token = data.token;
                 this.user = {
@@ -74,7 +61,7 @@ export const useAuthStore = defineStore('auth', {
                 };
                 localStorage.setItem('token', data.token);
 
-                return response.data;
+                return res;
             } catch (err) {
                 this.error = err.response?.data?.message || 'Error al iniciar sesión';
                 throw err;
@@ -83,18 +70,13 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
-        // 1.1 Iniciar Sesión con Google (NUEVO)
+        // 1.1 Iniciar Sesión con Google
         async loginWithGoogle(idToken) {
             this.loading = true;
             this.error = null;
             try {
-                const response = await api.post('/auth/google', { idToken });
-
-                // Imprime esto en consola una vez para verificar la estructura exacta que llega:
-                console.log('Respuesta del backend Google:', response.data);
-
-                // Ajusta esto según cómo devuelva los datos tu API:
-                const data = response.data?.data || response.data;
+                const res = await authService.loginWithGoogle(idToken);
+                const data = res.data || res;
 
                 this.token = data.token;
                 this.user = {
@@ -103,7 +85,8 @@ export const useAuthStore = defineStore('auth', {
                 };
                 localStorage.setItem('token', data.token);
 
-                return response.data;
+                // Retornamos el objeto completo para que el componente lea 'isNewUser'
+                return res;
             } catch (err) {
                 this.error = err.response?.data?.message || 'Error en la autenticación con Google';
                 throw err;
@@ -117,14 +100,14 @@ export const useAuthStore = defineStore('auth', {
             this.loading = true;
             this.error = null;
             try {
-                const response = await api.post('/auth/register', userData);
-                const { user, token } = response.data.data;
+                const res = await authService.register(userData);
+                const data = res.data || res;
 
-                this.token = token;
-                this.user = user;
-                localStorage.setItem('token', token);
+                this.token = data.token;
+                this.user = data.user;
+                localStorage.setItem('token', data.token);
 
-                return response.data;
+                return res;
             } catch (err) {
                 this.error = err.response?.data?.message || 'Error al registrar usuario';
                 throw err;
@@ -133,20 +116,17 @@ export const useAuthStore = defineStore('auth', {
             }
         },
 
-        // 3. Verificar Sesión al recargar la página o al navegar
+        // 3. Verificar Sesión al recargar la página
         async fetchUser() {
             if (!this.token) return;
 
             this.loading = true;
             try {
-                const response = await api.get('/auth/me');
-                
-                // Aseguramos capturar la data tanto si viene anidada como directa
-                const responseData = response.data?.data || response.data;
+                const res = await authService.getMe();
+                const responseData = res.data || res;
                 const user = responseData.user || responseData;
                 const features = responseData.features || {};
 
-                // Fusión limpia idéntica al login
                 this.user = {
                     ...user,
                     ...features
@@ -163,7 +143,7 @@ export const useAuthStore = defineStore('auth', {
         async logout() {
             try {
                 if (this.token) {
-                    await api.post('/auth/logout');
+                    await authService.logout();
                 }
             } catch (err) {
                 console.warn('Error respondiendo al servidor en logout:', err);

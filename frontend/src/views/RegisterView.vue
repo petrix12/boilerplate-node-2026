@@ -129,7 +129,7 @@ const handleSubmit = async () => {
             </div>
 
             <!-- Mismo componente reutilizado con otro texto -->
-            <GoogleAuthButton text="Registrarse con Google" />            
+            <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
 
             <p class="mt-6 text-center text-sm text-slate-400">
                 ¿Ya tienes cuenta?
