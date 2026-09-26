@@ -73,14 +73,33 @@ const handleCredentialResponse = async (response) => {
             Swal.fire({
                 icon: 'info',
                 title: '¡Hola de nuevo!',
-                text: 'Detectamos que ya tenías una cuenta registrada, por lo que hemos iniciado sesión directamente.',
+                html: `
+                    <div style="font-size: 0.95rem; color: #f8fafc; margin-bottom: 12px;">
+                        Detectamos que ya tenías una cuenta registrada, por lo que hemos iniciado sesión directamente.
+                    </div>
+                    <!-- Barra de progreso personalizada -->
+                    <div style="width: 100%; background-color: #334155; height: 4px; border-radius: 9999px; overflow: hidden;">
+                        <div id="custom-progress-bar" style="width: 100%; height: 100%; background-color: #3b82f6; transition: width 7.5s linear;"></div>
+                    </div>
+                `,
                 toast: true,
                 position: 'center',
-                showConfirmButton: false,
+                showConfirmButton: true,
+                confirmButtonText: 'Entendido',
                 timer: 7500,
-                timerProgressBar: true,
+                timerProgressBar: false, // Desactivamos la nativa para usar la nuestra
                 background: '#1e293b',
                 color: '#f8fafc',
+                confirmButtonColor: '#3b82f6',
+                didOpen: (toast) => {
+                    // Truco para forzar la animación CSS de la barra de 100% a 0%
+                    const bar = toast.querySelector('#custom-progress-bar');
+                    if (bar) {
+                        setTimeout(() => {
+                            bar.style.width = '0%';
+                        }, 50); // Pequeño delay para que el navegador renderice el estado inicial
+                    }
+                }
             });
         }
     } catch (err) {
