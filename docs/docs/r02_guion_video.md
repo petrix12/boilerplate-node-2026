@@ -143,7 +143,4 @@
 + Convertir texto a voz: `https://elevenlabs.io/app/speech-synthesis/text-to-speech`.
 Miguel - Warm, Confident, Inspiring | Venezuela
 El Faraon - Full, Clear, Mellow | Mexico
-
-
-frontend/src/views/auth/LoginView.vue
-frontend/src/views/auth/RegisterView.vue
+Salva - The Spanish Narrator | España
