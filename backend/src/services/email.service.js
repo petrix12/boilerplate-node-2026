@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
-const SibApiV3Sdk = require('@getbrevo/brevo');
+const { BrevoClient } = require('@getbrevo/brevo');
 
 // 1. Configuración de la estrategia SMTP (Nodemailer)
 const transporter = nodemailer.createTransport({
@@ -11,16 +11,16 @@ const transporter = nodemailer.createTransport({
     secure: false, // Requerido para STARTTLS en el puerto 587
     auth: {
         user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS, // Aquí va la clave SMTP en modo local/smtp
+        pass: process.env.MAIL_PASS,
     },
 });
 
-// 2. Configuración de la estrategia API HTTP (Brevo SDK)
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+// 2. Configuración de la estrategia API HTTP (Brevo Client unificado)
+let brevoApiClient = null;
 if (process.env.MAIL_CONNECTION === 'api') {
-    const apiKey = apiInstance.authentications['apiKey'];
-    // Reutilizamos MAIL_PASS (o MAIL_API_KEY si prefieres) para mantenerlo agnóstico al proveedor
-    apiKey.apiKey = process.env.MAIL_PASS; 
+    brevoApiClient = new BrevoClient({
+        apiKey: process.env.MAIL_PASS, // Reutilizamos MAIL_PASS para la API Key
+    });
 }
 
 const sendVerificationEmail = async (toEmail, token, userName = 'Usuario') => {
@@ -34,7 +34,7 @@ const sendVerificationEmail = async (toEmail, token, userName = 'Usuario') => {
     const senderEmail = process.env.MAIL_FROM || 'no-reply@boilerplate.com';
     const mailDriver = process.env.MAIL_CONNECTION || 'smtp';
 
-    // Leer la plantilla HTML desde el archivo físico (Igual que lo tenías)
+    // Leer la plantilla HTML desde el archivo físico
     const templatePath = path.join(__dirname, '../templates/emails/verification.html');
     let htmlTemplate = fs.readFileSync(templatePath, 'utf-8');
 
@@ -49,14 +49,13 @@ const sendVerificationEmail = async (toEmail, token, userName = 'Usuario') => {
 
     // Estrategia A: Envío mediante API HTTP (Puerto 443 - Ideal para Render)
     if (mailDriver === 'api') {
-        const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-        sendSmtpEmail.subject = subject;
-        sendSmtpEmail.htmlContent = htmlTemplate;
-        sendSmtpEmail.sender = { name: `${appName} Soporte`, email: senderEmail };
-        sendSmtpEmail.to = [{ email: toEmail }];
-
         try {
-            await apiInstance.sendTransacEmail(sendSmtpEmail);
+            await brevoApiClient.transactionalEmails.sendTransacEmail({
+                subject: subject,
+                htmlContent: htmlTemplate,
+                sender: { name: `${appName} Soporte`, email: senderEmail },
+                to: [{ email: toEmail, name: userName }],
+            });
             console.log(`[Email API] Correo enviado exitosamente a ${toEmail}`);
             return true;
         } catch (error) {
