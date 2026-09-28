@@ -3,8 +3,10 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
+import { authService } from '@/services/auth.service';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
+import Swal from 'sweetalert2';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -24,10 +26,61 @@ const form = ref({
 
 const handleSubmit = async () => {
     try {
-        await authStore.register(form.value);
-        router.push({ name: 'dashboard' });
-    } catch (err) {
-        console.error('Error en registro:', err);
+        authStore.error = null;
+
+        const response = await authService.register(form.value);
+        
+        const successMessage = response.message || 'Registro exitoso';
+
+        // Detectamos si el modo oscuro está activo en el documento
+        const isDarkMode = document.documentElement.classList.contains('dark');
+
+        // Configuramos los colores dinámicos según el tema
+        const swalThemeConfig = {
+            background: isDarkMode ? '#1e293b' : '#ffffff', // slate-800 en dark, blanco en light
+            color: isDarkMode ? '#f1f5f9' : '#0f172a',       // slate-100 en dark, slate-900 en light
+            confirmButtonColor: '#059669',                   // esmeralda
+        };
+
+        if (response.requiresVerification) {
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Registro Exitoso!',
+                text: successMessage,
+                confirmButtonText: 'Ir a Iniciar Sesión',
+                ...swalThemeConfig
+            });
+
+            router.push({ name: 'login' }); 
+        } else {
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Bienvenido!',
+                text: successMessage,
+                timer: 1500,
+                showConfirmButton: false,
+                ...swalThemeConfig
+            });
+
+            router.push({ name: 'dashboard' });
+        }
+
+    } catch (error) {
+        const errorMessage = error.response?.data?.message || 'Ocurrió un error en el registro';
+        authStore.error = errorMessage; 
+
+        const isDarkMode = document.documentElement.classList.contains('dark');
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: errorMessage,
+            confirmButtonColor: '#059669',
+            background: isDarkMode ? '#1e293b' : '#ffffff',
+            color: isDarkMode ? '#f1f5f9' : '#0f172a',
+        });
+
+        console.error('Error en registro:', error);
     }
 };
 </script>

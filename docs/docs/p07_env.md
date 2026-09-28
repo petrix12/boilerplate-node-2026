@@ -46,6 +46,30 @@
     # DIRECT_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:5432/postgres?pgbouncer=true"
 
     # ===================================================================================================
+    # CONFIGURACIÓN DE CORREO (MAIL)
+    # ===================================================================================================
+    # ==========================================
+    # - - - LOCAL - - -
+    # ==========================================
+    MAIL_MAILER=smtp
+    MAIL_HOST=smtp.mailtrap.io
+    MAIL_PORT=2525
+    MAIL_USER=tu_usuario_mailtrap
+    MAIL_PASS=tu_password_mailtrap
+    MAIL_FROM=no-reply@boilerplate.com
+    MAIL_ENABLE_VERIFICATION=false
+    # ==========================================
+    # - - - PRODUCCIÓN - - -
+    # ==========================================
+    # MAIL_MAILER=smtp
+    # MAIL_HOST=smtp.mailtrap.io
+    # MAIL_PORT=2525
+    # MAIL_USER=tu_usuario_mailtrap
+    # MAIL_PASS=tu_password_mailtrap
+    # MAIL_FROM=no-reply@boilerplate.com
+    # MAIL_ENABLE_VERIFICATION=false
+
+    # ===================================================================================================
     # ALMACENAMIENTO S3
     # ===================================================================================================
     # ==========================================

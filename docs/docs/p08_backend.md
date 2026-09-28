@@ -21,16 +21,19 @@
 
     // Modelo de Usuario
     model User {
-        id        String     @id @default(uuid())
-        name      String
-        email     String     @unique
-        password  String
-        isActive  Boolean    @default(true)
-        avatarUrl String?
-        createdAt DateTime   @default(now())
-        updatedAt DateTime   @updatedAt
-        roles     UserRole[]
-        auditLogs AuditLog[]
+        id                 String     @id @default(uuid())
+        name               String
+        email              String     @unique
+        password           String
+        isActive           Boolean    @default(true)
+        avatarUrl          String?
+        createdAt          DateTime   @default(now())
+        updatedAt          DateTime   @updatedAt
+        roles              UserRole[]
+        auditLogs          AuditLog[]
+        isVerified         Boolean   @default(true) // Si está en false, requerirá validación
+        verificationToken  String?   @unique
+        tokenExpiresAt     DateTime?
 
         @@map("users")
     }
@@ -629,7 +632,47 @@
             req,
         });
         ```
-2. Crear el Servicio de Ingesta (`backend/src/services/systemLog.service.js`):
+2. Crear el Servicio de Correo (`backend/src/services/email.service.js`):
+    ```js
+    // src/services/email.service.js
+    const nodemailer = require('nodemailer');
+
+    const transporter = nodemailer.createTransport({
+        host: process.env.MAIL_HOST,
+        port: process.env.MAIL_PORT,
+        auth: {
+            user: process.env.MAIL_USER,
+            pass: process.env.MAIL_PASS,
+        },
+    });
+
+    const sendVerificationEmail = async (toEmail, token) => {
+        // Si la verificación está desactivada por la variable de entorno, salimos sin hacer nada
+        if (process.env.MAIL_ENABLE_VERIFICATION !== 'true') return;
+
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
+
+        const mailOptions = {
+            from: `"Soporte" <${process.env.MAIL_FROM || 'no-reply@boilerplate.com'}>`,
+            to: toEmail,
+            subject: 'Verifica tu cuenta de correo',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2>¡Bienvenido a nuestra plataforma!</h2>
+                    <p>Para completar tu registro y verificar tu cuenta, por favor haz clic en el siguiente botón:</p>
+                    <a href="${verificationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #059669; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Verificar Correo</a>
+                    <p style="margin-top: 20px; font-size: 12px; color: #666;">Si no solicitaste esta cuenta, puedes ignorar este mensaje.</p>
+                </div>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+    };
+
+    module.exports = { sendVerificationEmail };    
+    ```
+3. Crear el Servicio de Ingesta (`backend/src/services/systemLog.service.js`):
     ```js
     const prisma = require('../config/prisma');
 
@@ -672,7 +715,7 @@
     module.exports = systemLogService;    
     ```
     + Crearemos un servicio dedicado para interactuar con la tabla SystemLog de manera asíncrona y segura (para que un fallo guardando un log jamás interrumpa la petición principal).
-3. Crear el Servicio de Limpieza (`backend/src/services/cron.service.js`):
+4. Crear el Servicio de Limpieza (`backend/src/services/cron.service.js`):
     ```js
     const prisma = require('../config/prisma');
 
@@ -713,7 +756,7 @@
 
     module.exports = { initSystemCleanup, cleanupOldLogs };    
     ```
-4. Crear el Agregador (`backend/src/services/diagnosticAggregator.service.js`):
+5. Crear el Agregador (`backend/src/services/diagnosticAggregator.service.js`):
     ```js
     const prisma = require('../config/prisma');
 
@@ -798,7 +841,7 @@
 
     module.exports = diagnosticAggregatorService;    
     ```
-5. Crear el Servicio de IA Adaptativo (`backend/src/services/ai.service.js`):
+6. Crear el Servicio de IA Adaptativo (`backend/src/services/ai.service.js`):
     ```js
     const diagnosticAggregatorService = require('./diagnosticAggregator.service');
 
@@ -909,7 +952,7 @@
 
     module.exports = aiService;  
     ```
-6. Creaar servicio de Auth con Google (`backend/src/services/googleAuth.service.js`):
+7. Creaar servicio de Auth con Google (`backend/src/services/googleAuth.service.js`):
     ```js
     const prisma = require('../config/prisma');
     const jwt = require('jsonwebtoken');
@@ -1028,10 +1071,13 @@
 + Implementa la capa de orquestación de respuesta para cada dominio:
 1. `backend/src/controllers/auth.controller.js`: Login, registro, cambio de contraseña y refresco de tokens:
     ```js
+    // src/controllers/auth.controller.js
     const bcrypt = require('bcryptjs');
     const jwt = require('jsonwebtoken');
+    const crypto = require('crypto');
     const prisma = require('../config/prisma');
     const { getClientIp } = require('../utils/request.utils');
+    const { sendVerificationEmail } = require('../services/email.service');
 
     const generateToken = (user, roles = [], permissions = []) => {
         return jwt.sign(
@@ -1054,11 +1100,43 @@
             const salt = await bcrypt.genSalt(10);
             const passwordHash = await bcrypt.hash(password, salt);
 
+            // Evaluar si la verificación está activa
+            const isVerificationEnabled = process.env.MAIL_ENABLE_VERIFICATION === 'true';
+            
+            let verificationToken = null;
+            let tokenExpiresAt = null;
+            let isVerified = true; // Por defecto true si la opción está apagada
+
+            if (isVerificationEnabled) {
+                isVerified = false;
+                verificationToken = crypto.randomBytes(32).toString('hex');
+                tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Expira en 24 horas
+            }
+
             const newUser = await prisma.user.create({
-                data: { email, password: passwordHash, name: fullName },
-                select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true },
+                data: { 
+                    email, 
+                    password: passwordHash, 
+                    name: fullName,
+                    isVerified,
+                    verificationToken,
+                    tokenExpiresAt
+                },
+                select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true, isVerified: true },
             });
 
+            // Si está activa la verificación, enviamos el correo y no devolvemos token de acceso inmediato
+            if (isVerificationEnabled) {
+                await sendVerificationEmail(email, verificationToken);
+                return res.status(201).json({
+                    status: 'success',
+                    message: 'Usuario registrado correctamente. Por favor, verifica tu correo electrónico para iniciar sesión.',
+                    requiresVerification: true,
+                    data: { user: newUser },
+                });
+            }
+
+            // Comportamiento clásico (si está desactivada la verificación)
             const token = generateToken(newUser, []);
 
             return res.status(201).json({
@@ -1068,6 +1146,44 @@
             });
         } catch (error) {
             console.error('Error en registro:', error);
+            return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+        }
+    };
+
+    const verifyEmail = async (req, res) => {
+        try {
+            const { token } = req.query;
+
+            if (!token) {
+                return res.status(400).json({ status: 'fail', message: 'Token de verificación no proporcionado' });
+            }
+
+            const user = await prisma.user.findFirst({
+                where: {
+                    verificationToken: token,
+                    tokenExpiresAt: { gte: new Date() }
+                }
+            });
+
+            if (!user) {
+                return res.status(400).json({ status: 'fail', message: 'Token de verificación inválido o expirado' });
+            }
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    isVerified: true,
+                    verificationToken: null,
+                    tokenExpiresAt: null
+                }
+            });
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Correo verificado correctamente. Ya puedes iniciar sesión.'
+            });
+        } catch (error) {
+            console.error('Error en verifyEmail:', error);
             return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
         }
     };
@@ -1107,6 +1223,15 @@
                 return res.status(401).json({ status: 'fail', message: 'Credenciales inválidas o cuenta desactivada' });
             }
 
+            // Validar si requiere verificación de correo y no la ha completado
+            const isVerificationEnabled = process.env.MAIL_ENABLE_VERIFICATION === 'true';
+            if (isVerificationEnabled && !user.isVerified) {
+                return res.status(403).json({ 
+                    status: 'fail', 
+                    message: 'Tu cuenta no está verificada. Por favor, revisa tu correo electrónico.' 
+                });
+            }
+
             const isPasswordValid = await bcrypt.compare(password, user.password);
             if (!isPasswordValid) {
                 await prisma.auditLog.create({
@@ -1122,7 +1247,6 @@
 
             const userRoles = user.roles.map((ur) => ur.role.name);
 
-            // Extraer lista plana de permisos sin duplicados
             const permissionsSet = new Set();
             user.roles.forEach((ur) => {
                 if (ur.role && ur.role.permissions) {
@@ -1203,8 +1327,6 @@
                 }
             });
             const userPermissions = Array.from(permissionsSet);
-
-            // Evaluar si la IA está habilitada comprobando la variable de entorno
             const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';        
 
             return res.status(200).json({
@@ -1251,7 +1373,7 @@
         }
     };
 
-    module.exports = { register, login, getMe, logout }; 
+    module.exports = { register, verifyEmail, login, getMe, logout };
     ```
 2. `backend/src/controllers/profile.controller.js`: Gestión de perfil de usuario autenticado:
     ```js
@@ -2245,10 +2367,11 @@
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
 1. `backend/src/routes/auth.routes.js`: Rutas de autenticación (/api/v1/auth/*):
     ```js
+    // src/routes/auth.routes.js
     const express = require('express');
     const { body } = require('express-validator');
     const router = express.Router();
-    const { register, login, getMe, logout } = require('../controllers/auth.controller');
+    const { register, verifyEmail, login, getMe, logout } = require('../controllers/auth.controller');
     const { authenticateJWT } = require('../middlewares/auth.middleware');
     const validate = require('../middlewares/validate.middleware');
 
@@ -2266,12 +2389,16 @@
         validate,
     ];
 
+    // Rutas públicas
     router.post('/register', registerValidation, register);
     router.post('/login', loginValidation, login);
+    router.get('/verify-email', verifyEmail);
+
+    // Rutas protegidas
     router.get('/me', authenticateJWT, getMe);
     router.post('/logout', authenticateJWT, logout);
 
-    module.exports = router;   
+    module.exports = router;  
     ```
 2. `backend/src/routes/user.routes.js`: Rutas admimistración de usuarios (/api/v1/user/*):
     ```js

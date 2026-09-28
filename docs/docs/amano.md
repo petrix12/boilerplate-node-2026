@@ -69,7 +69,6 @@
 + ◻️ Recuperar credenciales (¿Olvidó su password?).
 + ◻️ Establecer politicas de seguridad en tablas de base de datos de supabase.
 + ◻️ Multi-idiomas.
-+ ◻️ Solicitar autenticación de email.
 + ◻️ Revisar la seguridad del backend.
 + ◻️ Seguridad y Hardening HTTP (Backend): helmet para configurar cabeceras HTTP seguras. | 
 + ◻️ Seguridad y Hardening HTTP (Backend): express-rate-limit para prevención de ataques de fuerza bruta en rutas críticas (/login, /register, /forgot-password).
@@ -88,6 +87,7 @@
     + ◻️ Apple (Sign in with Apple).
     + ◻️ Meta (Facebook Login) / Instagram.
     + ◻️ X (antes Twitter) / LinkedIn.
++ ◻️ Solicitar autenticación de email.
 
 ### Terminadas
 + ✅ Dockerización.

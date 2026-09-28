@@ -49,7 +49,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         npm init -y
 
         # 3. Instalar dependencias de producción
-        npm install express @prisma/client @prisma/adapter-pg pg bcryptjs jsonwebtoken dotenv cors multer @aws-sdk/client-s3 express-validator
+        npm install express @prisma/client @prisma/adapter-pg pg bcryptjs jsonwebtoken dotenv cors multer @aws-sdk/client-s3 express-validator nodemailer
 
         # 4. Instalar dependencias de desarrollo
         npm install -D prisma nodemon @faker-js/faker vitest supertest
@@ -68,6 +68,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
         multer	                | Producción    | Middleware para procesar peticiones multipart/form-data y gestionar carga de archivos.
         @aws-sdk/client-s3	    | Producción    | SDK de AWS para operaciones de almacenamiento S3 (MinIO en local, AWS S3, Cloudflare R2).
         express-validator	    | Producción    | Sanitización y validación de datos de entrada en las peticiones HTTP (email, password, etc.).
+        nodemailer              | Producción    | Cliente de correo para el envío de notificaciones y enlaces de verificación SMTP.
         prisma	                | Desarrollo    | CLI de Prisma para ejecutar migraciones, inspeccionar esquemas y generar el cliente.
         nodemon	                | Desarrollo    | Reinicio automático del servidor Node.js ante cambios de código en desarrollo.
         @faker-js/faker	        | Desarrollo    | Generación de datos de prueba (seeders/factories) para poblar la base de datos.

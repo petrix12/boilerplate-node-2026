@@ -432,6 +432,7 @@
 5. Configuración de Vue Router con Guards (`src/router/index.js`)
     + Abre o crea el archivo `frontend/src/router/index.js` y reemplaza su contenido:
         ```js
+        // src/router/index.js
         import { createRouter, createWebHistory } from 'vue-router';
         import { useAuthStore } from '../stores/auth.store';
 
@@ -441,6 +442,7 @@
                 { path: '/', name: 'home', component: () => import('@/views/HomeView.vue'), meta: { title: 'Inicio' } },
                 { path: '/login', name: 'login', component: () => import('@/views/auth/LoginView.vue'), meta: { requiresGuest: true, title: 'Iniciar Sesión' } },
                 { path: '/register', name: 'register', component: () => import('@/views/auth/RegisterView.vue'), meta: { requiresGuest: true, title: 'Registro' } },
+                { path: '/verify-email', name: 'VerifyEmail', component: () => import('@/views/auth/VerifyEmailView.vue'), meta: { requiresGuest: true } },
                 {
                     // Rutas protegidas que comparten el mismo Navbar sin pestañeos
                     path: '/',
@@ -565,6 +567,7 @@
 ## ⚡ Establecer los servicios (`src/services/`)
 1. Crear servicio `frontend/src/services/auth.service.js`
     ```js
+    // src/services/auth.service.js
     import api from '@/api/axios';
 
     export const authService = {
@@ -574,11 +577,17 @@
             return response.data;
         },
 
+        // Verificar email
+        async verifyEmail(token) {
+            const response = await api.get(`/auth/verify-email?token=${token}`);
+            return response.data;
+        },    
+
         // Iniciar sesión
         async login(credentials) {
             const response = await api.post('/auth/login', credentials);
             return response.data;
-        },
+        },    
 
         // Iniciar sesión con Google
         async loginWithGoogle(idToken) {
@@ -1222,8 +1231,10 @@
         import { ref } from 'vue';
         import { useRouter } from 'vue-router';
         import { useAuthStore } from '@/stores/auth.store';
+        import { authService } from '@/services/auth.service';
         import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
+        import Swal from 'sweetalert2';
 
         const authStore = useAuthStore();
         const router = useRouter();
@@ -1243,10 +1254,61 @@
 
         const handleSubmit = async () => {
             try {
-                await authStore.register(form.value);
-                router.push({ name: 'dashboard' });
-            } catch (err) {
-                console.error('Error en registro:', err);
+                authStore.error = null;
+
+                const response = await authService.register(form.value);
+                
+                const successMessage = response.message || 'Registro exitoso';
+
+                // Detectamos si el modo oscuro está activo en el documento
+                const isDarkMode = document.documentElement.classList.contains('dark');
+
+                // Configuramos los colores dinámicos según el tema
+                const swalThemeConfig = {
+                    background: isDarkMode ? '#1e293b' : '#ffffff', // slate-800 en dark, blanco en light
+                    color: isDarkMode ? '#f1f5f9' : '#0f172a',       // slate-100 en dark, slate-900 en light
+                    confirmButtonColor: '#059669',                   // esmeralda
+                };
+
+                if (response.requiresVerification) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Registro Exitoso!',
+                        text: successMessage,
+                        confirmButtonText: 'Ir a Iniciar Sesión',
+                        ...swalThemeConfig
+                    });
+
+                    router.push({ name: 'login' }); 
+                } else {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Bienvenido!',
+                        text: successMessage,
+                        timer: 1500,
+                        showConfirmButton: false,
+                        ...swalThemeConfig
+                    });
+
+                    router.push({ name: 'dashboard' });
+                }
+
+            } catch (error) {
+                const errorMessage = error.response?.data?.message || 'Ocurrió un error en el registro';
+                authStore.error = errorMessage; 
+
+                const isDarkMode = document.documentElement.classList.contains('dark');
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: errorMessage,
+                    confirmButtonColor: '#059669',
+                    background: isDarkMode ? '#1e293b' : '#ffffff',
+                    color: isDarkMode ? '#f1f5f9' : '#0f172a',
+                });
+
+                console.error('Error en registro:', error);
             }
         };
         </script>
@@ -1359,7 +1421,84 @@
             </div>
         </template>
         ```
-4. Rediseñar la Landing Page:
+4. Vista de Verificación:
+    + Crea el archivo `frontend/src/views/auth/VerifyEmailView.vue`:
+        ```vue
+        <!-- src/views/auth/VerifyEmailView.vue -->
+        <script setup>
+        import { ref, onMounted } from 'vue';
+        import { useRoute, useRouter } from 'vue-router';
+        import { authService } from '@/services/auth.service';
+
+        const route = useRoute();
+        const router = useRouter();
+
+        const loading = ref(true);
+        const success = ref(false);
+        const message = ref('');
+
+        onMounted(async () => {
+            const token = route.query.token;
+
+            if (!token) {
+                loading.value = false;
+                success.value = false;
+                message.value = 'Token de verificación no proporcionado.';
+                return;
+            }
+
+            try {
+                const response = await authService.verifyEmail(token);
+                success.value = true;
+                message.value = response.message || 'Correo verificado correctamente.';
+            } catch (error) {
+                success.value = false;
+                message.value = error.response?.data?.message || 'Hubo un error al verificar el correo o el token ha expirado.';
+            } finally {
+                loading.value = false;
+            }
+        });
+        </script>
+
+        <template>
+            <div class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+                <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
+                    <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-slate-900 dark:text-white">
+                        Verificación de Correo Electrónico
+                    </h2>
+                </div>
+
+                <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
+                    <div class="bg-white dark:bg-slate-800 px-6 py-12 shadow sm:rounded-lg sm:px-12 text-center">
+                        
+                        <!-- Estado Cargando -->
+                        <div v-if="loading" class="space-y-4">
+                            <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent align-[-0.125em]" role="status"></div>
+                            <p class="text-sm text-slate-600 dark:text-slate-300">Verificando tu cuenta, por favor espera...</p>
+                        </div>
+
+                        <!-- Estado Resultado -->
+                        <div v-else class="space-y-6">
+                            <div :class="success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'" class="text-lg font-medium">
+                                {{ message }}
+                            </div>
+
+                            <div>
+                                <router-link
+                                    to="/login"
+                                    class="flex w-full justify-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                                >
+                                    Ir a Iniciar Sesión
+                                </router-link>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </template>        
+        ```
+5. Rediseñar la Landing Page:
     + Reemplaza el contenido de `frontend/src/views/HomeView.vue` para que la raíz / muestre una bienvenida profesional:
         ```vue
         <script setup>
@@ -1481,7 +1620,7 @@
             </div>
         </template>
         ```
-5. Crear el Layout Principal (`frontend/src/layouts/AppLayout.vue`)
+6. Crear el Layout Principal (`frontend/src/layouts/AppLayout.vue`)
     + Crea un layout que envuelva todas las páginas autenticadas:
         ```vue
         <script setup>
@@ -1522,7 +1661,7 @@
         }
         </style>
         ```
-6. Vista Protegida del Dashboard:
+7. Vista Protegida del Dashboard:
     + Crea el archivo `frontend/src/views/DashboardView.vue`:
         ```vue
         <script setup>
@@ -1696,7 +1835,7 @@
             </div>
         </template>
         ```
-7. Vista de Configuración / Perfil (`frontend/src/views/ProfileView.vue`)
+8. Vista de Configuración / Perfil (`frontend/src/views/ProfileView.vue`)
     + Crearemos la nueva pantalla de perfil limpia y estructurada:
         ```vue
         <script setup>
@@ -2133,7 +2272,7 @@
             </div>
         </template>
         ```
-8. Limpiar `App.vue`:
+9.  Limpiar `App.vue`:
     + Abre `frontend/src/App.vue` y reemplaza todo su contenido con esto:
         ```vue
         <script setup>
@@ -2146,7 +2285,7 @@
             <RouterView />
         </template>
         ```
-9.  Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
+10. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
     ```vue
     <template>
         <div class="max-w-7xl mx-auto p-6 space-y-6">
@@ -2255,7 +2394,7 @@
         const isAiActive = computed(() => authStore.aiDiagnosticActive);
     </script>
     ```
-10. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
+11. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
     + Crea la carpeta src/views/admin/ si no existe y añade la vista:
         ```vue
         <script setup>
@@ -3048,7 +3187,7 @@
             </div>
         </template>
         ```
-11. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
+12. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
     + Crea el componente `RolesAdminView.vue` para la interfaz de gestión de roles y asignación de permisos:
         ```vue
         <script setup>
@@ -3382,7 +3521,7 @@
             </div>
         </template>
         ```
-12. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
+13. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
     ```vue
     <script setup>
     import { ref, onMounted, onUnmounted } from 'vue';
@@ -3751,7 +3890,7 @@
         </div>
     </template>
     ```
-13. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
+14. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
     ```vue
     <script setup>
     import { computed, onMounted } from 'vue';
@@ -3930,7 +4069,7 @@
         </div>
     </template>  
     ```
-14. Crear Vista 404 (not-found):
+15. Crear Vista 404 (not-found):
     + Crea el archivo `frontend/src/views/errors/NotFoundView.vue`:
         ```vue
         <template>
@@ -3949,7 +4088,7 @@
             </div>
         </template>        
         ```
-15. Crear Vista 403 (forbidden):
+16. Crear Vista 403 (forbidden):
     + Crea el archivo `frontend/src/views/errors/ForbiddenView.vue`:
         ```vue
         <template>

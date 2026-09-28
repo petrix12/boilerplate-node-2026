@@ -1,7 +1,10 @@
+// src/controllers/auth.controller.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const prisma = require('../config/prisma');
 const { getClientIp } = require('../utils/request.utils');
+const { sendVerificationEmail } = require('../services/email.service');
 
 const generateToken = (user, roles = [], permissions = []) => {
     return jwt.sign(
@@ -24,11 +27,43 @@ const register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
+        // Evaluar si la verificación está activa
+        const isVerificationEnabled = process.env.MAIL_ENABLE_VERIFICATION === 'true';
+        
+        let verificationToken = null;
+        let tokenExpiresAt = null;
+        let isVerified = true; // Por defecto true si la opción está apagada
+
+        if (isVerificationEnabled) {
+            isVerified = false;
+            verificationToken = crypto.randomBytes(32).toString('hex');
+            tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Expira en 24 horas
+        }
+
         const newUser = await prisma.user.create({
-            data: { email, password: passwordHash, name: fullName },
-            select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true },
+            data: { 
+                email, 
+                password: passwordHash, 
+                name: fullName,
+                isVerified,
+                verificationToken,
+                tokenExpiresAt
+            },
+            select: { id: true, email: true, name: true, avatarUrl: true, createdAt: true, isVerified: true },
         });
 
+        // Si está activa la verificación, enviamos el correo y no devolvemos token de acceso inmediato
+        if (isVerificationEnabled) {
+            await sendVerificationEmail(email, verificationToken);
+            return res.status(201).json({
+                status: 'success',
+                message: 'Usuario registrado correctamente. Por favor, verifica tu correo electrónico para iniciar sesión.',
+                requiresVerification: true,
+                data: { user: newUser },
+            });
+        }
+
+        // Comportamiento clásico (si está desactivada la verificación)
         const token = generateToken(newUser, []);
 
         return res.status(201).json({
@@ -38,6 +73,44 @@ const register = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en registro:', error);
+        return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+    }
+};
+
+const verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.query;
+
+        if (!token) {
+            return res.status(400).json({ status: 'fail', message: 'Token de verificación no proporcionado' });
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                verificationToken: token,
+                tokenExpiresAt: { gte: new Date() }
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({ status: 'fail', message: 'Token de verificación inválido o expirado' });
+        }
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                isVerified: true,
+                verificationToken: null,
+                tokenExpiresAt: null
+            }
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Correo verificado correctamente. Ya puedes iniciar sesión.'
+        });
+    } catch (error) {
+        console.error('Error en verifyEmail:', error);
         return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
     }
 };
@@ -77,6 +150,15 @@ const login = async (req, res) => {
             return res.status(401).json({ status: 'fail', message: 'Credenciales inválidas o cuenta desactivada' });
         }
 
+        // Validar si requiere verificación de correo y no la ha completado
+        const isVerificationEnabled = process.env.MAIL_ENABLE_VERIFICATION === 'true';
+        if (isVerificationEnabled && !user.isVerified) {
+            return res.status(403).json({ 
+                status: 'fail', 
+                message: 'Tu cuenta no está verificada. Por favor, revisa tu correo electrónico.' 
+            });
+        }
+
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             await prisma.auditLog.create({
@@ -92,7 +174,6 @@ const login = async (req, res) => {
 
         const userRoles = user.roles.map((ur) => ur.role.name);
 
-        // Extraer lista plana de permisos sin duplicados
         const permissionsSet = new Set();
         user.roles.forEach((ur) => {
             if (ur.role && ur.role.permissions) {
@@ -173,8 +254,6 @@ const getMe = async (req, res) => {
             }
         });
         const userPermissions = Array.from(permissionsSet);
-
-        // Evaluar si la IA está habilitada comprobando la variable de entorno
         const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';        
 
         return res.status(200).json({
@@ -221,4 +300,4 @@ const logout = async (req, res) => {
     }
 };
 
-module.exports = { register, login, getMe, logout };
+module.exports = { register, verifyEmail, login, getMe, logout };

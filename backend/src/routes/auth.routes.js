@@ -1,7 +1,8 @@
+// src/routes/auth.routes.js
 const express = require('express');
 const { body } = require('express-validator');
 const router = express.Router();
-const { register, login, getMe, logout } = require('../controllers/auth.controller');
+const { register, verifyEmail, login, getMe, logout } = require('../controllers/auth.controller');
 const { authenticateJWT } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 
@@ -19,8 +20,12 @@ const loginValidation = [
     validate,
 ];
 
+// Rutas públicas
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
+router.get('/verify-email', verifyEmail);
+
+// Rutas protegidas
 router.get('/me', authenticateJWT, getMe);
 router.post('/logout', authenticateJWT, logout);
 
