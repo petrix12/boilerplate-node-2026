@@ -115,3 +115,63 @@
         + Connect to an environment: Production.
         + Clic en `Add O Domains`.
     + Deployments: Hacer `Deploy` o `Redeploy`.
+
+## 🪤 Obtener Credenciales de Mailtrap (Cliente de correo para desarrollo)
++ Mailtrap es una herramienta de prueba de correo electrónico (Email Sandbox) que permite interceptar los correos salientes de tu entorno de desarrollo local sin enviarlos a usuarios reales, evitando errores de entrega accidentales.
+1. Crear una cuenta en Mailtrap
+    + Ve al sitio web oficial: mailtrap.io.
+    + Haz clic en el botón de registro (Sign Up o Get Started Free).
+    + Puedes registrarte utilizando una cuenta existente de Google, GitHub o introduciendo tu correo electrónico y contraseña.
+    + Completa el proceso de verificación inicial si el sistema lo requiere.
+2. Crear una Bandeja de Entrada (Inbox) para el Proyecto: Una vez dentro de tu panel principal (Dashboard):
+    + Dirígete a la sección Email Sandbox en el menú lateral y selecciona Inboxes.
+    + Haz clic en el botón Add Inbox (o Create Inbox).
+    + Dale un nombre descriptivo a tu bandeja (por ejemplo: boilerplate-dev o el nombre de tu aplicación) y guárdala.
+3. Obtener las Credenciales SMTP:
+    + Haz clic sobre la bandeja de entrada que acabas de crear.
+    + Por defecto, estarás en la pestaña Integrations (Integraciones).
+    + En el menú desplegable de integraciones (donde dice "Show Credentials"), selecciona Node.js (o busca la opción genérica SMTP).
+    + Verás los parámetros de configuración necesarios que Mailtrap genera de forma única para tu bandeja:
+        + Host: sandbox.smtp.mailtrap.io (o similar)
+        + Port: 2525 (o 465 / 587)
+        + User: (un código alfanumérico largo generado por Mailtrap)
+        + Password: (un token secreto generado por Mailtrap)
+4. Configurar el archivo `.env` del Backend
+    + Copia los valores obtenidos en el paso anterior e ingrésalos en el archivo .env ubicado en la carpeta backend/ de tu proyecto:
+        ```ini
+        MAIL_HOST=sandbox.smtp.mailtrap.io
+        MAIL_PORT=2525
+        MAIL_USER=tu_usuario_proporcionado_por_mailtrap
+        MAIL_PASS=tu_password_proporcionado_por_mailtrap
+
+        # Configuración adicional del servicio de correo
+        MAIL_ENABLE_VERIFICATION=true
+        MAIL_FROM=no-reply@tuapp.com
+        ```
+
+## 📬 Obtener Credenciales de Brevo (Cliente de correo para producción)
+1. Crear tu cuenta en Brevo:
+    + Entra a `brevo.com` y regístrate de manera gratuita.
+    + Completa los pasos de verificación de perfil e identidad que solicitan para prevenir spam.
+2. Obtener tus credenciales SMTP:
+    + Una vez dentro de tu panel, haz clic en tu nombre o perfil (esquina superior/inferior derecha) y selecciona SMTP & API.
+    + Ve a la pestaña SMTP.
+    + Verás los datos de tu servidor SMTP generados por Brevo (si no ves una clave principal, puedes generar una nueva en "Generate a new SMTP key"). Los datos clave son:
+        + Host: smtp-relay.brevo.com
+        + Port: 587 (o 465)
+        + User: (tu correo electrónico registrado en Brevo)
+        + Password: (la clave SMTP larga que te generó el sistema)
+3. Validar tu dominio o remitente (Muy importante para producción):
+    + Para evitar que los correos de verificación lleguen a la bandeja de SPAM de tus usuarios:
+        + En el panel de Brevo, ve a la sección de configuración de Senders & Domains (Remitentes y dominios).
+        + Añade tu propio dominio (o un correo verificado con el dominio de tu app) para configurar los registros DNS (SPF, DKIM). Nota: Si estás en fases muy tempranas de prueba en producción, puedes validar un correo personal, pero lo profesional es usar tu propio dominio web.
+4. Actualizar las variables de entorno en Render:
+    + Ve al panel de control de tu servicio en Render, entra a la sección de Environment Variables y actualiza los valores con los de Brevo:
+        ```ini
+        MAIL_HOST=smtp-relay.brevo.com
+        MAIL_PORT=587
+        MAIL_USER=tu_correo_de_registro@brevo.com
+        MAIL_PASS=tu_clave_smtp_larga_de_brevo
+        MAIL_ENABLE_VERIFICATION=true
+        MAIL_FROM=soporte@tudominio.com
+        ```

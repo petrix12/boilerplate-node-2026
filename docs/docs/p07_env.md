@@ -12,6 +12,8 @@
     PORT=3000
     APP_URL=http://localhost:3000
     APP_INFRASTRUCTURE=Entorno de desarrollo local (Node.js nativo)
+    APP_NAME="NodeVue Boilerplate | Dev"
+    APP_LOGO_URL=https://boilerplate-node-2026.vercel.app/logo.png
     NODE_ENV=development
 
     # ==========================================
@@ -20,6 +22,8 @@
     # PORT=10000
     # APP_URL=https://boilerplate-node-2026.onrender.com
     # APP_INFRASTRUCTURE=Servidor VPS Linux nativo gestionado mediante PM2 / Systemd
+    # APP_NAME="Node|Vue Boilerplate"
+    # APP_LOGO_URL=https://boilerplate-node-2026.vercel.app/logo.png
     # NODE_ENV=production
 
     # ===================================================================================================
@@ -51,7 +55,6 @@
     # ==========================================
     # - - - LOCAL - - -
     # ==========================================
-    MAIL_MAILER=smtp
     MAIL_HOST=smtp.mailtrap.io
     MAIL_PORT=2525
     MAIL_USER=tu_usuario_mailtrap
@@ -61,7 +64,6 @@
     # ==========================================
     # - - - PRODUCCIÓN - - -
     # ==========================================
-    # MAIL_MAILER=smtp
     # MAIL_HOST=smtp.mailtrap.io
     # MAIL_PORT=2525
     # MAIL_USER=tu_usuario_mailtrap

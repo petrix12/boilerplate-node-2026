@@ -635,6 +635,8 @@
 2. Crear el Servicio de Correo (`backend/src/services/email.service.js`):
     ```js
     // src/services/email.service.js
+    const fs = require('fs');
+    const path = require('path');
     const nodemailer = require('nodemailer');
 
     const transporter = nodemailer.createTransport({
@@ -646,31 +648,38 @@
         },
     });
 
-    const sendVerificationEmail = async (toEmail, token) => {
+    const sendVerificationEmail = async (toEmail, token, userName = 'Usuario') => {
         // Si la verificación está desactivada por la variable de entorno, salimos sin hacer nada
         if (process.env.MAIL_ENABLE_VERIFICATION !== 'true') return;
 
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
+        const appName = process.env.APP_NAME || 'Plataforma';
+        // Logo público accesible por internet (Mailtrap o tu cliente de correo necesita una URL absoluta real)
+        const logoUrl = process.env.APP_LOGO_URL || 'https://via.placeholder.com/48?text=App';
+
+        // Leer la plantilla HTML desde el archivo físico
+        const templatePath = path.join(__dirname, '../templates/emails/verification.html');
+        let htmlTemplate = fs.readFileSync(templatePath, 'utf-8');
+
+        // Reemplazar las etiquetas dinámicas de la plantilla
+        htmlTemplate = htmlTemplate
+            .replace(/{{appName}}/g, appName)
+            .replace(/{{userName}}/g, userName)
+            .replace(/{{verificationUrl}}/g, verificationUrl)
+            .replace(/{{logoUrl}}/g, logoUrl);
 
         const mailOptions = {
-            from: `"Soporte" <${process.env.MAIL_FROM || 'no-reply@boilerplate.com'}>`,
+            from: `"${appName} Soporte" <${process.env.MAIL_FROM || 'no-reply@boilerplate.com'}>`,
             to: toEmail,
-            subject: 'Verifica tu cuenta de correo',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                    <h2>¡Bienvenido a nuestra plataforma!</h2>
-                    <p>Para completar tu registro y verificar tu cuenta, por favor haz clic en el siguiente botón:</p>
-                    <a href="${verificationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #059669; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Verificar Correo</a>
-                    <p style="margin-top: 20px; font-size: 12px; color: #666;">Si no solicitaste esta cuenta, puedes ignorar este mensaje.</p>
-                </div>
-            `,
+            subject: `Verifica tu cuenta en ${appName}`,
+            html: htmlTemplate,
         };
 
         await transporter.sendMail(mailOptions);
     };
 
-    module.exports = { sendVerificationEmail };    
+    module.exports = { sendVerificationEmail };  
     ```
 3. Crear el Servicio de Ingesta (`backend/src/services/systemLog.service.js`):
     ```js
@@ -3020,3 +3029,71 @@
         ```bash
         DATABASE_URL="postgresql://postgres.<Project ID>:<Password>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" node src/seeders/superadmin.seeder.js
         ```
+
+## 📌 Paso 11: Plantillas
+1. Crear plantilla para verificación de email `backend/src/templates/emails/verification.html`:
+    ```html
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verifica tu correo</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f8fafc; padding: 40px 0;">
+            <tr>
+                <td align="center">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #e2e8f0;">
+                        
+                        <!-- Header con Logo y Nombre de la App -->
+                        <tr>
+                            <td align="center" style="padding: 30px 40px; background-color: #0f172a; border-bottom: 3px solid #059669;">
+                                <img src="{{logoUrl}}" alt="Logo" width="48" height="48" style="display: block; margin-bottom: 10px; object-fit: contain;">
+                                <h1 style="color: #ffffff; font-size: 20px; margin: 0; font-weight: 600; letter-spacing: 0.5px;">{{appName}}</h1>
+                            </td>
+                        </tr>
+
+                        <!-- Cuerpo del Contenido -->
+                        <tr>
+                            <td style="padding: 40px 30px; color: #334155;">
+                                <h2 style="font-size: 22px; font-weight: 700; margin-top: 0; color: #0f172a;">¡Bienvenido, {{userName}}!</h2>
+                                <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 30px;">
+                                    Nos alegra mucho que te hayas registrado. Para garantizar la seguridad de tu cuenta y completar el acceso, por favor confirma tu dirección de correo electrónico haciendo clic en el siguiente botón:
+                                </p>
+                                
+                                <!-- Botón de Acción Principal -->
+                                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                    <tr>
+                                        <td align="center">
+                                            <a href="{{verificationUrl}}" target="_blank" style="background-color: #059669; color: #ffffff; padding: 14px 28px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; display: inline-block; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);">
+                                                Verificar mi Correo
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <p style="font-size: 14px; line-height: 1.5; color: #64748b; margin-top: 35px;">
+                                    Si el botón no funciona, también puedes copiar y pegar el siguiente enlace en tu navegador:
+                                </p>
+                                <p style="font-size: 12px; color: #059669; word-break: break-all; background-color: #f1f5f9; padding: 10px; border-radius: 6px;">
+                                    {{verificationUrl}}
+                                </p>
+                            </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                            <td align="center" style="padding: 20px 30px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px;">
+                                <p style="margin: 0;">Si no solicitaste crear una cuenta en {{appName}}, puedes ignorar este mensaje con total tranquilidad.</p>
+                                <p style="margin: 10px 0 0 0;">&copy; 2026 {{appName}}. Todos los derechos reservados.</p>
+                            </td>
+                        </tr>
+
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>    
+    ```

@@ -87,7 +87,7 @@
     + ◻️ Apple (Sign in with Apple).
     + ◻️ Meta (Facebook Login) / Instagram.
     + ◻️ X (antes Twitter) / LinkedIn.
-+ ◻️ Solicitar autenticación de email.
+
 
 ### Terminadas
 + ✅ Dockerización.
@@ -107,6 +107,7 @@
 + ✅ Implementar mensaje sweetalert en todos los lugares que haga falta.
 + ✅ Si el usuario ya esta registrado que no le permita registrarse otra vez, sino que lo notifique y lo mande al login.
 + ✅ Modalidad modo oscuro y modo claro.
++ ✅ Solicitar autenticación de email.
 
 
 
