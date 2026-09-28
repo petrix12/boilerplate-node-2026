@@ -1,16 +1,16 @@
 <script setup>
-    import { computed } from 'vue';
-    import { useRoute } from 'vue-router';
-    import Navbar from '../components/Navbar.vue';
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import Navbar from '../components/Navbar.vue';
 
-    const route = useRoute();
+const route = useRoute();
 
-    // Extrae el título definido en los meta de la ruta actual
-    const pageTitle = computed(() => route.meta.title || 'Dashboard');
+// Extrae el título definido en los meta de la ruta actual
+const pageTitle = computed(() => route.meta.title || 'Dashboard');
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
+    <div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
         <!-- El Navbar permanece estático y vivo siempre -->
         <Navbar :title="pageTitle" />
 
@@ -26,12 +26,12 @@
 </template>
 
 <style scoped>
-    .fade-enter-active,
-    .fade-leave-active {
-        transition: opacity 0.15s ease;
-    }
-    .fade-enter-from,
-    .fade-leave-to {
-        opacity: 0;
-    }
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
 </style>

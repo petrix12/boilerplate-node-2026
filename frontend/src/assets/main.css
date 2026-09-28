@@ -1,6 +1,29 @@
 @import "tailwindcss";
 
-/* Asegura que la raíz ocupe siempre al menos el 100% de la ventana */
+/* 1. Definimos los selectores de variante oscura para Tailwind v4 */
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-app-bg: var(--bg-app);
+  --color-app-surface: var(--surface-app);
+  --color-app-text: var(--text-app);
+}
+
+/* 2. Paleta por defecto (Modo Claro) */
+:root {
+  --bg-app: #f8fafc;       /* slate-50 */
+  --surface-app: #ffffff;  /* blanco */
+  --text-app: #0f172a;     /* slate-900 */
+}
+
+/* 3. Paleta para el Modo Oscuro */
+.dark {
+  --bg-app: #0f172a;       /* slate-900 */
+  --surface-app: #1e293b;  /* slate-800 */
+  --text-app: #f8fafc;     /* slate-50 */
+}
+
+/* Aplicación base reactiva */
 html,
 body,
 #app {
@@ -8,11 +31,12 @@ body,
     min-height: 100dvh;
     margin: 0;
     padding: 0;
-    background-color: #0f172a;
-    color: #f8fafc;
+    background-color: var(--bg-app);
+    color: var(--text-app);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* --- CURSOR POINTER GLOBAL Y PROFESIONAL --- */
+/* --- CURSOR POINTER GLOBAL --- */
 button,
 [role="button"],
 a,
@@ -26,7 +50,6 @@ input[type="button"] {
     cursor: pointer;
 }
 
-/* Excepción profesional: Si un botón está deshabilitado, el cursor debe indicarlo */
 button:disabled,
 input:disabled,
 [disabled] {

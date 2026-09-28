@@ -270,7 +270,7 @@ const handleDrop = (event) => {
         <div class="mb-6">
             <router-link 
                 to="/dashboard" 
-                class="inline-flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition-colors group"
+                class="inline-flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors group"
             >
                 <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
                 <span>Volver al Dashboard</span>
@@ -278,14 +278,14 @@ const handleDrop = (event) => {
         </div>
 
         <div class="mb-6">
-            <h2 class="text-2xl font-bold text-slate-100">Mi Perfil</h2>
-            <p class="text-sm text-slate-400">Administra tu información personal y seguridad de la cuenta.</p>
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Mi Perfil</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Administra tu información personal y seguridad de la cuenta.</p>
         </div>
 
         <form @submit.prevent="updateProfile" class="space-y-6">
             <!-- Sección Avatar & Datos Básicos con Drag & Drop -->
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-                <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm dark:shadow-xl transition-colors">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-200 mb-4 flex items-center gap-2">
                     <UserIcon class="w-5 h-5 text-emerald-400" />
                     Información Personal
                 </h3>
@@ -293,7 +293,7 @@ const handleDrop = (event) => {
                 <!-- Contenedor principal con eventos de Drag & Drop -->
                 <div 
                     class="flex flex-col sm:flex-row items-center gap-6 mb-6 p-4 rounded-xl border-2 border-dashed transition-all duration-200"
-                    :class="isDragging ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]' : 'border-slate-700/80 bg-slate-900/30'"
+                    :class="isDragging ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]' : 'border-slate-300 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/30'"
                     @dragover.prevent="isDragging = true"
                     @dragleave.prevent="isDragging = false"
                     @drop.prevent="handleDrop"
@@ -350,7 +350,7 @@ const handleDrop = (event) => {
                             v-model="profileForm.name" 
                             type="text" 
                             required 
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                            class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
                         />
                     </div>
 
@@ -360,15 +360,15 @@ const handleDrop = (event) => {
                             v-model="profileForm.email" 
                             type="email" 
                             disabled 
-                            class="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-3.5 py-2.5 text-sm text-slate-500 cursor-not-allowed" 
+                            class="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl px-3.5 py-2.5 text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed transition-colors"
                         />
                     </div>
                 </div>
             </div>
 
             <!-- Sección Seguridad -->
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-                <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm dark:shadow-xl transition-colors">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-200 mb-4 flex items-center gap-2">
                     <KeyIcon class="w-5 h-5 text-emerald-400" />
                     Cambiar Contraseña
                 </h3>
@@ -382,7 +382,7 @@ const handleDrop = (event) => {
                                 v-model="profileForm.currentPassword" 
                                 :type="showCurrentPassword ? 'text' : 'password'" 
                                 placeholder="••••••••" 
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                                class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
                             />
                             <button 
                                 type="button"
@@ -403,7 +403,7 @@ const handleDrop = (event) => {
                                 v-model="profileForm.newPassword" 
                                 :type="showNewPassword ? 'text' : 'password'" 
                                 placeholder="••••••••" 
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" 
+                                class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
                             />
                             <button 
                                 type="button"

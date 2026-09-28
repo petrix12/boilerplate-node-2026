@@ -81,7 +81,6 @@
 + ◻️ Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
-+ ◻️ Modalidad modo oscuro y modo claro.
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ◻️ GitHub.
@@ -107,6 +106,7 @@
 + ✅ Limpiar proyecto frontend de archivos que no se usan.
 + ✅ Implementar mensaje sweetalert en todos los lugares que haga falta.
 + ✅ Si el usuario ya esta registrado que no le permita registrarse otra vez, sino que lo notifique y lo mande al login.
++ ✅ Modalidad modo oscuro y modo claro.
 
 
 

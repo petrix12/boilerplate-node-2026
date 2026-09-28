@@ -1,217 +1,3 @@
-<template>
-    <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-        <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
-            <!-- Header / Tarjeta de Encabezado con Botón de Retorno -->
-            <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
-                <div>
-                    <router-link 
-                        to="/admin" 
-                        class="inline-flex items-center space-x-2 text-sm text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300 transition-colors group"
-                    >
-                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                        <span>Volver al Panel Admin</span>
-                    </router-link>
-                </div>
-
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Auditoría del Sistema</h1>
-                        <p class="text-sm text-slate-500 dark:text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
-                    </div>
-                    <button 
-                        @click="fetchLogs" 
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer shadow-sm"
-                    >
-                        <span>Refrescar</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Filtros -->
-            <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Buscar</label>
-                    <input 
-                        v-model="filters.search" 
-                        @input="debounceSearch"
-                        type="text" 
-                        placeholder="Acción, usuario, email..." 
-                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-800 dark:text-slate-200"
-                    />
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Entidad</label>
-                    <select 
-                        v-model="filters.entity" 
-                        @change="fetchLogs(1)"
-                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-800 dark:text-slate-200"
-                    >
-                        <option value="">Todas</option>
-                        <option value="User">Usuario</option>
-                        <option value="Auth">Autenticación</option>
-                        <option value="Role">Rol</option>
-                        <option value="SystemLog">Sistema</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Desde</label>
-                    <input 
-                        ref="startDateInput"
-                        type="text" 
-                        placeholder="Seleccionar fecha..."
-                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer text-slate-800 dark:text-slate-200"
-                    />
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Hasta</label>
-                    <input 
-                        ref="endDateInput"
-                        type="text" 
-                        placeholder="Seleccionar fecha..."
-                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer text-slate-800 dark:text-slate-200"
-                    />
-                </div>
-            </div>
-
-            <!-- Tabla -->
-            <div class="bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead>
-                            <tr class="border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none">
-                                <th @click="handleSort('createdAt')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
-                                    <div class="flex items-center space-x-1">
-                                        <span>Fecha / Hora</span>
-                                        <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
-                                        </span>
-                                    </div>
-                                </th>
-
-                                <th @click="handleSort('user')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
-                                    <div class="flex items-center space-x-1">
-                                        <span>Usuario</span>
-                                        <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'user' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'user' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
-                                        </span>
-                                    </div>
-                                </th>
-
-                                <th @click="handleSort('action')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
-                                    <div class="flex items-center space-x-1">
-                                        <span>Acción</span>
-                                        <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'action' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'action' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
-                                        </span>
-                                    </div>
-                                </th>
-
-                                <th @click="handleSort('entity')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
-                                    <div class="flex items-center space-x-1">
-                                        <span>Entidad</span>
-                                        <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'entity' && sortOrder === 'asc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'entity' && sortOrder === 'desc' ? 'text-yellow-500 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
-                                        </span>
-                                    </div>
-                                </th>
-
-                                <th class="py-3 px-4 text-left">IP</th>
-                                <th class="py-3 px-4 text-right">Detalles</th>
-                            </tr>
-                        </thead>               
-                        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
-                            <tr v-if="loading">
-                                <td colspan="6" class="text-center py-8 text-slate-400">Cargando registros...</td>
-                            </tr>
-                            <tr v-else-if="logs.length === 0">
-                                <td colspan="6" class="text-center py-8 text-slate-400">No se encontraron eventos.</td>
-                            </tr>
-                            <tr v-for="log in logs" :key="log.id" class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                                <td class="py-3 px-4 font-mono text-xs whitespace-nowrap">{{ formatDate(log.createdAt) }}</td>
-                                <td class="py-3 px-4">
-                                    <div v-if="log.user" class="flex flex-col">
-                                        <span class="font-medium text-slate-900 dark:text-white">{{ log.user.name }}</span>
-                                        <span class="text-xs text-slate-400">{{ log.user.email }}</span>
-                                    </div>
-                                    <span v-else class="text-xs text-slate-400 italic">Sistema / Anónimo</span>
-                                </td>
-                                <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{{ log.action }}</td>
-                                <td class="py-3 px-4">
-                                    <span :class="getEntityBadgeClass(log.entity)" class="px-2.5 py-1 text-[11px] font-semibold rounded-lg border">
-                                        {{ log.entity }}
-                                    </span>
-                                </td>
-                                <td class="py-3 px-4 font-mono text-xs text-slate-400">{{ log.ipAddress || 'N/A' }}</td>
-                                <td class="py-3 px-4 text-right">
-                                    <button 
-                                        v-if="log.details" 
-                                        @click="openDetailsModal(log)" 
-                                        class="text-xs text-yellow-600 dark:text-yellow-400 hover:underline font-medium cursor-pointer"
-                                    >
-                                        Ver JSON
-                                    </button>
-                                    <span v-else class="text-xs text-slate-400">-</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Paginación -->
-                <div class="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700">
-                    <span class="text-xs text-slate-500 dark:text-slate-400">
-                        Mostrando página {{ pagination.page }} de {{ pagination.totalPages }} ({{ pagination.total }} registros)
-                    </span>
-                    <div class="flex gap-2">
-                        <button 
-                            :disabled="pagination.page <= 1" 
-                            @click="changePage(pagination.page - 1)" 
-                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                        >
-                            Anterior
-                        </button>
-                        <button 
-                            :disabled="pagination.page >= pagination.totalPages" 
-                            @click="changePage(pagination.page + 1)" 
-                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                        >
-                            Siguiente
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal de Detalles JSON -->
-            <div v-if="selectedLogModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
-                    <div class="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-1">
-                        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Detalles del Evento</h3>
-                        <span class="text-xs text-slate-400 font-mono">{{ selectedLogModal.action }} - {{ formatDate(selectedLogModal.createdAt) }}</span>
-                    </div>    
-                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 overflow-y-auto overflow-x-hidden max-h-[50vh] max-w-full">
-                        <pre class="text-yellow-400 font-mono text-xs whitespace-pre-wrap break-all leading-relaxed select-all">{{ formatJsonDetails(selectedLogModal.details) }}</pre>
-                    </div>
-                    <div class="flex justify-end">
-                        <button 
-                            @click="selectedLogModal = null" 
-                            class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
-                        >
-                            Cerrar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
@@ -364,3 +150,217 @@ onUnmounted(() => {
     if (fpEnd) fpEnd.destroy();
 });
 </script>
+
+<template>
+    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col">
+        <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
+            <!-- Header / Tarjeta de Encabezado con Botón de Retorno -->
+            <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
+                <div>
+                    <router-link 
+                        to="/admin" 
+                        class="inline-flex items-center space-x-2 text-sm text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors group"
+                    >
+                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                        <span>Volver al Panel Admin</span>
+                    </router-link>
+                </div>
+
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Auditoría del Sistema</h1>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
+                    </div>
+                    <button 
+                        @click="fetchLogs" 
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer shadow-sm"
+                    >
+                        <span>Refrescar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Buscar</label>
+                    <input 
+                        v-model="filters.search" 
+                        @input="debounceSearch"
+                        type="text" 
+                        placeholder="Acción, usuario, email..." 
+                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-800 dark:text-slate-200"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Entidad</label>
+                    <select 
+                        v-model="filters.entity" 
+                        @change="fetchLogs(1)"
+                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 text-slate-800 dark:text-slate-200"
+                    >
+                        <option value="">Todas</option>
+                        <option value="User">Usuario</option>
+                        <option value="Auth">Autenticación</option>
+                        <option value="Role">Rol</option>
+                        <option value="SystemLog">Sistema</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Desde</label>
+                    <input 
+                        ref="startDateInput"
+                        type="text" 
+                        placeholder="Seleccionar fecha..."
+                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer text-slate-800 dark:text-slate-200"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Hasta</label>
+                    <input 
+                        ref="endDateInput"
+                        type="text" 
+                        placeholder="Seleccionar fecha..."
+                        class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer text-slate-800 dark:text-slate-200"
+                    />
+                </div>
+            </div>
+
+            <!-- Tabla -->
+            <div class="bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none">
+                                <th @click="handleSort('createdAt')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Fecha / Hora</span>
+                                        <span class="inline-flex flex-col text-[10px] leading-none">
+                                            <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th @click="handleSort('user')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Usuario</span>
+                                        <span class="inline-flex flex-col text-[10px] leading-none">
+                                            <span :class="sortBy === 'user' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'user' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th @click="handleSort('action')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Acción</span>
+                                        <span class="inline-flex flex-col text-[10px] leading-none">
+                                            <span :class="sortBy === 'action' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'action' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th @click="handleSort('entity')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Entidad</span>
+                                        <span class="inline-flex flex-col text-[10px] leading-none">
+                                            <span :class="sortBy === 'entity' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'entity' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th class="py-3 px-4 text-left">IP</th>
+                                <th class="py-3 px-4 text-right">Detalles</th>
+                            </tr>
+                        </thead>               
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
+                            <tr v-if="loading">
+                                <td colspan="6" class="text-center py-8 text-slate-500 dark:text-slate-400">Cargando registros...</td>
+                            </tr>
+                            <tr v-else-if="logs.length === 0">
+                                <td colspan="6" class="text-center py-8 text-slate-500 dark:text-slate-400">No se encontraron eventos.</td>
+                            </tr>
+                            <tr v-for="log in logs" :key="log.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                <td class="py-3 px-4 font-mono text-xs whitespace-nowrap text-slate-600 dark:text-slate-300">{{ formatDate(log.createdAt) }}</td>
+                                <td class="py-3 px-4">
+                                    <div v-if="log.user" class="flex flex-col">
+                                        <span class="font-medium text-slate-900 dark:text-white">{{ log.user.name }}</span>
+                                        <span class="text-xs text-slate-500 dark:text-slate-400">{{ log.user.email }}</span>
+                                    </div>
+                                    <span v-else class="text-xs text-slate-500 dark:text-slate-400 italic">Sistema / Anónimo</span>
+                                </td>
+                                <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{{ log.action }}</td>
+                                <td class="py-3 px-4">
+                                    <span :class="getEntityBadgeClass(log.entity)" class="px-2.5 py-1 text-[11px] font-semibold rounded-lg border">
+                                        {{ log.entity }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 font-mono text-xs text-slate-500 dark:text-slate-400">{{ log.ipAddress || 'N/A' }}</td>
+                                <td class="py-3 px-4 text-right">
+                                    <button 
+                                        v-if="log.details" 
+                                        @click="openDetailsModal(log)" 
+                                        class="text-xs text-yellow-600 dark:text-yellow-400 hover:underline font-medium cursor-pointer"
+                                    >
+                                        Ver JSON
+                                    </button>
+                                    <span v-else class="text-xs text-slate-400">-</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                <div class="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700">
+                    <span class="text-xs text-slate-600 dark:text-slate-400">
+                        Mostrando página {{ pagination.page }} de {{ pagination.totalPages }} ({{ pagination.total }} registros)
+                    </span>
+                    <div class="flex gap-2">
+                        <button 
+                            :disabled="pagination.page <= 1" 
+                            @click="changePage(pagination.page - 1)" 
+                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                        >
+                            Anterior
+                        </button>
+                        <button 
+                            :disabled="pagination.page >= pagination.totalPages" 
+                            @click="changePage(pagination.page + 1)" 
+                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Detalles JSON -->
+            <div v-if="selectedLogModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+                    <div class="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-1">
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Detalles del Evento</h3>
+                        <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ selectedLogModal.action }} - {{ formatDate(selectedLogModal.createdAt) }}</span>
+                    </div>    
+                    <div class="bg-slate-900 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 overflow-y-auto overflow-x-hidden max-h-[50vh] max-w-full">
+                        <pre class="text-yellow-600 dark:text-yellow-400 font-mono text-xs whitespace-pre-wrap break-all leading-relaxed select-all">{{ formatJsonDetails(selectedLogModal.details) }}</pre>
+                    </div>
+                    <div class="flex justify-end">
+                        <button 
+                            @click="selectedLogModal = null" 
+                            class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

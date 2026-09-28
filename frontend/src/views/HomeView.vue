@@ -1,22 +1,22 @@
 <script setup>
-    import { ref } from 'vue';
-    import { useAuthStore } from '../stores/auth.store';
+import { ref } from 'vue';
+import { useAuthStore } from '../stores/auth.store';
 
-    const authStore = useAuthStore();
-    const hasLogoError = ref(false);
+const authStore = useAuthStore();
+const hasLogoError = ref(false);
 
-    // Capturamos la variable de entorno de Vite de forma segura
-    const docsUrl = import.meta.env.VITE_DOCS_URL || '';
+// Capturamos la variable de entorno de Vite de forma segura
+const docsUrl = import.meta.env.VITE_DOCS_URL || '';
 
-    const handleLogoError = () => {
-        hasLogoError.value = true;
-    };
+const handleLogoError = () => {
+    hasLogoError.value = true;
+};
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between">
+    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col justify-between transition-colors">
         <!-- Navbar simple -->
-        <header class="py-4 px-4 sm:px-8 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 border-b border-slate-800 text-center sm:text-left">
+        <header class="py-4 px-4 sm:px-8 flex flex-col sm:flex-row justify-center sm:justify-between items-center gap-4 border-b border-slate-200 dark:border-slate-800 text-center sm:text-left bg-white/50 dark:bg-transparent backdrop-blur-md transition-colors">
             <!-- Logotipo / Branding -->
             <router-link to="/" class="flex items-center justify-center gap-2.5 shrink-0 group">
                 <img 
