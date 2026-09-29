@@ -150,10 +150,14 @@
         ```
 
 ## 📬 Obtener Credenciales de Brevo (Cliente de correo para producción)
-1. Crear tu cuenta en Brevo:
+1. Instalar dependencia de Brevo:
+    ```bash
+    npm install @getbrevo/brevo
+    ```
+2. Crear tu cuenta en Brevo:
     + Entra a `brevo.com` y regístrate de manera gratuita.
     + Completa los pasos de verificación de perfil e identidad que solicitan para prevenir spam.
-2. Obtener tus credenciales SMTP:
+3. Obtener tus credenciales SMTP:
     + Una vez dentro de tu panel, haz clic en tu nombre o perfil (esquina superior/inferior derecha) y selecciona SMTP & API.
     + Ve a la pestaña SMTP.
     + Verás los datos de tu servidor SMTP generados por Brevo (si no ves una clave principal, puedes generar una nueva en "Generate a new SMTP key"). Los datos clave son:
@@ -161,11 +165,11 @@
         + Port: 587 (o 465)
         + User: (tu correo electrónico registrado en Brevo)
         + Password: (la clave SMTP larga que te generó el sistema)
-3. Validar tu dominio o remitente (Muy importante para producción):
+4. Validar tu dominio o remitente (Muy importante para producción):
     + Para evitar que los correos de verificación lleguen a la bandeja de SPAM de tus usuarios:
         + En el panel de Brevo, ve a la sección de configuración de Senders & Domains (Remitentes y dominios).
         + Añade tu propio dominio (o un correo verificado con el dominio de tu app) para configurar los registros DNS (SPF, DKIM). Nota: Si estás en fases muy tempranas de prueba en producción, puedes validar un correo personal, pero lo profesional es usar tu propio dominio web.
-4. Actualizar las variables de entorno en Render:
+5. Actualizar las variables de entorno en Render:
     + Ve al panel de control de tu servicio en Render, entra a la sección de Environment Variables y actualiza los valores con los de Brevo:
         ```ini
         MAIL_HOST=smtp-relay.brevo.com

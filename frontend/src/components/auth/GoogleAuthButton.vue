@@ -1,8 +1,9 @@
+<!-- src/components/auth/GoogleAuthButton.vue -->
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
-import Swal from 'sweetalert2';
+import { getSwalTheme } from '@/utils/swal';
 
 // Única llamada a defineProps combinando ambas propiedades
 const props = defineProps({
@@ -70,41 +71,20 @@ const handleCredentialResponse = async (response) => {
 
         // Si estamos en el flujo de registro y el backend indicó que la cuenta ya existía
         if (props.isRegisterContext && resData.isNewUser === false) {
-            Swal.fire({
+            getSwalTheme().fire({
                 icon: 'info',
                 title: '¡Hola de nuevo!',
-                html: `
-                    <div style="font-size: 0.95rem; color: #f8fafc; margin-bottom: 12px;">
-                        Detectamos que ya tenías una cuenta registrada, por lo que hemos iniciado sesión directamente.
-                    </div>
-                    <!-- Barra de progreso personalizada -->
-                    <div style="width: 100%; background-color: #334155; height: 4px; border-radius: 9999px; overflow: hidden;">
-                        <div id="custom-progress-bar" style="width: 100%; height: 100%; background-color: #3b82f6; transition: width 7.5s linear;"></div>
-                    </div>
-                `,
+                text: 'Detectamos que ya tenías una cuenta registrada, por lo que hemos iniciado sesión directamente.',
                 toast: true,
                 position: 'center',
                 showConfirmButton: true,
                 confirmButtonText: 'Entendido',
-                timer: 7500,
-                timerProgressBar: false, // Desactivamos la nativa para usar la nuestra
-                background: '#1e293b',
-                color: '#f8fafc',
-                confirmButtonColor: '#3b82f6',
-                didOpen: (toast) => {
-                    // Truco para forzar la animación CSS de la barra de 100% a 0%
-                    const bar = toast.querySelector('#custom-progress-bar');
-                    if (bar) {
-                        setTimeout(() => {
-                            bar.style.width = '0%';
-                        }, 50); // Pequeño delay para que el navegador renderice el estado inicial
-                    }
-                }
+                timer: 7500
             });
         }
     } catch (err) {
         console.error('Error al autenticar con el backend:', err);
-        Swal.fire({
+        getSwalTheme().fire({
             icon: 'error',
             title: 'Error de autenticación',
             text: authStore.error || 'No se pudo iniciar sesión con Google',

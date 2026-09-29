@@ -1,9 +1,10 @@
+<!-- src/views/admin/UsersAdminView.vue -->
 <script setup>
 import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, ChevronLeftIcon, MagnifyingGlassIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
-import Swal from 'sweetalert2';
 import { ref, onMounted } from 'vue';
 import { userService, roleService } from '@/services';
 import { useAuthStore } from '@/stores/auth.store';
+import { getSwalTheme } from '@/utils/swal';
 
 // Instancia del store para acceder a los getters
 const authStore = useAuthStore();
@@ -43,10 +44,10 @@ const handleAvatarChange = (event) => {
     const file = event.target.files[0];
     processSelectedFile(file);
 };
+
 // Eliminar foto de perfil
 const removeAvatar = async () => {
     if (targetUser.value) {
-        // MODO EDICIÓN: Invoca directamente el nuevo endpoint DELETE /api/v1/users/:id/avatar
         uploadingAvatar.value = true;
         try {
             await userService.deleteUserAvatarById(targetUser.value.id);
@@ -56,18 +57,15 @@ const removeAvatar = async () => {
             targetUser.value.avatarUrl = null;
             targetUser.value.avatar = null;
         } catch (err) {
-            Swal.fire({
+            getSwalTheme().fire({
                 title: 'Error',
                 text: err.response?.data?.message || 'Error al eliminar la imagen',
-                icon: 'error',
-                background: '#1e293b',
-                color: '#f8fafc'
+                icon: 'error'
             });
         } finally {
             uploadingAvatar.value = false;
         }
     } else {
-        // MODO CREACIÓN: Limpia los campos locales
         userForm.value.avatarFile = null;
         userForm.value.avatarUrl = null;
     }
@@ -78,22 +76,19 @@ const removeAvatar = async () => {
 };      
 
 // --- LÓGICA DE CARGA Y BÚSQUEDA ---
-// Estados de ordenamiento
 const sortBy = ref('createdAt');
 const sortOrder = ref('desc');
 
 const handleSort = (field) => {
     if (sortBy.value === field) {
-        // Alternar entre ascendente y descendente
         sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
     } else {
         sortBy.value = field;
         sortOrder.value = 'asc';
     }
-    fetchUsers(1); // Volver a la primera página al reordenar
+    fetchUsers(1);
 };
 
-// Actualiza tu fetchUsers para enviar estos parámetros
 const fetchUsers = async (page = 1) => {
     loading.value = true;
     try {
@@ -138,29 +133,18 @@ const saveUserRoles = async () => {
         selectedUser.value.roles = [...modalRoles.value];
         selectedUser.value = null;
 
-        // Notificación profesional de éxito al actualizar roles
-        Swal.fire({
+        getSwalTheme().fire({
             title: '¡Roles actualizados!',
             text: 'Los permisos del usuario se han modificado correctamente.',
             icon: 'success',
             timer: 2200,
-            showConfirmButton: false,
-            background: '#1e293b', // Slate-800
-            color: '#f8fafc',       // Slate-50
-            customClass: {
-                popup: 'rounded-xl border border-slate-700 shadow-2xl'
-            }
+            showConfirmButton: false
         });
     } catch (err) {
-        Swal.fire({
+        getSwalTheme().fire({
             title: 'Error',
             text: err.response?.data?.message || 'Error al guardar los roles del usuario.',
-            icon: 'error',
-            background: '#1e293b',
-            color: '#f8fafc',
-            customClass: {
-                popup: 'rounded-xl border border-slate-700 shadow-2xl'
-            }
+            icon: 'error'
         });
     } finally {
         saving.value = false;
@@ -184,17 +168,14 @@ const openUserModal = (user = null) => {
     isUserModalOpen.value = true;
 };
 
-// Guardar datos del usuario (Submit)
 const saveUserData = async () => {
     saving.value = true;
     try {
         if (targetUser.value) {
-            // --- MODO EDICIÓN ---
             const payload = { 
                 name: userForm.value.name, 
                 email: userForm.value.email 
             };
-            // Solo se envía la contraseña si se escribió una nueva
             if (userForm.value.password) payload.password = userForm.value.password;
 
             const res = await userService.updateUser(targetUser.value.id, payload);
@@ -202,19 +183,14 @@ const saveUserData = async () => {
             targetUser.value.name = res.data.user.name;
             targetUser.value.email = res.data.user.email;
 
-            Swal.fire({
+            getSwalTheme().fire({
                 title: '¡Actualizado!',
                 text: 'Los datos del usuario han sido actualizados correctamente.',
                 icon: 'success',
                 timer: 2000,
-                showConfirmButton: false,
-                background: '#1e293b',
-                color: '#f8fafc',
-                customClass: { popup: 'rounded-xl border border-slate-700' }
+                showConfirmButton: false
             });
         } else {
-            // --- MODO CREACIÓN ---
-            // Si el input de contraseña está vacío, asignamos una por defecto
             const passwordToUse = userForm.value.password.trim() !== '' 
                 ? userForm.value.password 
                 : DEFAULT_PASSWORD;
@@ -227,7 +203,6 @@ const saveUserData = async () => {
 
             const newUserId = res.data.user.id;
 
-            // Si seleccionó un avatar en la creación, subirlo ahora con el nuevo ID
             if (userForm.value.avatarFile && newUserId) {
                 const formData = new FormData();
                 formData.append('avatar', userForm.value.avatarFile);
@@ -236,59 +211,48 @@ const saveUserData = async () => {
 
             await fetchUsers(1);
 
-            // Mensaje informativo que indica si usó la contraseña por defecto
             const usedDefault = !userForm.value.password.trim();
             const passwordInfo = usedDefault 
                 ? '<br><span class="text-xs text-amber-400 mt-1 block">Contraseña asignada por defecto: <strong>Password123*</strong></span>' 
                 : '';
 
-            Swal.fire({
+            getSwalTheme().fire({
                 title: '¡Usuario creado exitosamente!',
                 html: `Se ha registrado a <strong>${userForm.value.name}</strong> en el sistema.${passwordInfo}`,
                 icon: 'success',
-                showConfirmButton: usedDefault, // Si usó la por defecto, dejamos un botón para que el admin lo note
+                showConfirmButton: usedDefault,
                 confirmButtonText: 'Entendido',
-                confirmButtonColor: '#4f46e5', // Indigo-600
-                timer: usedDefault ? undefined : 2500, // Si usa la por defecto, no se cierra solo para que la lea
-                background: '#1e293b',
-                color: '#f8fafc',
-                customClass: {
-                    popup: 'rounded-xl border border-slate-700 shadow-2xl',
-                    confirmButton: 'px-4 py-2 rounded-lg font-medium text-sm'
-                }
+                timer: usedDefault ? undefined : 2500
             });
         }
         isUserModalOpen.value = false;
     } catch (err) {
-        Swal.fire({
+        getSwalTheme().fire({
             title: 'Error',
             text: err.response?.data?.message || 'Error al procesar la solicitud',
-            icon: 'error',
-            background: '#1e293b',
-            color: '#f8fafc'
+            icon: 'error'
         });
     } finally {
         saving.value = false;
     }
 };
 
-// --- LÓGICA DE ELIMINACIÓN CON SWEETALERT2 ---
+// --- LÓGICA DE ELIMINACIÓN ---
 const confirmDeleteUser = async (user) => {
-    const result = await Swal.fire({
+    const isDarkTheme = document.documentElement.classList.contains('dark');
+    const result = await getSwalTheme().fire({
         title: '¿Eliminar usuario?',
         html: `Estás a punto de eliminar a <strong>${user.name}</strong>.<br><span class="text-xs text-slate-400">Esta acción no se puede deshacer.</span>`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444', // Red-500 de Tailwind
-        cancelButtonColor: '#64748b',  // Slate-500 de Tailwind
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
-        background: '#1e293b',         // Slate-800 de Tailwind (Coincide con tu tema)
-        color: '#f8fafc',              // Slate-50 de Tailwind
         customClass: {
-            popup: 'rounded-xl border border-slate-700 shadow-2xl',
-            confirmButton: 'px-4 py-2 rounded-lg font-medium text-sm',
-            cancelButton: 'px-4 py-2 rounded-lg font-medium text-sm'
+            popup: isDarkTheme ? 'rounded-xl border border-slate-700 shadow-2xl' : 'rounded-xl border border-slate-200 shadow-2xl',
+            confirmButton: 'px-4 py-2 rounded-lg font-medium text-sm bg-red-600 hover:bg-red-500 text-white transition-colors mr-3',
+            cancelButton: isDarkTheme 
+                ? 'px-4 py-2 rounded-lg font-medium text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors'
+                : 'px-4 py-2 rounded-lg font-medium text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors'
         }
     });
 
@@ -296,37 +260,26 @@ const confirmDeleteUser = async (user) => {
         try {
             await userService.deleteUser(user.id);
             
-            // Notificación flotante de éxito
-            Swal.fire({
+            getSwalTheme().fire({
                 title: '¡Eliminado!',
                 text: 'El usuario ha sido eliminado correctamente.',
                 icon: 'success',
                 timer: 2000,
-                showConfirmButton: false,
-                background: '#1e293b',
-                color: '#f8fafc',
-                customClass: {
-                    popup: 'rounded-xl border border-slate-700'
-                }
+                showConfirmButton: false
             });
 
             await fetchUsers(pagination.value.page);
         } catch (err) {
-            Swal.fire({
+            getSwalTheme().fire({
                 title: 'Error',
                 text: err.response?.data?.message || 'Error al intentar eliminar el usuario',
-                icon: 'error',
-                background: '#1e293b',
-                color: '#f8fafc',
-                customClass: {
-                    popup: 'rounded-xl border border-slate-700'
-                }
+                icon: 'error'
             });
         }
     }
-};    
+};      
 
-// --- UTILITIES DE FORMATO Y ESTILOS ---
+// --- UTILITIES ---
 const getRoleBadgeClass = (role) => {
     switch (role) {
         case 'SUPER_ADMIN':
@@ -352,7 +305,6 @@ const formatDate = (dateStr) => {
 const fetchAvailableRoles = async () => {
     try {
         const res = await roleService.getRoles();
-        // Mapeamos para obtener únicamente los nombres en string
         const rolesData = res.data.roles || res.data;
         availableRoles.value = rolesData.map((r) => (typeof r === 'object' ? r.name : r));
     } catch (err) {
@@ -360,37 +312,29 @@ const fetchAvailableRoles = async () => {
     }
 };
 
-// Función centralizada para validar el archivo (tipo y límite de 2MB) y procesarlo
 const processSelectedFile = async (file) => {
     if (!file) return;
 
-    // 1. Validar que sea una imagen
     if (!file.type.startsWith('image/')) {
-        Swal.fire({
+        getSwalTheme().fire({
             title: 'Archivo inválido',
             text: 'Por favor, selecciona o arrastra un archivo de imagen válido.',
-            icon: 'warning',
-            background: '#1e293b',
-            color: '#f8fafc'
+            icon: 'warning'
         });
         return;
     }
 
-    // 2. Validar límite estricto de 2MB
     if (file.size > 2 * 1024 * 1024) {
-        Swal.fire({
+        getSwalTheme().fire({
             title: 'Archivo muy grande',
             text: 'La imagen supera el tamaño máximo permitido de 2MB.',
-            icon: 'warning',
-            background: '#1e293b',
-            color: '#f8fafc'
+            icon: 'warning'
         });
         if (fileInputRef.value) fileInputRef.value.value = '';
         return;
     }
 
     if (targetUser.value) {
-        // MODO EDICIÓN: Sube el avatar inmediatamente al servidor por ID
         uploadingAvatar.value = true;
         try {
             const formData = new FormData();
@@ -403,18 +347,15 @@ const processSelectedFile = async (file) => {
             targetUser.value.avatarUrl = updatedAvatar;
             targetUser.value.avatar = updatedAvatar;
         } catch (err) {
-            Swal.fire({
+            getSwalTheme().fire({
                 title: 'Error',
                 text: err.response?.data?.message || 'Error al subir la imagen',
-                icon: 'error',
-                background: '#1e293b',
-                color: '#f8fafc'
+                icon: 'error'
             });
         } finally {
             uploadingAvatar.value = false;
         }
     } else {
-        // MODO CREACIÓN: Guarda temporalmente el archivo en el formulario
         if (userForm.value.avatarUrl && userForm.value.avatarUrl.startsWith('blob:')) {
             URL.revokeObjectURL(userForm.value.avatarUrl);
         }
@@ -423,7 +364,6 @@ const processSelectedFile = async (file) => {
     }
 };
 
-// Manejar evento Drop de la zona interactiva
 const handleDrop = (event) => {
     isDragging.value = false;
     const files = event.dataTransfer?.files;

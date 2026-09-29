@@ -1,9 +1,10 @@
+<!-- src/views/admin/RolesAdminView.vue -->
 <script setup>
 import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
 import { ref, computed, onMounted } from 'vue';
 import { roleService } from '@/services';
-import Swal from 'sweetalert2';
 import { useAuthStore } from '@/stores/auth.store';
+import { getSwalTheme } from '@/utils/swal';
 
 // Instancia del store para acceder a los getters
 const authStore = useAuthStore();
@@ -39,7 +40,7 @@ const loadData = async () => {
         availablePermissions.value = permsRes.data?.permissions || permsRes.permissions || [];
     } catch (err) {
         console.error('Error al cargar datos:', err);
-        Swal.fire({
+        getSwalTheme().fire({
             title: 'Error',
             text: 'No se pudieron cargar los roles y permisos.',
             icon: 'error'
@@ -73,7 +74,7 @@ const saveRole = async () => {
         isModalOpen.value = false;
         await loadData();
         
-        Swal.fire({
+        getSwalTheme().fire({
             title: '¡Guardado!',
             text: 'El rol ha sido guardado exitosamente.',
             icon: 'success',
@@ -81,7 +82,7 @@ const saveRole = async () => {
             showConfirmButton: false
         });
     } catch (err) {
-        Swal.fire({
+        getSwalTheme().fire({
             title: 'Error',
             text: err.response?.data?.message || 'Error al guardar el rol',
             icon: 'error'
@@ -93,7 +94,7 @@ const saveRole = async () => {
 
 const confirmDelete = async (role) => {
     if (role.name === 'SUPER_ADMIN') {
-        Swal.fire({
+        getSwalTheme().fire({
             title: 'Acción No Permitida',
             text: 'El rol SUPER_ADMIN es un rol de sistema y no puede ser eliminado.',
             icon: 'error'
@@ -101,23 +102,39 @@ const confirmDelete = async (role) => {
         return;
     }
 
-    const result = await Swal.fire({
+    const isDarkTheme = document.documentElement.classList.contains('dark');
+    const result = await getSwalTheme().fire({
         title: '¿Eliminar Rol?',
         html: `Estás a punto de eliminar el rol <strong>${role.name}</strong>.`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#64748b',
         confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
+        cancelButtonText: 'Cancelar',
+        customClass: {
+            popup: isDarkTheme ? 'rounded-xl border border-slate-700 shadow-2xl' : 'rounded-xl border border-slate-200 shadow-2xl',
+            confirmButton: 'px-4 py-2 rounded-lg font-medium text-sm bg-red-600 hover:bg-red-500 text-white transition-colors mr-3',
+            cancelButton: isDarkTheme 
+                ? 'px-4 py-2 rounded-lg font-medium text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors'
+                : 'px-4 py-2 rounded-lg font-medium text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors'
+        }
     });
 
     if (result.isConfirmed) {
         try {
             await roleService.deleteRole(role.id);
+            
+            // Notificación de éxito al eliminar
+            getSwalTheme().fire({
+                title: '¡Eliminado!',
+                text: 'El rol ha sido eliminado correctamente.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
             await loadData();
         } catch (err) {
-            Swal.fire({
+            getSwalTheme().fire({
                 title: 'Error',
                 text: err.response?.data?.message || 'Error al eliminar el rol',
                 icon: 'error'

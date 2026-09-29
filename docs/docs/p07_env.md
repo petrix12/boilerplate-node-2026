@@ -55,6 +55,7 @@
     # ==========================================
     # - - - LOCAL - - -
     # ==========================================
+    MAIL_CONNECTION=smtp
     MAIL_HOST=smtp.mailtrap.io
     MAIL_PORT=2525
     MAIL_USER=tu_usuario_mailtrap
@@ -64,6 +65,7 @@
     # ==========================================
     # - - - PRODUCCIÓN - - -
     # ==========================================
+    # MAIL_CONNECTION=api
     # MAIL_HOST=smtp.mailtrap.io
     # MAIL_PORT=2525
     # MAIL_USER=tu_usuario_mailtrap

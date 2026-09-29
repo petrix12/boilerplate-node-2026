@@ -1,9 +1,10 @@
+<!-- src/views/ProfileView.vue -->
 <script setup>
 import { ref, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth.store';
 import { userService } from '@/services';
 import { UserIcon, KeyIcon, ChevronLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
-import Swal from 'sweetalert2';
+import { getSwalTheme } from '@/utils/swal';
 
 const authStore = useAuthStore();
 const showCurrentPassword = ref(false);
@@ -13,18 +14,6 @@ const saving = ref(false);
 
 // Estado para controlar el efecto visual cuando arrastras sobre la zona
 const isDragging = ref(false);
-
-// Configuración base de SweetAlert2 con estilo oscuro (Slate)
-const swalDark = Swal.mixin({
-    background: '#1e293b',
-    color: '#f8fafc',
-    customClass: {
-        popup: 'rounded-2xl border border-slate-700 shadow-2xl',
-        confirmButton: 'px-5 py-2.5 rounded-xl font-medium text-sm bg-emerald-600 hover:bg-emerald-500 text-white transition-colors',
-        cancelButton: 'px-5 py-2.5 rounded-xl font-medium text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors'
-    },
-    buttonsStyling: false
-});
 
 // Formulario reactivo
 const profileForm = ref({
@@ -53,7 +42,7 @@ const handleAvatarChange = (event) => {
     if (file) {
         // Validar tamaño máximo (2MB)
         if (file.size > 2 * 1024 * 1024) {
-            swalDark.fire({
+            getSwalTheme().fire({
                 title: 'Archivo muy grande',
                 text: 'La imagen supera el tamaño máximo permitido de 2MB.',
                 icon: 'warning'
@@ -89,7 +78,7 @@ const updateProfile = async () => {
     const avatarProvided = Boolean(profileForm.value.avatarFile);
 
     if (!avatarProvided && !nameChanged && !passwordProvided) {
-        swalDark.fire({
+        getSwalTheme().fire({
             title: 'Sin cambios',
             text: 'No has realizado ninguna modificación en tu perfil.',
             icon: 'info',
@@ -101,7 +90,7 @@ const updateProfile = async () => {
 
     // Validación de contraseña si intenta cambiarla
     if (passwordProvided && !profileForm.value.currentPassword) {
-        swalDark.fire({
+        getSwalTheme().fire({
             title: 'Campo requerido',
             text: 'Debes ingresar tu contraseña actual para establecer una nueva.',
             icon: 'warning'
@@ -152,17 +141,16 @@ const updateProfile = async () => {
         profileForm.value.avatarFile = null;
         if (fileInputRef.value) fileInputRef.value.value = '';
 
-        swalDark.fire({
+        getSwalTheme().fire({
             title: '¡Perfil actualizado!',
             text: 'Tus datos se han guardado correctamente.',
             icon: 'success',
             timer: 2000,
             showConfirmButton: false
         });
-
     } catch (error) {
         console.error('Error al actualizar perfil:', error);
-        swalDark.fire({
+        getSwalTheme().fire({
             title: 'Error',
             text: error.response?.data?.message || 'Ocurrió un error al intentar actualizar el perfil.',
             icon: 'error'
@@ -174,7 +162,8 @@ const updateProfile = async () => {
 
 // Eliminar avatar definitivamente
 const removeCurrentAvatar = async () => {
-    const confirmResult = await swalDark.fire({
+    const isDarkTheme = document.documentElement.classList.contains('dark');
+    const confirmResult = await getSwalTheme().fire({
         title: '¿Eliminar foto de perfil?',
         text: 'Tu avatar se borrará permanentemente de tu cuenta.',
         icon: 'warning',
@@ -182,9 +171,11 @@ const removeCurrentAvatar = async () => {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         customClass: {
-            popup: 'rounded-2xl border border-slate-700 shadow-2xl',
+            popup: isDarkTheme ? 'rounded-2xl border border-slate-700 shadow-2xl' : 'rounded-2xl border border-slate-200 shadow-2xl',
             confirmButton: 'px-5 py-2.5 rounded-xl font-medium text-sm bg-red-600 hover:bg-red-500 text-white transition-colors mr-3',
-            cancelButton: 'px-5 py-2.5 rounded-xl font-medium text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors'
+            cancelButton: isDarkTheme 
+                ? 'px-5 py-2.5 rounded-xl font-medium text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors'
+                : 'px-5 py-2.5 rounded-xl font-medium text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors'
         }
     });
 
@@ -206,7 +197,7 @@ const removeCurrentAvatar = async () => {
         profileForm.value.avatarFile = null;
         if (fileInputRef.value) fileInputRef.value.value = '';
 
-        swalDark.fire({
+        getSwalTheme().fire({
             title: 'Eliminada',
             text: 'Tu foto de perfil ha sido eliminada.',
             icon: 'success',
@@ -215,7 +206,7 @@ const removeCurrentAvatar = async () => {
         });
     } catch (error) {
         console.error('Error al eliminar avatar:', error);
-        swalDark.fire({
+        getSwalTheme().fire({
             title: 'Error',
             text: error.response?.data?.message || 'Error al eliminar la imagen de perfil.',
             icon: 'error'
@@ -234,7 +225,7 @@ const handleDrop = (event) => {
         
         // 1. Validar que sea una imagen
         if (!file.type.startsWith('image/')) {
-            swalDark.fire({
+            getSwalTheme().fire({
                 title: 'Archivo inválido',
                 text: 'Por favor, arrastra un archivo de imagen válido.',
                 icon: 'warning'
@@ -244,7 +235,7 @@ const handleDrop = (event) => {
 
         // 2. Validar tamaño máximo (2MB) - ¡AQUÍ ESTÁ LA CLAVE!
         if (file.size > 2 * 1024 * 1024) {
-            swalDark.fire({
+            getSwalTheme().fire({
                 title: 'Archivo muy grande',
                 text: 'La imagen supera el tamaño máximo permitido de 2MB.',
                 icon: 'warning'

@@ -66,7 +66,6 @@
 
 ## Tares
 ### Pendientes
-+ ◻️ Recuperar credenciales (¿Olvidó su password?).
 + ◻️ Establecer politicas de seguridad en tablas de base de datos de supabase.
 + ◻️ Multi-idiomas.
 + ◻️ Revisar la seguridad del backend.
@@ -76,7 +75,6 @@
 + ◻️ Documentación & CI/CD (Swagger, .env.example, pruebas unitarias básicas).
 + ◻️ Realizar pruebas unitarias.
 + ◻️ Asegurar que los endpoints en el backend se puedan ejecutar según los permisos que les corresponde.
-+ ◻️ Crear example.env o como se llame.
 + ◻️ Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
@@ -87,6 +85,7 @@
     + ◻️ Apple (Sign in with Apple).
     + ◻️ Meta (Facebook Login) / Instagram.
     + ◻️ X (antes Twitter) / LinkedIn.
++ ◻️ Recuperar credenciales (¿Olvidó su password?).
 
 
 ### Terminadas
@@ -108,6 +107,7 @@
 + ✅ Si el usuario ya esta registrado que no le permita registrarse otra vez, sino que lo notifique y lo mande al login.
 + ✅ Modalidad modo oscuro y modo claro.
 + ✅ Solicitar autenticación de email.
++ ✅ Crear backend/.env.example y frontend/.env.example
 
 
 
