@@ -282,6 +282,27 @@
 
     module.exports = { getClientIp };    
     ```
+2. `backend/src/utils/template.util.js`: Helper para renderizar esto de forma limpia sin librerías externas pesadas (como Handlebars, si no lo usas), puedes usar un reemplazo de cadenas nativo muy sencillo en un archivo auxiliar:
+    ```js
+    /* src/utils/template.util.js */
+    const fs = require('fs');
+    const path = require('path');
+
+    const renderEmailTemplate = (templateName, data) => {
+        const filePath = path.join(__dirname, `../templates/emails/${templateName}.html`);
+        let template = fs.readFileSync(filePath, 'utf-8');
+
+        // Reemplaza todas las ocurrencias de {{variable}} por su valor
+        for (const [key, value] of Object.entries(data)) {
+            const regex = new RegExp(`{{${key}}}`, 'g');
+            template = template.replace(regex, value || '');
+        }
+
+        return template;
+    };
+
+    module.exports = { renderEmailTemplate };    
+    ```
 
 ## 🛡️ Paso 5: Middlewares Fundamentales (`src/middlewares/`)
 + Crea la capa intermedia para el manejo de peticiones, seguridad y errores:
@@ -634,17 +655,40 @@
         ```
 2. Crear el Servicio de Correo (`backend/src/services/email.service.js`):
     ```js
-    // src/services/email.service.js
+    /* src/services/email.service.js */
     const fs = require('fs');
     const path = require('path');
     const nodemailer = require('nodemailer');
     const { BrevoClient } = require('@getbrevo/brevo');
 
-    // 1. Configuración de la estrategia SMTP (Nodemailer)
+    // Helper interno para renderizar
+    const renderTemplate = (data) => {
+        const filePath = path.join(__dirname, '../templates/emails/base-email.html');
+        let template = fs.readFileSync(filePath, 'utf-8');
+
+        for (const [key, value] of Object.entries(data)) {
+            const regex = new RegExp(`{{${key}}}`, 'g');
+            template = template.replace(regex, value || '');
+        }
+        return template;
+    };
+
+    // Configuración común de transporte
+    const getEmailConfig = () => {
+        return {
+            appName: process.env.APP_NAME || 'Plataforma',
+            logoUrl: process.env.APP_LOGO_URL || 'https://via.placeholder.com/48?text=App',
+            senderEmail: process.env.MAIL_FROM || 'no-reply@boilerplate.com',
+            mailDriver: process.env.MAIL_CONNECTION || 'smtp',
+            frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173'
+        };
+    };
+
+    // 1. Configuración de la estrategia SMTP (Nodemailer global)
     const transporter = nodemailer.createTransport({
         host: process.env.MAIL_HOST,
         port: Number(process.env.MAIL_PORT) || 587,
-        secure: false, // Requerido para STARTTLS en el puerto 587
+        secure: false,
         auth: {
             user: process.env.MAIL_USER,
             pass: process.env.MAIL_PASS,
@@ -655,58 +699,32 @@
     let brevoApiClient = null;
     if (process.env.MAIL_CONNECTION === 'api') {
         brevoApiClient = new BrevoClient({
-            apiKey: process.env.MAIL_PASS, // Reutilizamos MAIL_PASS para la API Key
+            apiKey: process.env.MAIL_PASS,
         });
     }
 
-    const sendVerificationEmail = async (toEmail, token, userName = 'Usuario') => {
-        // Si la verificación está desactivada por la variable de entorno, salimos sin hacer nada
-        if (process.env.MAIL_ENABLE_VERIFICATION !== 'true') return;
-
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
-        const appName = process.env.APP_NAME || 'Plataforma';
-        const logoUrl = process.env.APP_LOGO_URL || 'https://via.placeholder.com/48?text=App';
-        const senderEmail = process.env.MAIL_FROM || 'no-reply@boilerplate.com';
-        const mailDriver = process.env.MAIL_CONNECTION || 'smtp';
-
-        // Leer la plantilla HTML desde el archivo físico
-        const templatePath = path.join(__dirname, '../templates/emails/verification.html');
-        let htmlTemplate = fs.readFileSync(templatePath, 'utf-8');
-
-        // Reemplazar las etiquetas dinámicas de la plantilla
-        htmlTemplate = htmlTemplate
-            .replace(/{{appName}}/g, appName)
-            .replace(/{{userName}}/g, userName)
-            .replace(/{{verificationUrl}}/g, verificationUrl)
-            .replace(/{{logoUrl}}/g, logoUrl);
-
-        const subject = `Verifica tu cuenta en ${appName}`;
-
-        // Estrategia A: Envío mediante API HTTP (Puerto 443 - Ideal para Render)
-        if (mailDriver === 'api') {
+    // Función genérica para despachar vía SMTP o API de Brevo
+    const dispatchEmail = async (toEmail, userName, subject, htmlContent, config) => {
+        if (config.mailDriver === 'api') {
             try {
                 await brevoApiClient.transactionalEmails.sendTransacEmail({
                     subject: subject,
-                    htmlContent: htmlTemplate,
-                    sender: { name: `${appName} Soporte`, email: senderEmail },
+                    htmlContent: htmlContent,
+                    sender: { name: `${config.appName} Soporte`, email: config.senderEmail },
                     to: [{ email: toEmail, name: userName }],
                 });
                 console.log(`[Email API] Correo enviado exitosamente a ${toEmail}`);
                 return true;
             } catch (error) {
                 console.error('[Email API Error] Falló el envío por API:', error);
-                throw new Error('No se pudo enviar el correo de verificación mediante API');
+                throw new Error('No se pudo enviar el correo mediante API');
             }
-        } 
-        
-        // Estrategia B: Envío tradicional mediante SMTP (Nodemailer)
-        else {
+        } else {
             const mailOptions = {
-                from: `"${appName} Soporte" <${senderEmail}>`,
+                from: `"${config.appName} Soporte" <${config.senderEmail}>`,
                 to: toEmail,
                 subject: subject,
-                html: htmlTemplate,
+                html: htmlContent,
             };
 
             try {
@@ -715,12 +733,52 @@
                 return true;
             } catch (error) {
                 console.error('[Email SMTP Error] Falló el envío por SMTP:', error);
-                throw new Error('No se pudo enviar el correo de verificación mediante SMTP');
+                throw new Error('No se pudo enviar el correo mediante SMTP');
             }
         }
     };
 
-    module.exports = { sendVerificationEmail };
+    const sendVerificationEmail = async (toEmail, token, userName = 'Usuario') => {
+        if (process.env.MAIL_ENABLE_VERIFICATION !== 'true') return;
+
+        const config = getEmailConfig();
+        const verificationUrl = `${config.frontendUrl}/verify-email?token=${token}`;
+        const subject = `Verifica tu correo en ${config.appName}`;
+
+        const htmlContent = renderTemplate({
+            subject,
+            appName: config.appName,
+            logoUrl: config.logoUrl,
+            heading: `¡Bienvenido, ${userName}!`,
+            bodyText: `Nos alegra mucho que te hayas registrado. Para garantizar la seguridad de tu cuenta y completar el acceso, por favor confirma tu dirección de correo electrónico haciendo clic en el siguiente botón:`,
+            actionText: 'Verificar mi Correo',
+            actionUrl: verificationUrl,
+            securityNotice: `Si no solicitaste crear una cuenta en ${config.appName}, puedes ignorar este mensaje con total tranquilidad.`
+        });
+
+        await dispatchEmail(toEmail, userName, subject, htmlContent, config);
+    };
+
+    const sendPasswordResetEmail = async (toEmail, token, userName = 'Usuario') => {
+        const config = getEmailConfig();
+        const resetUrl = `${config.frontendUrl}/reset-password?token=${token}`;
+        const subject = `Recupera tu contraseña en ${config.appName}`;
+
+        const htmlContent = renderTemplate({
+            subject,
+            appName: config.appName,
+            logoUrl: config.logoUrl,
+            heading: `Recuperación de contraseña`,
+            bodyText: `Hola <strong>${userName}</strong>,<br><br>Has solicitado restablecer tu contraseña. Haz clic en el siguiente botón para continuar con el proceso:`,
+            actionText: 'Restablecer Contraseña',
+            actionUrl: resetUrl,
+            securityNotice: `Si no solicitaste este cambio, puedes ignorar este correo de forma segura. Tu contraseña actual no sufrirá cambios.`
+        });
+
+        await dispatchEmail(toEmail, userName, subject, htmlContent, config);
+    };
+
+    module.exports = { sendVerificationEmail, sendPasswordResetEmail };
     ```
 3. Crear el Servicio de Ingesta (`backend/src/services/systemLog.service.js`):
     ```js
@@ -1121,13 +1179,13 @@
 + Implementa la capa de orquestación de respuesta para cada dominio:
 1. `backend/src/controllers/auth.controller.js`: Login, registro, cambio de contraseña y refresco de tokens:
     ```js
-    // src/controllers/auth.controller.js
+    /* src/controllers/auth.controller.js */
     const bcrypt = require('bcryptjs');
     const jwt = require('jsonwebtoken');
     const crypto = require('crypto');
     const prisma = require('../config/prisma');
     const { getClientIp } = require('../utils/request.utils');
-    const { sendVerificationEmail } = require('../services/email.service');
+    const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email.service');
 
     const generateToken = (user, roles = [], permissions = []) => {
         return jwt.sign(
@@ -1423,7 +1481,86 @@
         }
     };
 
-    module.exports = { register, verifyEmail, login, getMe, logout };
+    const forgotPassword = async (req, res) => {
+        try {
+            const { email } = req.body;
+            const user = await prisma.user.findUnique({ where: { email } });
+
+            // Por seguridad, respondemos éxito aunque el usuario no exista para prevenir ataques de enumeración
+            if (!user || !user.isActive) {
+                return res.status(200).json({
+                    status: 'success',
+                    message: 'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.'
+                });
+            }
+
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            const tokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // Expira en 1 hora
+
+            // Guardamos el token en los campos de reseteo (puedes adaptarlo a tus columnas de prisma)
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    verificationToken: resetToken, // O resetPasswordToken
+                    tokenExpiresAt: tokenExpiresAt // O resetPasswordExpires
+                }
+            });
+
+            await sendPasswordResetEmail(user.email, resetToken, user.name);
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.'
+            });
+        } catch (error) {
+            console.error('Error en forgotPassword:', error);
+            return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+        }
+    };
+
+    const resetPassword = async (req, res) => {
+        try {
+            const { token, newPassword } = req.body;
+
+            if (!token || !newPassword) {
+                return res.status(400).json({ status: 'fail', message: 'Token y nueva contraseña requeridos' });
+            }
+
+            const user = await prisma.user.findFirst({
+                where: {
+                    verificationToken: token,
+                    tokenExpiresAt: { gte: new Date() }
+                }
+            });
+
+            if (!user) {
+                return res.status(400).json({ status: 'fail', message: 'Token inválido o expirado' });
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const passwordHash = await bcrypt.hash(newPassword, salt);
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    password: passwordHash,
+                    verificationToken: null,
+                    tokenExpiresAt: null,
+                    isVerified: true // Aseguramos que quede verificado al cambiar contraseña
+                }
+            });
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.'
+            });
+        } catch (error) {
+            console.error('Error en resetPassword:', error);
+            return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+        }
+    };
+
+    module.exports = { register, verifyEmail, login, getMe, logout, forgotPassword, resetPassword };
     ```
 2. `backend/src/controllers/profile.controller.js`: Gestión de perfil de usuario autenticado:
     ```js
@@ -2417,11 +2554,11 @@
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
 1. `backend/src/routes/auth.routes.js`: Rutas de autenticación (/api/v1/auth/*):
     ```js
-    // src/routes/auth.routes.js
+    /* src/routes/auth.routes.js */
     const express = require('express');
     const { body } = require('express-validator');
     const router = express.Router();
-    const { register, verifyEmail, login, getMe, logout } = require('../controllers/auth.controller');
+    const { register, verifyEmail, login, getMe, logout, forgotPassword, resetPassword } = require('../controllers/auth.controller');
     const { authenticateJWT } = require('../middlewares/auth.middleware');
     const validate = require('../middlewares/validate.middleware');
 
@@ -2439,16 +2576,29 @@
         validate,
     ];
 
+    const forgotPasswordValidation = [
+        body('email').isEmail().withMessage('Correo electrónico inválido'),
+        validate,
+    ];
+
+    const resetPasswordValidation = [
+        body('token').notEmpty().withMessage('El token es obligatorio'),
+        body('newPassword').isLength({ min: 6 }).withMessage('La contraseña debe tener mínimo 6 caracteres'),
+        validate,
+    ];
+
     // Rutas públicas
     router.post('/register', registerValidation, register);
     router.post('/login', loginValidation, login);
     router.get('/verify-email', verifyEmail);
+    router.post('/forgot-password', forgotPasswordValidation, forgotPassword);
+    router.post('/reset-password', resetPasswordValidation, resetPassword);
 
     // Rutas protegidas
     router.get('/me', authenticateJWT, getMe);
     router.post('/logout', authenticateJWT, logout);
 
-    module.exports = router;  
+    module.exports = router;
     ```
 2. `backend/src/routes/user.routes.js`: Rutas admimistración de usuarios (/api/v1/user/*):
     ```js
@@ -3072,14 +3222,15 @@
         ```
 
 ## 📌 Paso 11: Plantillas
-1. Crear plantilla para verificación de email `backend/src/templates/emails/verification.html`:
+1. Crear plantilla para emails `backend/src/templates/emails/base-email.html`:
     ```html
+    <!-- src/templates/emails/base-email.html -->
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verifica tu correo</title>
+        <title>{{subject}}</title>
     </head>
     <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f8fafc; padding: 40px 0;">
@@ -3098,17 +3249,17 @@
                         <!-- Cuerpo del Contenido -->
                         <tr>
                             <td style="padding: 40px 30px; color: #334155;">
-                                <h2 style="font-size: 22px; font-weight: 700; margin-top: 0; color: #0f172a;">¡Bienvenido, {{userName}}!</h2>
+                                <h2 style="font-size: 22px; font-weight: 700; margin-top: 0; color: #0f172a;">{{heading}}</h2>
                                 <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 30px;">
-                                    Nos alegra mucho que te hayas registrado. Para garantizar la seguridad de tu cuenta y completar el acceso, por favor confirma tu dirección de correo electrónico haciendo clic en el siguiente botón:
+                                    {{bodyText}}
                                 </p>
                                 
                                 <!-- Botón de Acción Principal -->
                                 <table border="0" cellpadding="0" cellspacing="0" width="100%">
                                     <tr>
                                         <td align="center">
-                                            <a href="{{verificationUrl}}" target="_blank" style="background-color: #059669; color: #ffffff; padding: 14px 28px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; display: inline-block; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);">
-                                                Verificar mi Correo
+                                            <a href="{{actionUrl}}" target="_blank" style="background-color: #059669; color: #ffffff; padding: 14px 28px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; display: inline-block; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);">
+                                                {{actionText}}
                                             </a>
                                         </td>
                                     </tr>
@@ -3118,7 +3269,7 @@
                                     Si el botón no funciona, también puedes copiar y pegar el siguiente enlace en tu navegador:
                                 </p>
                                 <p style="font-size: 12px; color: #059669; word-break: break-all; background-color: #f1f5f9; padding: 10px; border-radius: 6px;">
-                                    {{verificationUrl}}
+                                    {{actionUrl}}
                                 </p>
                             </td>
                         </tr>
@@ -3126,7 +3277,7 @@
                         <!-- Footer -->
                         <tr>
                             <td align="center" style="padding: 20px 30px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px;">
-                                <p style="margin: 0;">Si no solicitaste crear una cuenta en {{appName}}, puedes ignorar este mensaje con total tranquilidad.</p>
+                                <p style="margin: 0;">{{securityNotice}}</p>
                                 <p style="margin: 10px 0 0 0;">&copy; 2026 {{appName}}. Todos los derechos reservados.</p>
                             </td>
                         </tr>
@@ -3136,5 +3287,5 @@
             </tr>
         </table>
     </body>
-    </html>    
+    </html>  
     ```

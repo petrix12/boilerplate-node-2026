@@ -1,4 +1,4 @@
-// src/services/auth.service.js
+/* src/services/auth.service.js */
 import api from '@/api/axios';
 
 export const authService = {
@@ -36,5 +36,17 @@ export const authService = {
     async logout() {
         const response = await api.post('/auth/logout');
         return response.data;
-    }
+    },
+
+    // Recuperar password
+    async forgotPassword(email) {
+        const response = await api.post('/auth/forgot-password', { email });
+        return response.data;
+    },
+
+    // Resetear password
+    async resetPassword(data) {
+        const response = await api.post('/auth/reset-password', data);
+        return response.data;
+    }    
 };

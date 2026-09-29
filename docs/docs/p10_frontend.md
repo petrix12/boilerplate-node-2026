@@ -434,7 +434,7 @@
 5. Configuración de Vue Router con Guards (`src/router/index.js`)
     + Abre o crea el archivo `frontend/src/router/index.js` y reemplaza su contenido:
         ```js
-        // src/router/index.js
+        /* src/router/index.js */
         import { createRouter, createWebHistory } from 'vue-router';
         import { useAuthStore } from '../stores/auth.store';
 
@@ -445,6 +445,8 @@
                 { path: '/login', name: 'login', component: () => import('@/views/auth/LoginView.vue'), meta: { requiresGuest: true, title: 'Iniciar Sesión' } },
                 { path: '/register', name: 'register', component: () => import('@/views/auth/RegisterView.vue'), meta: { requiresGuest: true, title: 'Registro' } },
                 { path: '/verify-email', name: 'VerifyEmail', component: () => import('@/views/auth/VerifyEmailView.vue'), meta: { requiresGuest: true } },
+                { path: '/forgot-password', name: 'forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue') },
+                { path: '/reset-password', name: 'reset-password', component: () => import('@/views/auth/ResetPasswordView.vue') },
                 {
                     // Rutas protegidas que comparten el mismo Navbar sin pestañeos
                     path: '/',
@@ -601,7 +603,7 @@
 ## ⚡ Establecer los servicios (`src/services/`)
 1. Crear servicio `frontend/src/services/auth.service.js`
     ```js
-    // src/services/auth.service.js
+    /* src/services/auth.service.js */
     import api from '@/api/axios';
 
     export const authService = {
@@ -639,7 +641,19 @@
         async logout() {
             const response = await api.post('/auth/logout');
             return response.data;
-        }
+        },
+
+        // Recuperar password
+        async forgotPassword(email) {
+            const response = await api.post('/auth/forgot-password', { email });
+            return response.data;
+        },
+
+        // Resetear password
+        async resetPassword(data) {
+            const response = await api.post('/auth/reset-password', data);
+            return response.data;
+        }    
     };
     ```
     + Maneja únicamente la autenticación y la sesión del usuario actual.
@@ -1120,7 +1134,7 @@
 2. Formulario de Inicio de Sesión:
     + Crea el archivo `frontend/src/views/auth/LoginView.vue`:
         ```vue
-        // src/views/auth/LoginView.vue
+        <!-- src/views/auth/LoginView.vue -->
         <script setup>
         import { ref } from 'vue';
         import { useRouter } from 'vue-router';
@@ -1218,6 +1232,13 @@
                         >
                             {{ authStore.loading ? 'Cargando...' : 'Entrar' }}
                         </button>
+                        
+                        <!-- Enlace de contraseña olvidada alineado a la derecha -->
+                        <div class="flex justify-end mt-1.5">
+                            <router-link to="/forgot-password" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+                                ¿Olvidaste tu contraseña?
+                            </router-link>
+                        </div>
                     </form>
 
                     <!-- Divisor visual -->
@@ -1498,7 +1519,203 @@
             </div>
         </template>        
         ```
-5. Rediseñar la Landing Page:
+5. Vista de recuperaciónde password:
+    + Crea el archivo `frontend/src/views/auth/ForgotPasswordView.vue`:
+        ```vue
+        <!-- src/views/auth/ForgotPasswordView.vue -->
+        <script setup>
+        import { ref } from 'vue';
+        import { authService } from '@/services/auth.service';
+
+        const email = ref('');
+        const loading = ref(false);
+        const message = ref('');
+        const error = ref('');
+
+        const handleSubmit = async () => {
+            loading.value = true;
+            message.value = '';
+            error.value = '';
+
+            try {
+                const response = await authService.forgotPassword(email.value);
+                message.value = response.message || 'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.';
+                email.value = '';
+            } catch (err) {
+                error.value = err.response?.data?.message || 'Ocurrió un error al procesar la solicitud.';
+            } finally {
+                loading.value = false;
+            }
+        };
+        </script>
+
+        <template>
+            <div class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 text-slate-900 dark:text-slate-100">
+                <div class="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8">
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">¿Olvidaste tu contraseña?</h2>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                            Ingresa tu correo electrónico y te enviaremos un enlace para restablecerla.
+                        </p>
+                    </div>
+
+                    <!-- Alerta de éxito -->
+                    <div v-if="message" class="mb-4 p-4 text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/50 rounded-lg">
+                        {{ message }}
+                    </div>
+
+                    <!-- Alerta de error -->
+                    <div v-if="error" class="mb-4 p-4 text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/20 border border-rose-200 dark:border-rose-500/50 rounded-lg">
+                        {{ error }}
+                    </div>
+
+                    <form @submit.prevent="handleSubmit" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Correo electrónico</label>
+                            <input 
+                                type="email" 
+                                v-model="email" 
+                                required 
+                                placeholder="tu@correo.com"
+                                class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-200"
+                            />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            :disabled="loading"
+                            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg transition duration-200 disabled:opacity-50 cursor-pointer shadow-md"
+                        >
+                            {{ loading ? 'Enviando...' : 'Enviar enlace de recuperación' }}
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-6">
+                        <router-link to="/login" class="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+                            &larr; Volver al inicio de sesión
+                        </router-link>
+                    </div>
+                </div>
+            </div>
+        </template>        
+        ```
+6. Vista de reseto de password:
+    + Crea el archivo `frontend/src/views/auth/ResetPasswordView.vue`:
+        ```vue
+        <!-- src/views/auth/ResetPasswordView.vue -->
+        <script setup>
+        import { ref, onMounted } from 'vue';
+        import { useRoute, useRouter } from 'vue-router';
+        import { authService } from '@/services/auth.service';
+
+        const route = useRoute();
+        const router = useRouter();
+
+        const token = ref('');
+        const newPassword = ref('');
+        const confirmPassword = ref('');
+        const loading = ref(false);
+        const message = ref('');
+        const error = ref('');
+
+        onMounted(() => {
+            token.value = route.query.token || '';
+            if (!token.value) {
+                error.value = 'Token de recuperación inválido o ausente.';
+            }
+        });
+
+        const handleSubmit = async () => {
+            if (newPassword.value !== confirmPassword.value) {
+                error.value = 'Las contraseñas no coinciden.';
+                return;
+            }
+
+            loading.value = true;
+            message.value = '';
+            error.value = '';
+
+            try {
+                const response = await authService.resetPassword({
+                    token: token.value,
+                    newPassword: newPassword.value
+                });
+                message.value = response.message || 'Contraseña actualizada correctamente.';
+                setTimeout(() => {
+                    router.push('/login');
+                }, 3000);
+            } catch (err) {
+                error.value = err.response?.data?.message || 'El enlace ha expirado o es inválido.';
+            } finally {
+                loading.value = false;
+            }
+        };
+        </script>
+
+        <template>
+            <div class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 text-slate-900 dark:text-slate-100">
+                <div class="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8">
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Restablecer contraseña</h2>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                            Ingresa tu nueva contraseña para continuar.
+                        </p>
+                    </div>
+
+                    <!-- Alerta de éxito -->
+                    <div v-if="message" class="mb-4 p-4 text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/50 rounded-lg">
+                        {{ message }} Redirigiendo al login...
+                    </div>
+
+                    <!-- Alerta de error -->
+                    <div v-if="error" class="mb-4 p-4 text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/20 border border-rose-200 dark:border-rose-500/50 rounded-lg">
+                        {{ error }}
+                    </div>
+
+                    <form v-if="token" @submit.prevent="handleSubmit" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nueva contraseña</label>
+                            <input 
+                                type="password" 
+                                v-model="newPassword" 
+                                required 
+                                minlength="6"
+                                placeholder="Mínimo 6 caracteres"
+                                class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-200"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Confirmar nueva contraseña</label>
+                            <input 
+                                type="password" 
+                                v-model="confirmPassword" 
+                                required 
+                                minlength="6"
+                                placeholder="Repite tu contraseña"
+                                class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-200"
+                            />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            :disabled="loading"
+                            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg transition duration-200 disabled:opacity-50 cursor-pointer shadow-md"
+                        >
+                            {{ loading ? 'Actualizando...' : 'Actualizar contraseña' }}
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-6">
+                        <router-link to="/login" class="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+                            Ir al inicio de sesión
+                        </router-link>
+                    </div>
+                </div>
+            </div>
+        </template>        
+        ```
+7. Rediseñar la Landing Page:
     + Reemplaza el contenido de `frontend/src/views/HomeView.vue` para que la raíz / muestre una bienvenida profesional:
         ```vue
         <script setup>
@@ -1620,7 +1837,7 @@
             </div>
         </template>
         ```
-6. Crear el Layout Principal (`frontend/src/layouts/AppLayout.vue`)
+8. Crear el Layout Principal (`frontend/src/layouts/AppLayout.vue`)
     + Crea un layout que envuelva todas las páginas autenticadas:
         ```vue
         <script setup>
@@ -1661,7 +1878,7 @@
         }
         </style>
         ```
-7. Vista Protegida del Dashboard:
+9. Vista Protegida del Dashboard:
     + Crea el archivo `frontend/src/views/DashboardView.vue`:
         ```vue
         <script setup>
@@ -1835,7 +2052,7 @@
             </div>
         </template>
         ```
-8. Vista de Configuración / Perfil (`frontend/src/views/ProfileView.vue`)
+10. Vista de Configuración / Perfil (`frontend/src/views/ProfileView.vue`)
     + Crearemos la nueva pantalla de perfil limpia y estructurada:
         ```vue
         <!-- src/views/ProfileView.vue -->
@@ -2263,7 +2480,7 @@
             </div>
         </template>
         ```
-9.  Limpiar `App.vue`:
+11. Limpiar `App.vue`:
     + Abre `frontend/src/App.vue` y reemplaza todo su contenido con esto:
         ```vue
         <script setup>
@@ -2276,7 +2493,7 @@
             <RouterView />
         </template>
         ```
-10. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
+12. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
     ```vue
     <template>
         <div class="max-w-7xl mx-auto p-6 space-y-6">
@@ -2385,7 +2602,7 @@
         const isAiActive = computed(() => authStore.aiDiagnosticActive);
     </script>
     ```
-11. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
+13. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
     + Crea la carpeta src/views/admin/ si no existe y añade la vista:
         ```vue
         <!-- src/views/admin/UsersAdminView.vue -->
@@ -3118,7 +3335,7 @@
             </div>
         </template>
         ```
-12. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
+14. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
     + Crea el componente `RolesAdminView.vue` para la interfaz de gestión de roles y asignación de permisos:
         ```vue
         <!-- src/views/admin/RolesAdminView.vue -->
@@ -3469,7 +3686,7 @@
             </div>
         </template>
         ```
-13. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
+15. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
     ```vue
     <script setup>
     import { ref, onMounted, onUnmounted } from 'vue';
@@ -3838,7 +4055,7 @@
         </div>
     </template>
     ```
-14. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
+16. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
     ```vue
     <script setup>
     import { computed, onMounted } from 'vue';
@@ -4017,7 +4234,7 @@
         </div>
     </template>  
     ```
-15. Crear Vista 404 (not-found):
+17. Crear Vista 404 (not-found):
     + Crea el archivo `frontend/src/views/errors/NotFoundView.vue`:
         ```vue
         <template>
@@ -4036,7 +4253,7 @@
             </div>
         </template>        
         ```
-16. Crear Vista 403 (forbidden):
+18. Crear Vista 403 (forbidden):
     + Crea el archivo `frontend/src/views/errors/ForbiddenView.vue`:
         ```vue
         <template>

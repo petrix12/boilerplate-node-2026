@@ -85,7 +85,6 @@
     + ◻️ Apple (Sign in with Apple).
     + ◻️ Meta (Facebook Login) / Instagram.
     + ◻️ X (antes Twitter) / LinkedIn.
-+ ◻️ Recuperar credenciales (¿Olvidó su password?).
 
 
 ### Terminadas
@@ -108,6 +107,7 @@
 + ✅ Modalidad modo oscuro y modo claro.
 + ✅ Solicitar autenticación de email.
 + ✅ Crear backend/.env.example y frontend/.env.example
++ ✅ Recuperar credenciales (¿Olvidó su password?).
 
 
 

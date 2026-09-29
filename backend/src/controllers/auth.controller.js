@@ -1,10 +1,10 @@
-// src/controllers/auth.controller.js
+/* src/controllers/auth.controller.js */
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const prisma = require('../config/prisma');
 const { getClientIp } = require('../utils/request.utils');
-const { sendVerificationEmail } = require('../services/email.service');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email.service');
 
 const generateToken = (user, roles = [], permissions = []) => {
     return jwt.sign(
@@ -300,4 +300,83 @@ const logout = async (req, res) => {
     }
 };
 
-module.exports = { register, verifyEmail, login, getMe, logout };
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        // Por seguridad, respondemos éxito aunque el usuario no exista para prevenir ataques de enumeración
+        if (!user || !user.isActive) {
+            return res.status(200).json({
+                status: 'success',
+                message: 'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.'
+            });
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const tokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // Expira en 1 hora
+
+        // Guardamos el token en los campos de reseteo (puedes adaptarlo a tus columnas de prisma)
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                verificationToken: resetToken, // O resetPasswordToken
+                tokenExpiresAt: tokenExpiresAt // O resetPasswordExpires
+            }
+        });
+
+        await sendPasswordResetEmail(user.email, resetToken, user.name);
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.'
+        });
+    } catch (error) {
+        console.error('Error en forgotPassword:', error);
+        return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({ status: 'fail', message: 'Token y nueva contraseña requeridos' });
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                verificationToken: token,
+                tokenExpiresAt: { gte: new Date() }
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({ status: 'fail', message: 'Token inválido o expirado' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(newPassword, salt);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: passwordHash,
+                verificationToken: null,
+                tokenExpiresAt: null,
+                isVerified: true // Aseguramos que quede verificado al cambiar contraseña
+            }
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.'
+        });
+    } catch (error) {
+        console.error('Error en resetPassword:', error);
+        return res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+    }
+};
+
+module.exports = { register, verifyEmail, login, getMe, logout, forgotPassword, resetPassword };

@@ -1,4 +1,4 @@
-// src/views/auth/LoginView.vue
+<!-- src/views/auth/LoginView.vue -->
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -96,6 +96,13 @@ const handleSubmit = async () => {
                 >
                     {{ authStore.loading ? 'Cargando...' : 'Entrar' }}
                 </button>
+                
+                <!-- Enlace de contraseña olvidada alineado a la derecha -->
+                <div class="flex justify-end mt-1.5">
+                    <router-link to="/forgot-password" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">
+                        ¿Olvidaste tu contraseña?
+                    </router-link>
+                </div>
             </form>
 
             <!-- Divisor visual -->
