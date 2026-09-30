@@ -8,7 +8,7 @@ import 'flatpickr/dist/themes/dark.css';
 import { Spanish } from 'flatpickr/dist/l10n/es.js';
 import PageLayout from '@/components/common/PageLayout.vue';
 import AdminTableLayout from '@/components/common/AdminTableLayout.vue';
-import BaseModal from '@/components/common/BaseModal.vue';
+import AuditDetailModal from '@/components/admin/AuditDetailModal.vue';
 
 const logs = ref([]);
 const loading = ref(false);
@@ -65,7 +65,6 @@ const fetchLogs = async (page = 1) => {
             sortOrder: sortOrder.value
         });
 
-        // Extrae la data directo del payload estandarizado del backend
         const resData = response.data || response;
         logs.value = resData.logs || [];
         pagination.value = resData.pagination || { page: 1, limit: 15, total: 0, totalPages: 1 };
@@ -112,16 +111,6 @@ const formatDate = (dateString) => {
     });
 };
 
-const formatJsonDetails = (details) => {
-    if (!details) return '';
-    try {
-        const parsed = typeof details === 'string' ? JSON.parse(details) : details;
-        return JSON.stringify(parsed, null, 2);
-    } catch (e) {
-        return details;
-    }
-};
-
 onMounted(() => {
     fetchLogs();
 
@@ -163,7 +152,6 @@ onUnmounted(() => {
         :backTo="'/admin'"
         backText="Volver al Panel Admin"
     >
-        <!-- Slot para Botones de Acción (Refrescar) -->
         <template #actions>
             <button 
                 @click="fetchLogs" 
@@ -173,7 +161,6 @@ onUnmounted(() => {
             </button>
         </template>
 
-        <!-- Slot para Filtros -->
         <template #filters>
             <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
@@ -224,7 +211,6 @@ onUnmounted(() => {
             </div>
         </template>
 
-        <!-- Contenido Principal usando AdminTableLayout con paginación de servidor centralizada -->
         <AdminTableLayout 
             :data="logs" 
             :columns="[]"
@@ -233,7 +219,6 @@ onUnmounted(() => {
             :total="pagination.total"
             @page-change="changePage"
         >
-            <!-- Sobrescribimos exclusivamente la tabla manteniendo el ordenamiento manual -->
             <template #table>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
@@ -323,33 +308,12 @@ onUnmounted(() => {
             </template>
         </AdminTableLayout>
 
-        <!-- Slot para Modales -->
         <template #modales>
-            <!-- Modal de Detalles JSON -->
-            <BaseModal
+            <AuditDetailModal 
                 v-model="isDetailModalOpen"
-                title="Detalles del Evento"
-                max-width="max-w-2xl"
+                :log="selectedLogModal"
                 @close="selectedLogModal = null"
-            >
-                <div v-if="selectedLogModal" class="space-y-4">
-                    <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                        {{ selectedLogModal.action }} - {{ formatDate(selectedLogModal.createdAt) }}
-                    </div>    
-                    <div class="bg-slate-900 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 overflow-y-auto overflow-x-hidden max-h-[50vh] max-w-full">
-                        <pre class="text-yellow-600 dark:text-yellow-400 font-mono text-xs whitespace-pre-wrap break-all leading-relaxed select-all">{{ formatJsonDetails(selectedLogModal.details) }}</pre>
-                    </div>
-                </div>
-
-                <template #footer>
-                    <button 
-                        @click="isDetailModalOpen = false; selectedLogModal = null" 
-                        class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
-                    >
-                        Cerrar
-                    </button>
-                </template>
-            </BaseModal>
+            />
         </template>
     </PageLayout>
 </template>
