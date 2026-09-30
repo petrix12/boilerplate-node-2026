@@ -1,25 +1,29 @@
+<!-- src/views/admin/AdminDashboardView.vue -->
+<script setup>
+    import { computed, onMounted } from 'vue';
+    import { useAuthStore } from '@/stores/auth.store';
+    import { UsersIcon, ShieldCheckIcon, DocumentChartBarIcon, CpuChipIcon } from '@heroicons/vue/24/outline';
+    import PageLayout from '@/components/common/PageLayout.vue';
+
+    const authStore = useAuthStore();
+
+    // Aseguramos que si por alguna razón el user no está completo al entrar, se consulte al backend
+    onMounted(async () => {
+        if (authStore.token && (!authStore.user || !authStore.user.hasOwnProperty('aiDiagnostic'))) {
+            await authStore.fetchUser();
+        }
+    });
+
+    const isAiActive = computed(() => authStore.aiDiagnosticActive);
+</script>
+
 <template>
-    <div class="max-w-7xl mx-auto p-6 space-y-6">
-        <!-- Header / Tarjeta de Encabezado con Botón de Retorno -->
-        <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
-            <div>
-                <router-link 
-                    to="/dashboard" 
-                    class="inline-flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors group"
-                >
-                    <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                    <span>Volver al Dashboard</span>
-                </router-link>
-            </div>
-
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Panel de Administración</h1>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Gestiona la configuración global de la plataforma, accesos y permisos.</p>
-                </div>
-            </div>
-        </div>
-
+    <PageLayout 
+        title="Panel de Administración" 
+        description="Gestiona la configuración global de la plataforma, accesos y permisos."
+        :backTo="'/dashboard'"
+        backText="Volver al Dashboard"
+    >
         <!-- Grid de Accesos Directos a Módulos Admin (Cada uno con su identidad de color intacta) -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
@@ -85,22 +89,5 @@
             </router-link>
 
         </div>
-    </div>
+    </PageLayout>
 </template>
-
-<script setup>
-    import { computed, onMounted } from 'vue';
-    import { useAuthStore } from '@/stores/auth.store';
-    import { ChevronLeftIcon, UsersIcon, ShieldCheckIcon, DocumentChartBarIcon, CpuChipIcon } from '@heroicons/vue/24/outline';
-
-    const authStore = useAuthStore();
-
-    // Aseguramos que si por alguna razón el user no está completo al entrar, se consulte al backend
-    onMounted(async () => {
-        if (authStore.token && (!authStore.user || !authStore.user.hasOwnProperty('aiDiagnostic'))) {
-            await authStore.fetchUser();
-        }
-    });
-
-    const isAiActive = computed(() => authStore.aiDiagnosticActive);
-</script>

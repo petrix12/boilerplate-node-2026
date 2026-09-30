@@ -1,10 +1,11 @@
 <!-- src/views/admin/RolesAdminView.vue -->
 <script setup>
-import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { ref, computed, onMounted } from 'vue';
 import { roleService } from '@/services';
 import { useAuthStore } from '@/stores/auth.store';
 import { getSwalTheme } from '@/utils/swal';
+import PageLayout from '@/components/common/PageLayout.vue';
 
 // Instancia del store para acceder a los getters
 const authStore = useAuthStore();
@@ -123,7 +124,6 @@ const confirmDelete = async (role) => {
         try {
             await roleService.deleteRole(role.id);
             
-            // Notificación de éxito al eliminar
             getSwalTheme().fire({
                 title: '¡Eliminado!',
                 text: 'El rol ha sido eliminado correctamente.',
@@ -158,117 +158,97 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col">
-        <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
-            
-            <!-- Cabecera envuelta en tarjeta -->
-            <div class="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-6 shadow-xl">
-                <!-- Botón Volver al Panel -->
-                <div class="mb-4">
-                    <router-link 
-                        to="/admin" 
-                        class="inline-flex items-center space-x-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors group"
-                    >
-                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                        <span>Volver al Panel Admin</span>
-                    </router-link>
-                </div>
+    <PageLayout 
+        title="Gestión de Roles" 
+        description="Administra los roles del sistema y configura las acciones permitidas para cada uno."
+        :backTo="'/admin'"
+        backText="Volver al Panel Admin"
+    >
+        <!-- Slot de acciones del encabezado -->
+        <template #actions>
+            <button 
+                v-if="authStore.hasPermission('roles:create')"
+                @click="openModal()"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30 shrink-0 cursor-pointer"
+            >
+                <PlusIcon class="w-5 h-5" />
+                <span>Nuevo Rol</span>
+            </button>
+        </template>
 
-                <!-- Título, Descripción y Acción -->
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                            <span>Gestión de Roles</span>
-                        </h1>
-                        <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">
-                            Administra los roles del sistema y configura las acciones permitidas para cada uno.
-                        </p>
-                    </div>
-                    <button 
-                        v-if="authStore.hasPermission('roles:create')"
-                        @click="openModal()"
-                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30 shrink-0"
-                    >
-                        <PlusIcon class="w-5 h-5" />
-                        <span>Nuevo Rol</span>
-                    </button>
-                </div>
-            </div>        
-
-            <!-- Tabla de Roles -->
-            <div class="w-full bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-x-auto shadow-xl">
-                <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-                    <thead class="bg-slate-100 dark:bg-slate-900/50 text-slate-700 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                        <tr>
-                            <th class="px-6 py-3">Nombre del Rol</th>
-                            <th class="px-6 py-3">Descripción</th>
-                            <th class="px-6 py-3">Usuarios</th>
-                            <th class="px-6 py-3">Permisos Asignados</th>
-                            <th class="px-6 py-3 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
-                        <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                            <td class="px-6 py-4 font-semibold text-slate-900 dark:text-white">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-bold border" :class="getRoleBadgeClass(role.name)">
-                                    {{ role.name }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">{{ role.description || 'Sin descripción' }}</td>
-                            <td class="px-6 py-4 text-slate-700 dark:text-slate-300">{{ role.userCount }} usuario(s)</td>
-                            <!-- Columna Permisos Asignados -->
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span 
-                                    v-if="role.name === 'SUPER_ADMIN'"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-500/20"
+        <!-- Contenido principal: Tabla de Roles -->
+        <div class="w-full bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-x-auto shadow-xl">
+            <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                <thead class="bg-slate-100 dark:bg-slate-900/50 text-slate-700 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th class="px-6 py-3">Nombre del Rol</th>
+                        <th class="px-6 py-3">Descripción</th>
+                        <th class="px-6 py-3">Usuarios</th>
+                        <th class="px-6 py-3">Permisos Asignados</th>
+                        <th class="px-6 py-3 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
+                    <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-slate-900 dark:text-white">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold border" :class="getRoleBadgeClass(role.name)">
+                                {{ role.name }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">{{ role.description || 'Sin descripción' }}</td>
+                        <td class="px-6 py-4 text-slate-700 dark:text-slate-300">{{ role.userCount }} usuario(s)</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span 
+                                v-if="role.name === 'SUPER_ADMIN'"
+                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-500/20"
+                            >
+                                Acceso Total (Global)
+                            </span>
+                            <span 
+                                v-else
+                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50"
+                            >
+                                {{ role.permissions ? role.permissions.length : 0 }} permiso(s)
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <button 
+                                    v-if="authStore.hasPermission('roles:update')"
+                                    @click="openModal(role)"
+                                    class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors cursor-pointer"
+                                    :title="role.name === 'SUPER_ADMIN' ? 'Ver detalles del rol' : 'Editar rol'"
                                 >
-                                    Acceso Total (Global)
-                                </span>
-                                <span 
-                                    v-else
-                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50"
+                                    <PencilIcon class="w-4 h-4" />
+                                </button>
+                                
+                                <button 
+                                    v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
+                                    @click="confirmDelete(role)"
+                                    class="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 rounded-lg transition-colors cursor-pointer"
+                                    title="Eliminar rol"
                                 >
-                                    {{ role.permissions ? role.permissions.length : 0 }} permiso(s)
-                                </span>
-                            </td>
-                            <!-- Columna Acciones en la tabla -->
-                            <td class="px-6 py-4 whitespace-nowrap text-right">
-                                <div class="flex items-center justify-end gap-2">
-                                    <button 
-                                        v-if="authStore.hasPermission('roles:update')"
-                                        @click="openModal(role)"
-                                        class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors"
-                                        :title="role.name === 'SUPER_ADMIN' ? 'Ver detalles del rol' : 'Editar rol'"
-                                    >
-                                        <PencilIcon class="w-4 h-4" />
-                                    </button>
-                                    
-                                    <button 
-                                        v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
-                                        @click="confirmDelete(role)"
-                                        class="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 rounded-lg transition-colors"
-                                        title="Eliminar rol"
-                                    >
-                                        <TrashIcon class="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                                    <TrashIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-            <!-- MODAL CREACIÓN / EDICIÓN -->
+        <!-- Slot para Modales -->
+        <template #modales>
             <div 
                 v-if="isModalOpen" 
                 class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm p-3 sm:p-4"
             >
                 <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
                     
-                    <!-- Header -->
+                    <!-- Header del Modal -->
                     <div class="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
                         <h2 class="text-lg font-bold text-slate-900 dark:text-white">{{ targetRole ? 'Editar Rol' : 'Crear Nuevo Rol' }}</h2>
-                        <button type="button" @click="isModalOpen = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1">✕</button>
+                        <button type="button" @click="isModalOpen = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 cursor-pointer">✕</button>
                     </div>
 
                     <!-- Formulario con scroll vertical -->
@@ -314,7 +294,7 @@ onMounted(() => {
                                                     type="checkbox" 
                                                     :value="perm.action" 
                                                     v-model="form.permissions"
-                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-600 focus:ring-purple-500"
+                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-600 focus:ring-purple-500 cursor-pointer"
                                                 />
                                                 <span class="break-all font-medium">{{ perm.action }}</span>
                                             </label>
@@ -326,7 +306,7 @@ onMounted(() => {
 
                         <!-- Footer con Botones -->
                         <div class="flex justify-end space-x-3 p-4 sm:p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/90 shrink-0">
-                            <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                            <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
                                 {{ targetRole?.name === 'SUPER_ADMIN' ? 'Cerrar' : 'Cancelar' }}
                             </button>
                             
@@ -334,7 +314,7 @@ onMounted(() => {
                                 v-if="targetRole?.name !== 'SUPER_ADMIN'"
                                 type="submit" 
                                 :disabled="saving" 
-                                class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20"
+                                class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20 cursor-pointer"
                             >
                                 {{ saving ? 'Guardando...' : 'Guardar Rol' }}
                             </button>
@@ -342,6 +322,6 @@ onMounted(() => {
                     </form>
                 </div>
             </div>
-        </div>
-    </div>
+        </template>
+    </PageLayout>
 </template>

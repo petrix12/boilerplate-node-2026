@@ -78,6 +78,7 @@
 + ◻️ Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
++ ◻️ Pedir repetir contraseña tanto en el register como en el profile.
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ◻️ GitHub.
@@ -108,6 +109,7 @@
 + ✅ Solicitar autenticación de email.
 + ✅ Crear backend/.env.example y frontend/.env.example
 + ✅ Recuperar credenciales (¿Olvidó su password?).
++ ✅ Mejorar el layout.
 
 
 

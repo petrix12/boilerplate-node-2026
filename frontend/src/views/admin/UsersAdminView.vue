@@ -1,10 +1,11 @@
 <!-- src/views/admin/UsersAdminView.vue -->
 <script setup>
-import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, ChevronLeftIcon, MagnifyingGlassIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
+import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, MagnifyingGlassIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import { ref, onMounted } from 'vue';
 import { userService, roleService } from '@/services';
 import { useAuthStore } from '@/stores/auth.store';
 import { getSwalTheme } from '@/utils/swal';
+import PageLayout from '@/components/common/PageLayout.vue';
 
 // Instancia del store para acceder a los getters
 const authStore = useAuthStore();
@@ -379,37 +380,26 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 py-8 px-4 sm:px-6 lg:px-8 transition-colors">
-        <div class="max-w-7xl mx-auto space-y-6">
-            <!-- Encabezado en Tarjeta -->
-            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-6 shadow-sm space-y-4 transition-colors">
-                <div>
-                    <router-link 
-                        to="/admin" 
-                        class="inline-flex items-center space-x-2 text-sm text-emerald-400 hover:text-emerald-300 transition-colors group"
-                    >
-                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                        <span>Volver al Panel Admin</span>
-                    </router-link>
-                </div>
+    <PageLayout 
+        title="Gestión de Usuarios" 
+        description="Administra los permisos y accesos de la plataforma en tiempo real."
+        :backTo="'/admin'"
+        backText="Volver al Panel Admin"
+    >
+        <!-- Slot para Botón de Acción Principal -->
+        <template #actions>
+            <button
+                v-if="authStore.hasPermission('users:create')"
+                @click="openUserModal(null)"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-emerald-600/35 shrink-0 cursor-pointer"
+            >
+                <PlusIcon class="w-5 h-5" />
+                Nuevo Usuario
+            </button>
+        </template>
 
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Gestión de Usuarios</h1>
-                        <p class="text-slate-600 dark:text-slate-400 text-sm">Administra los permisos y accesos de la plataforma en tiempo real.</p>
-                    </div>
-                    <button
-                        v-if="authStore.hasPermission('users:create')"
-                        @click="openUserModal(null)"
-                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-emerald-600/35 shrink-0"
-                    >
-                        <PlusIcon class="w-5 h-5" />
-                        Nuevo Usuario
-                    </button>
-                </div>
-            </div>
-
-            <!-- Barra de Búsqueda -->
+        <!-- Slot para Filtros (Barra de Búsqueda) -->
+        <template #filters>
             <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 shadow-sm rounded-2xl p-4 transition-colors">
                 <div class="relative">
                     <input
@@ -422,140 +412,143 @@ onMounted(() => {
                     <MagnifyingGlassIcon class="w-5 h-5 text-slate-400 absolute left-3 top-3" />
                 </div>
             </div>
+        </template>
 
-            <!-- Tabla de Usuarios (Contenedor Responsivo) -->
-            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm overflow-hidden transition-colors">
-                <div v-if="loading" class="p-12 text-center text-slate-400">
-                    <span class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-2"></span>
-                    <p>Cargando usuarios...</p>
-                </div>
-
-                <div v-else-if="users.length === 0" class="p-12 text-center text-slate-400">
-                    No se encontraron usuarios que coincidan con la búsqueda.
-                </div>
-
-                <div v-else class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none transition-colors">
-                                <th @click="handleSort('name')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
-                                    <div class="flex items-center space-x-1">
-                                        <span>Usuario</span>
-                                        <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'name' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'name' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
-                                        </span>
-                                    </div>
-                                </th>
-                                <th class="px-6 py-3.5">Roles Asignados</th>
-                                <th @click="handleSort('createdAt')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
-                                    <div class="flex items-center space-x-1">
-                                        <span>Fecha Registro</span>
-                                        <span class="inline-flex flex-col text-[10px] leading-none">
-                                            <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
-                                            <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
-                                        </span>
-                                    </div>
-                                </th>
-                                <th class="px-6 py-3.5 text-right">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
-                            <tr v-for="user in users" :key="user.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 uppercase border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0 transition-colors">
-                                            <img 
-                                                v-if="user.avatarUrl || user.avatar" 
-                                                :src="user.avatarUrl || user.avatar" 
-                                                :alt="user.name"
-                                                class="w-full h-full object-cover" 
-                                            />
-                                            <span v-else>{{ user.name ? user.name.charAt(0) : 'U' }}</span>
-                                        </div>
-                                        <div class="ml-4">
-                                            <div class="font-medium text-slate-900 dark:text-slate-200">{{ user.name }}</div>
-                                            <div class="text-xs text-slate-500 dark:text-slate-400">{{ user.email }}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex flex-wrap gap-1.5">
-                                        <span
-                                            v-for="role in user.roles"
-                                            :key="role"
-                                            :class="getRoleBadgeClass(role)"
-                                            class="px-2.5 py-0.5 rounded-full text-xs font-semibold border"
-                                        >
-                                            {{ role }}
-                                        </span>
-                                        <span v-if="user.roles.length === 0" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600 transition-colors">
-                                            Sin permisos (Guest)
-                                        </span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
-                                    {{ formatDate(user.createdAt) }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right font-medium">
-                                    <div class="inline-flex items-center justify-end space-x-2">
-                                        <button
-                                            v-if="authStore.hasPermission('users:update')"
-                                            @click="openUserModal(user)"
-                                            title="Editar datos del usuario"
-                                            class="h-9 w-9 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all"
-                                        >
-                                            <PencilSquareIcon class="w-4 h-4" />
-                                        </button>
-
-                                        <button
-                                            v-if="authStore.hasPermission('users:delete')"
-                                            @click="confirmDeleteUser(user)"
-                                            title="Eliminar usuario"
-                                            class="h-9 w-9 inline-flex items-center justify-center bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded-lg transition-all"
-                                        >
-                                            <TrashIcon class="w-4 h-4" />
-                                        </button>
-
-                                        <button
-                                            v-if="authStore.hasPermission('roles:update')"
-                                            @click="openRoleModal(user)"
-                                            title="Editar Roles"
-                                            class="h-9 px-3 inline-flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white rounded-lg transition-all"
-                                        >
-                                            <UserGroupIcon class="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Paginación -->
-                <div v-if="pagination.totalPages > 1" class="px-6 py-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between transition-colors">
-                    <span class="text-sm text-slate-600 dark:text-slate-400">
-                        Página {{ pagination.page }} de {{ pagination.totalPages }}
-                    </span>
-                    <div class="flex gap-2">
-                        <button
-                            :disabled="pagination.page === 1"
-                            @click="changePage(pagination.page - 1)"
-                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                        >
-                            Anterior
-                        </button>
-                        <button
-                            :disabled="pagination.page === pagination.totalPages"
-                            @click="changePage(pagination.page + 1)"
-                            class="px-3 py-1 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                        >
-                            Siguiente
-                        </button>
-                    </div>
-                </div>
+        <!-- Contenido principal: Tabla de Usuarios -->
+        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm overflow-hidden transition-colors">
+            <div v-if="loading" class="p-12 text-center text-slate-400">
+                <span class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-2"></span>
+                <p>Cargando usuarios...</p>
             </div>
 
+            <div v-else-if="users.length === 0" class="p-12 text-center text-slate-400">
+                No se encontraron usuarios que coincidan con la búsqueda.
+            </div>
+
+            <div v-else class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none transition-colors">
+                            <th @click="handleSort('name')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
+                                <div class="flex items-center space-x-1">
+                                    <span>Usuario</span>
+                                    <span class="inline-flex flex-col text-[10px] leading-none">
+                                        <span :class="sortBy === 'name' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
+                                        <span :class="sortBy === 'name' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
+                                    </span>
+                                </div>
+                            </th>
+                            <th class="px-6 py-3.5">Roles Asignados</th>
+                            <th @click="handleSort('createdAt')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
+                                <div class="flex items-center space-x-1">
+                                    <span>Fecha Registro</span>
+                                    <span class="inline-flex flex-col text-[10px] leading-none">
+                                        <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
+                                        <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
+                                    </span>
+                                </div>
+                            </th>
+                            <th class="px-6 py-3.5 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
+                        <tr v-for="user in users" :key="user.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 uppercase border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0 transition-colors">
+                                        <img 
+                                            v-if="user.avatarUrl || user.avatar" 
+                                            :src="user.avatarUrl || user.avatar" 
+                                            :alt="user.name"
+                                            class="w-full h-full object-cover" 
+                                        />
+                                        <span v-else>{{ user.name ? user.name.charAt(0) : 'U' }}</span>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="font-medium text-slate-900 dark:text-slate-200">{{ user.name }}</div>
+                                        <div class="text-xs text-slate-500 dark:text-slate-400">{{ user.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span
+                                        v-for="role in user.roles"
+                                        :key="role"
+                                        :class="getRoleBadgeClass(role)"
+                                        class="px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+                                    >
+                                        {{ role }}
+                                    </span>
+                                    <span v-if="user.roles.length === 0" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600 transition-colors">
+                                        Sin permisos (Guest)
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
+                                {{ formatDate(user.createdAt) }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right font-medium">
+                                <div class="inline-flex items-center justify-end space-x-2">
+                                    <button
+                                        v-if="authStore.hasPermission('users:update')"
+                                        @click="openUserModal(user)"
+                                        title="Editar datos del usuario"
+                                        class="h-9 w-9 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all cursor-pointer"
+                                    >
+                                        <PencilSquareIcon class="w-4 h-4" />
+                                    </button>
+
+                                    <button
+                                        v-if="authStore.hasPermission('users:delete')"
+                                        @click="confirmDeleteUser(user)"
+                                        title="Eliminar usuario"
+                                        class="h-9 w-9 inline-flex items-center justify-center bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded-lg transition-all cursor-pointer"
+                                    >
+                                        <TrashIcon class="w-4 h-4" />
+                                    </button>
+
+                                    <button
+                                        v-if="authStore.hasPermission('roles:update')"
+                                        @click="openRoleModal(user)"
+                                        title="Editar Roles"
+                                        class="h-9 px-3 inline-flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white rounded-lg transition-all cursor-pointer"
+                                    >
+                                        <UserGroupIcon class="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div v-if="pagination.totalPages > 1" class="px-6 py-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between transition-colors">
+                <span class="text-sm text-slate-600 dark:text-slate-400">
+                    Página {{ pagination.page }} de {{ pagination.totalPages }}
+                </span>
+                <div class="flex gap-2">
+                    <button
+                        :disabled="pagination.page === 1"
+                        @click="changePage(pagination.page - 1)"
+                        class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm cursor-pointer"
+                    >
+                        Anterior
+                    </button>
+                    <button
+                        :disabled="pagination.page === pagination.totalPages"
+                        @click="changePage(pagination.page + 1)"
+                        class="px-3 py-1 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm cursor-pointer"
+                    >
+                        Siguiente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slot para Modales -->
+        <template #modales>
             <!-- Modal de Asignación de Roles -->
             <div v-if="selectedUser" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
                 <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl transition-colors">
@@ -570,7 +563,7 @@ onMounted(() => {
                                 type="checkbox"
                                 :value="role"
                                 v-model="modalRoles"
-                                class="w-4 h-4 text-emerald-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500"
+                                class="w-4 h-4 text-emerald-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500 cursor-pointer"
                             />
                             <span class="text-sm font-medium text-slate-900 dark:text-slate-200">{{ role }}</span>
                         </label>
@@ -579,14 +572,14 @@ onMounted(() => {
                     <div class="flex justify-end gap-3">
                         <button
                             @click="selectedUser = null"
-                            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm"
+                            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm cursor-pointer"
                         >
                             Cancelar
                         </button>
                         <button
                             @click="saveUserRoles"
                             :disabled="saving"
-                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm"
+                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm cursor-pointer"
                         >
                             {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
                         </button>
@@ -630,7 +623,6 @@ onMounted(() => {
                                 <label class="block text-xs font-semibold uppercase text-slate-400">
                                     Contraseña {{ targetUser ? '(Opcional / Dejar en blanco)' : '' }}
                                 </label>
-                                <!-- Nota informativa dinámica solo para la creación -->
                                 <span v-if="!targetUser" class="text-[11px] text-amber-600 dark:text-amber-400/90 font-medium">
                                     Si se deja vacía, será: <code class="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-mono">{{ DEFAULT_PASSWORD }}</code>
                                 </span>
@@ -645,7 +637,7 @@ onMounted(() => {
                                 <button 
                                     type="button"
                                     @click="showUserPassword = !showUserPassword"
-                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer"
                                 >
                                     <EyeIcon v-if="!showUserPassword" class="w-5 h-5" />
                                     <EyeSlashIcon v-else class="w-5 h-5" />
@@ -694,7 +686,7 @@ onMounted(() => {
                                         type="button" 
                                         :disabled="uploadingAvatar"
                                         @click="removeAvatar"
-                                        class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 font-medium"
+                                        class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 font-medium cursor-pointer"
                                     >
                                         Eliminar
                                     </button>
@@ -709,14 +701,14 @@ onMounted(() => {
                             <button
                                 type="button"
                                 @click="isUserModalOpen = false"
-                                class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm"
+                                class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm cursor-pointer"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
                                 :disabled="saving || uploadingAvatar"
-                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm"
+                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm cursor-pointer"
                             >
                                 {{ saving ? 'Guardando...' : (targetUser ? 'Guardar Cambios' : 'Crear Usuario') }}
                             </button>
@@ -724,6 +716,6 @@ onMounted(() => {
                     </form>
                 </div>
             </div>
-        </div>
-    </div>
+        </template>
+    </PageLayout>
 </template>

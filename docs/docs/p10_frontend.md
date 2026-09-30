@@ -1010,7 +1010,103 @@
             </header>
         </template>
         ```
-2. Componente para login con Google:
+2. Componente para vistas estándar:
+    + Crea el archivo `frontend/src/components/common/PageLayout.vue`:
+        ```vue
+        <!-- src/components/common/PageLayout.vue -->
+        <script setup>
+        import { computed } from 'vue';
+        import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+
+        const appName = import.meta.env.VITE_APP_NAME || 'Mi Aplicación';
+        const currentYear = new Date().getFullYear();
+
+        // 1. Asignamos los props a una constante para poder acceder a ellos
+        const props = defineProps({
+            title: {
+                type: String,
+                required: true
+            },
+            description: {
+                type: String,
+                default: ''
+            },
+            backTo: {
+                type: [String, Object],
+                default: null
+            },
+            backText: {
+                type: String,
+                default: 'Volver'
+            },
+            showFooter: {
+                type: Boolean,
+                default: true
+            },
+            isAdmin: { 
+                type: Boolean, 
+                default: true 
+            }
+        });
+
+        // 2. Ahora 'props.isAdmin' ya está definido correctamente y es reactivo
+        const footerText = computed(() => {
+            if (props.isAdmin) {
+                return `© ${currentYear} Panel de Administración. Todos los derechos reservados.`;
+            }
+            return `© ${currentYear} ${appName}. Todos los derechos reservados.`;
+        });
+        </script>
+
+        <template>
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col justify-between">
+                <div class="p-6 max-w-7xl mx-auto w-full space-y-6 flex-1">
+                    
+                    <!-- Header / Tarjeta de Encabezado -->
+                    <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
+                        <div v-if="backTo">
+                            <router-link 
+                                :to="backTo" 
+                                class="inline-flex items-center space-x-2 text-sm text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors group"
+                            >
+                                <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                                <span>{{ backText }}</span>
+                            </router-link>
+                        </div>
+
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{{ title }}</h1>
+                                <p v-if="description" class="text-sm text-slate-600 dark:text-slate-400">{{ description }}</p>
+                            </div>
+                            
+                            <div v-if="$slots.actions" class="flex items-center gap-2">
+                                <slot name="actions" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slot para Filtros -->
+                    <slot name="filters" />
+
+                    <!-- Slot para el Contenido Principal -->
+                    <slot />
+
+                    <!-- Slot para Modales -->
+                    <slot name="modales" />
+
+                </div>
+
+                <!-- Pie de página integrado -->
+                <footer v-if="showFooter" class="w-full border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-4 px-6 mt-auto text-center text-xs text-slate-500 dark:text-slate-400">
+                    <slot name="footer">
+                        {{ footerText }}
+                    </slot>
+                </footer>
+            </div>
+        </template>        
+        ```
+3. Componente para login con Google:
     + Cera el archivo `frontend/src/components/auth/GoogleAuthButton.vue`:
         ```vue
         <!-- src/components/auth/GoogleAuthButton.vue -->
@@ -1119,7 +1215,7 @@
             </div>
         </template>
         ```
-3. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
+4. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
     ```vue
     <template>
         <svg class="fill-current" viewBox="0 0 24 24" aria-hidden="true">
@@ -1881,6 +1977,7 @@
 9. Vista Protegida del Dashboard:
     + Crea el archivo `frontend/src/views/DashboardView.vue`:
         ```vue
+        <!-- src/views/DashboardView.vue -->
         <script setup>
         import { computed } from 'vue';
         import { useAuthStore } from '../stores/auth.store';
@@ -1897,158 +1994,172 @@
         } from '@heroicons/vue/24/outline';
 
         const authStore = useAuthStore();
+        const appName = import.meta.env.VITE_APP_NAME || 'Mi Aplicación';
+        const currentYear = new Date().getFullYear();
 
         // Verificamos si el usuario tiene rol de administrador o dev
         const isAdmin = computed(() => {
             return authStore.userRoles?.some(role => ['admin', 'super-admin', 'Developer'].includes(role));
         });
+
+        // Texto dinámico para el pie de página (vistas no administrativas)
+        const footerText = computed(() => {
+            return `© ${currentYear} ${appName}. Todos los derechos reservados.`;
+        });
         </script>
 
         <template>
-            <div class="max-w-7xl mx-auto p-6 space-y-6">
-                <!-- Banner de Bienvenida / Perfil Resumido -->
-                <div class="bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 border border-slate-300 dark:border-slate-700/60 p-6 sm:p-8 rounded-2xl shadow-sm flex flex-col md:flex-row items-center md:items-center justify-between gap-6 text-center md:text-left transition-colors">
-                    
-                    <!-- Bloque superior/izquierdo: Avatar e Información del usuario -->
-                    <div class="flex flex-col md:flex-row items-center gap-4">
-                        <!-- Avatar: Centrado arriba en móvil, a la izquierda en desktop -->
-                        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-2xl font-bold shadow-inner shrink-0">
-                            {{ authStore.user?.name?.charAt(0).toUpperCase() || 'U' }}
-                        </div>
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col justify-between">
+                <div class="max-w-7xl mx-auto p-6 space-y-6 flex-1 w-full">
+                    <!-- Banner de Bienvenida / Perfil Resumido -->
+                    <div class="bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 border border-slate-300 dark:border-slate-700/60 p-6 sm:p-8 rounded-2xl shadow-sm flex flex-col md:flex-row items-center md:items-center justify-between gap-6 text-center md:text-left transition-colors">
                         
-                        <!-- Textos: Nombre con punto de estado y correo -->
-                        <div class="flex flex-col items-center md:items-start">
-                            <div class="flex items-center justify-center md:justify-start gap-2 flex-wrap">
-                                <h1 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white break-words">¡Hola, {{ authStore.user?.name }}!</h1>
-                                <span class="flex h-2 w-2 relative shrink-0">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
+                        <!-- Bloque superior/izquierdo: Avatar e Información del usuario -->
+                        <div class="flex flex-col md:flex-row items-center gap-4">
+                            <!-- Avatar: Centrado arriba en móvil, a la izquierda en desktop -->
+                            <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-2xl font-bold shadow-inner shrink-0">
+                                {{ authStore.user?.name?.charAt(0).toUpperCase() || 'U' }}
                             </div>
-                            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5 break-all">{{ authStore.user?.email }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Bloque de Roles: Abajo en móvil, a la derecha en desktop -->
-                    <div class="flex flex-wrap justify-center md:justify-end gap-2">
-                        <span 
-                            v-for="role in authStore.userRoles" 
-                            :key="role"
-                            class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-full flex items-center gap-1.5"
-                        >
-                            <ShieldCheckIcon class="w-4 h-4 shrink-0" />
-                            {{ role }}
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Métricas Rápidas / Stack Info -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
-                        <div class="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
-                            <ServerIcon class="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Estado del Sistema</p>
-                            <p class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1 mt-0.5">
-                                <CheckCircleIcon class="w-4 h-4 text-emerald-500" /> Operativo
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
-                        <div class="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
-                            <CommandLineIcon class="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Arquitectura</p>
-                            <p class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">Modular / REST</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
-                        <div class="p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-xl">
-                            <CpuChipIcon class="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Seguridad Auth</p>
-                            <p class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">JWT / Sanctum</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
-                        <div class="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
-                            <UserCircleIcon class="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">ID de Sesión</p>
-                            <p class="text-sm font-mono font-bold text-slate-900 dark:text-white mt-0.5">#{{ authStore.user?.id || 'N/A' }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Accesos / Acciones Principales -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Tarjeta de Acceso Admin (Si aplica) -->
-                    <div v-if="isAdmin" class="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex flex-col justify-between space-y-4">
-                        <div>
-                            <span class="px-2.5 py-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs font-semibold rounded-full">Zona Restringida</span>
-                            <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-3">Panel de Administración</h2>
-                            <p class="text-slate-600 dark:text-slate-400 text-xs mt-1 leading-relaxed">
-                                Tienes privilegios asignados para gestionar usuarios, roles, auditoría del sistema y diagnósticos avanzados de la plataforma.
-                            </p>
-                        </div>
-                        <router-link 
-                            to="/admin" 
-                            class="inline-flex items-center justify-between px-4 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors shadow-sm group"
-                        >
-                            <span>Acceder al Panel Admin</span>
-                            <ArrowRightIcon class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
-                        </router-link>
-                    </div>
-
-                    <!-- Tarjeta de Bienvenida / Info del Boilerplate -->
-                    <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between space-y-4">
-                        <div>
-                            <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-full">Boilerplate Ready</span>
-                            <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-3">Explora el Código y Estructura</h2>
-                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
-                                Este entorno demuestra buenas prácticas de desarrollo Full-Stack, separación de responsabilidades, componentes reutilizables y diseño responsivo.
-                            </p>
-                        </div>
-                        <div class="flex items-center gap-3 pt-2">
-                            <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">Vue 3 + Tailwind CSS + Pinia</span>
-                        </div>
-                    </div>
-
-                    <!-- Tarjeta del Repositorio de GitHub -->
-                    <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between space-y-4">
-                        <div>
-                            <div class="flex items-center justify-between">
-                                <span class="px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-full flex items-center gap-1.5">
-                                    <GithubIcon class="w-4 h-4 text-slate-700 dark:text-slate-200" />
-                                    Open Source
-                                </span>
+                            
+                            <!-- Textos: Nombre con punto de estado y correo -->
+                            <div class="flex flex-col items-center md:items-start">
+                                <div class="flex items-center justify-center md:justify-start gap-2 flex-wrap">
+                                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white break-words">¡Hola, {{ authStore.user?.name }}!</h1>
+                                    <span class="flex h-2 w-2 relative shrink-0">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                    </span>
+                                </div>
+                                <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5 break-all">{{ authStore.user?.email }}</p>
                             </div>
-                            <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-3">Boilerplate Node 2026</h2>
-                            <p class="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
-                                Explora el código fuente del backend, configuraciones de PostgreSQL, middleware de auditoría y arquitectura modular.
-                            </p>
                         </div>
-                        <div class="flex items-center justify-between pt-2">
-                            <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">Node.js + Express</span>
-                            <a 
-                                href="https://github.com/petrix12/boilerplate-node-2026" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg transition-colors"
+
+                        <!-- Bloque de Roles: Abajo en móvil, a la derecha en desktop -->
+                        <div class="flex flex-wrap justify-center md:justify-end gap-2">
+                            <span 
+                                v-for="role in authStore.userRoles" 
+                                :key="role"
+                                class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-full flex items-center gap-1.5"
                             >
-                                Ver Repositorio
-                                <ArrowTopRightOnSquareIcon class="w-3.5 h-3.5" />
-                            </a>
+                                <ShieldCheckIcon class="w-4 h-4 shrink-0" />
+                                {{ role }}
+                            </span>
                         </div>
-                    </div>            
+                    </div>
+
+                    <!-- Métricas Rápidas / Stack Info -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
+                            <div class="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
+                                <ServerIcon class="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Estado del Sistema</p>
+                                <p class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1 mt-0.5">
+                                    <CheckCircleIcon class="w-4 h-4 text-emerald-500" /> Operativo
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
+                            <div class="p-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
+                                <CommandLineIcon class="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Arquitectura</p>
+                                <p class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">Modular / REST</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
+                            <div class="p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-xl">
+                                <CpuChipIcon class="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Seguridad Auth</p>
+                                <p class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">JWT / Sanctum</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex items-center space-x-4">
+                            <div class="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                                <UserCircleIcon class="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">ID de Sesión</p>
+                                <p class="text-sm font-mono font-bold text-slate-900 dark:text-white mt-0.5">#{{ authStore.user?.id || 'N/A' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accesos / Acciones Principales -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Tarjeta de Acceso Admin (Si aplica) -->
+                        <div v-if="isAdmin" class="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex flex-col justify-between space-y-4">
+                            <div>
+                                <span class="px-2.5 py-1 bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-xs font-semibold rounded-full">Zona Restringida</span>
+                                <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-3">Panel de Administración</h2>
+                                <p class="text-slate-600 dark:text-slate-400 text-xs mt-1 leading-relaxed">
+                                    Tienes privilegios asignados para gestionar usuarios, roles, auditoría del sistema y diagnósticos avanzados de la plataforma.
+                                </p>
+                            </div>
+                            <router-link 
+                                to="/admin" 
+                                class="inline-flex items-center justify-between px-4 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors shadow-sm group"
+                            >
+                                <span>Acceder al Panel Admin</span>
+                                <ArrowRightIcon class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                            </router-link>
+                        </div>
+
+                        <!-- Tarjeta de Bienvenida / Info del Boilerplate -->
+                        <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between space-y-4">
+                            <div>
+                                <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-full">Boilerplate Ready</span>
+                                <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-3">Explora el Código y Estructura</h2>
+                                <p class="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
+                                    Este entorno demuestra buenas prácticas de desarrollo Full-Stack, separación de responsabilidades, componentes reutilizables y diseño responsivo.
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-3 pt-2">
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">Vue 3 + Tailwind CSS + Pinia</span>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta del Repositorio de GitHub -->
+                        <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between space-y-4">
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <span class="px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-full flex items-center gap-1.5">
+                                        <GithubIcon class="w-4 h-4 text-slate-700 dark:text-slate-200" />
+                                        Open Source
+                                    </span>
+                                </div>
+                                <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-3">Boilerplate Node 2026</h2>
+                                <p class="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
+                                    Explora el código fuente del backend, configuraciones de PostgreSQL, middleware de auditoría y arquitectura modular.
+                                </p>
+                            </div>
+                            <div class="flex items-center justify-between pt-2">
+                                <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">Node.js + Express</span>
+                                <a 
+                                    href="https://github.com/petrix12/boilerplate-node-2026" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg transition-colors"
+                                >
+                                    Ver Repositorio
+                                    <ArrowTopRightOnSquareIcon class="w-3.5 h-3.5" />
+                                </a>
+                            </div>
+                        </div>            
+                    </div>
                 </div>
+
+                <!-- Pie de página integrado -->
+                <footer class="w-full border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-4 px-6 mt-auto text-center text-xs text-slate-500 dark:text-slate-400">
+                    {{ footerText }}
+                </footer>
             </div>
         </template>
         ```
@@ -2060,8 +2171,9 @@
         import { ref, watch } from 'vue';
         import { useAuthStore } from '@/stores/auth.store';
         import { userService } from '@/services';
-        import { UserIcon, KeyIcon, ChevronLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
+        import { UserIcon, KeyIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import { getSwalTheme } from '@/utils/swal';
+        import PageLayout from '@/components/common/PageLayout.vue';
 
         const authStore = useAuthStore();
         const showCurrentPassword = ref(false);
@@ -2290,7 +2402,7 @@
                     return;
                 }
 
-                // 2. Validar tamaño máximo (2MB) - ¡AQUÍ ESTÁ LA CLAVE!
+                // 2. Validar tamaño máximo (2MB)
                 if (file.size > 2 * 1024 * 1024) {
                     getSwalTheme().fire({
                         title: 'Archivo muy grande',
@@ -2313,23 +2425,13 @@
         </script>
 
         <template>
-            <div class="max-w-4xl mx-auto px-4 py-8">
-                <!-- Botón de retorno al Dashboard -->
-                <div class="mb-6">
-                    <router-link 
-                        to="/dashboard" 
-                        class="inline-flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors group"
-                    >
-                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                        <span>Volver al Dashboard</span>
-                    </router-link>
-                </div>
-
-                <div class="mb-6">
-                    <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Mi Perfil</h2>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">Administra tu información personal y seguridad de la cuenta.</p>
-                </div>
-
+            <PageLayout 
+                title="Mi Perfil" 
+                description="Administra tu información personal y seguridad de la cuenta."
+                :backTo="'/dashboard'"
+                backText="Volver al Dashboard"
+                :isAdmin="false"
+            >
                 <form @submit.prevent="updateProfile" class="space-y-6">
                     <!-- Sección Avatar & Datos Básicos con Drag & Drop -->
                     <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm dark:shadow-xl transition-colors">
@@ -2477,7 +2579,7 @@
                         </button>
                     </div>
                 </form>
-            </div>
+            </PageLayout>
         </template>
         ```
 11. Limpiar `App.vue`:
@@ -2495,28 +2597,32 @@
         ```
 12. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
     ```vue
+    <!-- src/views/admin/AdminDashboardView.vue -->
+    <script setup>
+        import { computed, onMounted } from 'vue';
+        import { useAuthStore } from '@/stores/auth.store';
+        import { UsersIcon, ShieldCheckIcon, DocumentChartBarIcon, CpuChipIcon } from '@heroicons/vue/24/outline';
+        import PageLayout from '@/components/common/PageLayout.vue';
+
+        const authStore = useAuthStore();
+
+        // Aseguramos que si por alguna razón el user no está completo al entrar, se consulte al backend
+        onMounted(async () => {
+            if (authStore.token && (!authStore.user || !authStore.user.hasOwnProperty('aiDiagnostic'))) {
+                await authStore.fetchUser();
+            }
+        });
+
+        const isAiActive = computed(() => authStore.aiDiagnosticActive);
+    </script>
+
     <template>
-        <div class="max-w-7xl mx-auto p-6 space-y-6">
-            <!-- Header / Tarjeta de Encabezado con Botón de Retorno -->
-            <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
-                <div>
-                    <router-link 
-                        to="/dashboard" 
-                        class="inline-flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors group"
-                    >
-                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                        <span>Volver al Dashboard</span>
-                    </router-link>
-                </div>
-
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Panel de Administración</h1>
-                        <p class="text-sm text-slate-500 dark:text-slate-400">Gestiona la configuración global de la plataforma, accesos y permisos.</p>
-                    </div>
-                </div>
-            </div>
-
+        <PageLayout 
+            title="Panel de Administración" 
+            description="Gestiona la configuración global de la plataforma, accesos y permisos."
+            :backTo="'/dashboard'"
+            backText="Volver al Dashboard"
+        >
             <!-- Grid de Accesos Directos a Módulos Admin (Cada uno con su identidad de color intacta) -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
@@ -2582,36 +2688,20 @@
                 </router-link>
 
             </div>
-        </div>
+        </PageLayout>
     </template>
-
-    <script setup>
-        import { computed, onMounted } from 'vue';
-        import { useAuthStore } from '@/stores/auth.store';
-        import { ChevronLeftIcon, UsersIcon, ShieldCheckIcon, DocumentChartBarIcon, CpuChipIcon } from '@heroicons/vue/24/outline';
-
-        const authStore = useAuthStore();
-
-        // Aseguramos que si por alguna razón el user no está completo al entrar, se consulte al backend
-        onMounted(async () => {
-            if (authStore.token && (!authStore.user || !authStore.user.hasOwnProperty('aiDiagnostic'))) {
-                await authStore.fetchUser();
-            }
-        });
-
-        const isAiActive = computed(() => authStore.aiDiagnosticActive);
-    </script>
     ```
 13. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
     + Crea la carpeta src/views/admin/ si no existe y añade la vista:
         ```vue
         <!-- src/views/admin/UsersAdminView.vue -->
         <script setup>
-        import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, ChevronLeftIcon, MagnifyingGlassIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
+        import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, MagnifyingGlassIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import { ref, onMounted } from 'vue';
         import { userService, roleService } from '@/services';
         import { useAuthStore } from '@/stores/auth.store';
         import { getSwalTheme } from '@/utils/swal';
+        import PageLayout from '@/components/common/PageLayout.vue';
 
         // Instancia del store para acceder a los getters
         const authStore = useAuthStore();
@@ -2986,37 +3076,26 @@
         </script>
 
         <template>
-            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 py-8 px-4 sm:px-6 lg:px-8 transition-colors">
-                <div class="max-w-7xl mx-auto space-y-6">
-                    <!-- Encabezado en Tarjeta -->
-                    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-6 shadow-sm space-y-4 transition-colors">
-                        <div>
-                            <router-link 
-                                to="/admin" 
-                                class="inline-flex items-center space-x-2 text-sm text-emerald-400 hover:text-emerald-300 transition-colors group"
-                            >
-                                <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                                <span>Volver al Panel Admin</span>
-                            </router-link>
-                        </div>
+            <PageLayout 
+                title="Gestión de Usuarios" 
+                description="Administra los permisos y accesos de la plataforma en tiempo real."
+                :backTo="'/admin'"
+                backText="Volver al Panel Admin"
+            >
+                <!-- Slot para Botón de Acción Principal -->
+                <template #actions>
+                    <button
+                        v-if="authStore.hasPermission('users:create')"
+                        @click="openUserModal(null)"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-emerald-600/35 shrink-0 cursor-pointer"
+                    >
+                        <PlusIcon class="w-5 h-5" />
+                        Nuevo Usuario
+                    </button>
+                </template>
 
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Gestión de Usuarios</h1>
-                                <p class="text-slate-600 dark:text-slate-400 text-sm">Administra los permisos y accesos de la plataforma en tiempo real.</p>
-                            </div>
-                            <button
-                                v-if="authStore.hasPermission('users:create')"
-                                @click="openUserModal(null)"
-                                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-emerald-600/35 shrink-0"
-                            >
-                                <PlusIcon class="w-5 h-5" />
-                                Nuevo Usuario
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Barra de Búsqueda -->
+                <!-- Slot para Filtros (Barra de Búsqueda) -->
+                <template #filters>
                     <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 shadow-sm rounded-2xl p-4 transition-colors">
                         <div class="relative">
                             <input
@@ -3029,140 +3108,143 @@
                             <MagnifyingGlassIcon class="w-5 h-5 text-slate-400 absolute left-3 top-3" />
                         </div>
                     </div>
+                </template>
 
-                    <!-- Tabla de Usuarios (Contenedor Responsivo) -->
-                    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm overflow-hidden transition-colors">
-                        <div v-if="loading" class="p-12 text-center text-slate-400">
-                            <span class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-2"></span>
-                            <p>Cargando usuarios...</p>
-                        </div>
-
-                        <div v-else-if="users.length === 0" class="p-12 text-center text-slate-400">
-                            No se encontraron usuarios que coincidan con la búsqueda.
-                        </div>
-
-                        <div v-else class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none transition-colors">
-                                        <th @click="handleSort('name')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
-                                            <div class="flex items-center space-x-1">
-                                                <span>Usuario</span>
-                                                <span class="inline-flex flex-col text-[10px] leading-none">
-                                                    <span :class="sortBy === 'name' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
-                                                    <span :class="sortBy === 'name' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
-                                                </span>
-                                            </div>
-                                        </th>
-                                        <th class="px-6 py-3.5">Roles Asignados</th>
-                                        <th @click="handleSort('createdAt')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
-                                            <div class="flex items-center space-x-1">
-                                                <span>Fecha Registro</span>
-                                                <span class="inline-flex flex-col text-[10px] leading-none">
-                                                    <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
-                                                    <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
-                                                </span>
-                                            </div>
-                                        </th>
-                                        <th class="px-6 py-3.5 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
-                                    <tr v-for="user in users" :key="user.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="flex items-center">
-                                                <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 uppercase border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0 transition-colors">
-                                                    <img 
-                                                        v-if="user.avatarUrl || user.avatar" 
-                                                        :src="user.avatarUrl || user.avatar" 
-                                                        :alt="user.name"
-                                                        class="w-full h-full object-cover" 
-                                                    />
-                                                    <span v-else>{{ user.name ? user.name.charAt(0) : 'U' }}</span>
-                                                </div>
-                                                <div class="ml-4">
-                                                    <div class="font-medium text-slate-900 dark:text-slate-200">{{ user.name }}</div>
-                                                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ user.email }}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex flex-wrap gap-1.5">
-                                                <span
-                                                    v-for="role in user.roles"
-                                                    :key="role"
-                                                    :class="getRoleBadgeClass(role)"
-                                                    class="px-2.5 py-0.5 rounded-full text-xs font-semibold border"
-                                                >
-                                                    {{ role }}
-                                                </span>
-                                                <span v-if="user.roles.length === 0" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600 transition-colors">
-                                                    Sin permisos (Guest)
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
-                                            {{ formatDate(user.createdAt) }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right font-medium">
-                                            <div class="inline-flex items-center justify-end space-x-2">
-                                                <button
-                                                    v-if="authStore.hasPermission('users:update')"
-                                                    @click="openUserModal(user)"
-                                                    title="Editar datos del usuario"
-                                                    class="h-9 w-9 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all"
-                                                >
-                                                    <PencilSquareIcon class="w-4 h-4" />
-                                                </button>
-
-                                                <button
-                                                    v-if="authStore.hasPermission('users:delete')"
-                                                    @click="confirmDeleteUser(user)"
-                                                    title="Eliminar usuario"
-                                                    class="h-9 w-9 inline-flex items-center justify-center bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded-lg transition-all"
-                                                >
-                                                    <TrashIcon class="w-4 h-4" />
-                                                </button>
-
-                                                <button
-                                                    v-if="authStore.hasPermission('roles:update')"
-                                                    @click="openRoleModal(user)"
-                                                    title="Editar Roles"
-                                                    class="h-9 px-3 inline-flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white rounded-lg transition-all"
-                                                >
-                                                    <UserGroupIcon class="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Paginación -->
-                        <div v-if="pagination.totalPages > 1" class="px-6 py-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between transition-colors">
-                            <span class="text-sm text-slate-600 dark:text-slate-400">
-                                Página {{ pagination.page }} de {{ pagination.totalPages }}
-                            </span>
-                            <div class="flex gap-2">
-                                <button
-                                    :disabled="pagination.page === 1"
-                                    @click="changePage(pagination.page - 1)"
-                                    class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                                >
-                                    Anterior
-                                </button>
-                                <button
-                                    :disabled="pagination.page === pagination.totalPages"
-                                    @click="changePage(pagination.page + 1)"
-                                    class="px-3 py-1 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                                >
-                                    Siguiente
-                                </button>
-                            </div>
-                        </div>
+                <!-- Contenido principal: Tabla de Usuarios -->
+                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm overflow-hidden transition-colors">
+                    <div v-if="loading" class="p-12 text-center text-slate-400">
+                        <span class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-2"></span>
+                        <p>Cargando usuarios...</p>
                     </div>
 
+                    <div v-else-if="users.length === 0" class="p-12 text-center text-slate-400">
+                        No se encontraron usuarios que coincidan con la búsqueda.
+                    </div>
+
+                    <div v-else class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none transition-colors">
+                                    <th @click="handleSort('name')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
+                                        <div class="flex items-center space-x-1">
+                                            <span>Usuario</span>
+                                            <span class="inline-flex flex-col text-[10px] leading-none">
+                                                <span :class="sortBy === 'name' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
+                                                <span :class="sortBy === 'name' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
+                                            </span>
+                                        </div>
+                                    </th>
+                                    <th class="px-6 py-3.5">Roles Asignados</th>
+                                    <th @click="handleSort('createdAt')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
+                                        <div class="flex items-center space-x-1">
+                                            <span>Fecha Registro</span>
+                                            <span class="inline-flex flex-col text-[10px] leading-none">
+                                                <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
+                                                <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
+                                            </span>
+                                        </div>
+                                    </th>
+                                    <th class="px-6 py-3.5 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
+                                <tr v-for="user in users" :key="user.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 uppercase border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0 transition-colors">
+                                                <img 
+                                                    v-if="user.avatarUrl || user.avatar" 
+                                                    :src="user.avatarUrl || user.avatar" 
+                                                    :alt="user.name"
+                                                    class="w-full h-full object-cover" 
+                                                />
+                                                <span v-else>{{ user.name ? user.name.charAt(0) : 'U' }}</span>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="font-medium text-slate-900 dark:text-slate-200">{{ user.name }}</div>
+                                                <div class="text-xs text-slate-500 dark:text-slate-400">{{ user.email }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex flex-wrap gap-1.5">
+                                            <span
+                                                v-for="role in user.roles"
+                                                :key="role"
+                                                :class="getRoleBadgeClass(role)"
+                                                class="px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+                                            >
+                                                {{ role }}
+                                            </span>
+                                            <span v-if="user.roles.length === 0" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600 transition-colors">
+                                                Sin permisos (Guest)
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
+                                        {{ formatDate(user.createdAt) }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right font-medium">
+                                        <div class="inline-flex items-center justify-end space-x-2">
+                                            <button
+                                                v-if="authStore.hasPermission('users:update')"
+                                                @click="openUserModal(user)"
+                                                title="Editar datos del usuario"
+                                                class="h-9 w-9 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all cursor-pointer"
+                                            >
+                                                <PencilSquareIcon class="w-4 h-4" />
+                                            </button>
+
+                                            <button
+                                                v-if="authStore.hasPermission('users:delete')"
+                                                @click="confirmDeleteUser(user)"
+                                                title="Eliminar usuario"
+                                                class="h-9 w-9 inline-flex items-center justify-center bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded-lg transition-all cursor-pointer"
+                                            >
+                                                <TrashIcon class="w-4 h-4" />
+                                            </button>
+
+                                            <button
+                                                v-if="authStore.hasPermission('roles:update')"
+                                                @click="openRoleModal(user)"
+                                                title="Editar Roles"
+                                                class="h-9 px-3 inline-flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white rounded-lg transition-all cursor-pointer"
+                                            >
+                                                <UserGroupIcon class="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Paginación -->
+                    <div v-if="pagination.totalPages > 1" class="px-6 py-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between transition-colors">
+                        <span class="text-sm text-slate-600 dark:text-slate-400">
+                            Página {{ pagination.page }} de {{ pagination.totalPages }}
+                        </span>
+                        <div class="flex gap-2">
+                            <button
+                                :disabled="pagination.page === 1"
+                                @click="changePage(pagination.page - 1)"
+                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm cursor-pointer"
+                            >
+                                Anterior
+                            </button>
+                            <button
+                                :disabled="pagination.page === pagination.totalPages"
+                                @click="changePage(pagination.page + 1)"
+                                class="px-3 py-1 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm cursor-pointer"
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slot para Modales -->
+                <template #modales>
                     <!-- Modal de Asignación de Roles -->
                     <div v-if="selectedUser" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
                         <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl transition-colors">
@@ -3177,7 +3259,7 @@
                                         type="checkbox"
                                         :value="role"
                                         v-model="modalRoles"
-                                        class="w-4 h-4 text-emerald-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500"
+                                        class="w-4 h-4 text-emerald-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500 cursor-pointer"
                                     />
                                     <span class="text-sm font-medium text-slate-900 dark:text-slate-200">{{ role }}</span>
                                 </label>
@@ -3186,14 +3268,14 @@
                             <div class="flex justify-end gap-3">
                                 <button
                                     @click="selectedUser = null"
-                                    class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm"
+                                    class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm cursor-pointer"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     @click="saveUserRoles"
                                     :disabled="saving"
-                                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm"
+                                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm cursor-pointer"
                                 >
                                     {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
                                 </button>
@@ -3237,7 +3319,6 @@
                                         <label class="block text-xs font-semibold uppercase text-slate-400">
                                             Contraseña {{ targetUser ? '(Opcional / Dejar en blanco)' : '' }}
                                         </label>
-                                        <!-- Nota informativa dinámica solo para la creación -->
                                         <span v-if="!targetUser" class="text-[11px] text-amber-600 dark:text-amber-400/90 font-medium">
                                             Si se deja vacía, será: <code class="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-mono">{{ DEFAULT_PASSWORD }}</code>
                                         </span>
@@ -3252,7 +3333,7 @@
                                         <button 
                                             type="button"
                                             @click="showUserPassword = !showUserPassword"
-                                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer"
                                         >
                                             <EyeIcon v-if="!showUserPassword" class="w-5 h-5" />
                                             <EyeSlashIcon v-else class="w-5 h-5" />
@@ -3301,7 +3382,7 @@
                                                 type="button" 
                                                 :disabled="uploadingAvatar"
                                                 @click="removeAvatar"
-                                                class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 font-medium"
+                                                class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 font-medium cursor-pointer"
                                             >
                                                 Eliminar
                                             </button>
@@ -3316,14 +3397,14 @@
                                     <button
                                         type="button"
                                         @click="isUserModalOpen = false"
-                                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm"
+                                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm cursor-pointer"
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         type="submit"
                                         :disabled="saving || uploadingAvatar"
-                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm"
+                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm cursor-pointer"
                                     >
                                         {{ saving ? 'Guardando...' : (targetUser ? 'Guardar Cambios' : 'Crear Usuario') }}
                                     </button>
@@ -3331,8 +3412,8 @@
                             </form>
                         </div>
                     </div>
-                </div>
-            </div>
+                </template>
+            </PageLayout>
         </template>
         ```
 14. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
@@ -3340,11 +3421,12 @@
         ```vue
         <!-- src/views/admin/RolesAdminView.vue -->
         <script setup>
-        import { PlusIcon, PencilIcon, TrashIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
+        import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
         import { ref, computed, onMounted } from 'vue';
         import { roleService } from '@/services';
         import { useAuthStore } from '@/stores/auth.store';
         import { getSwalTheme } from '@/utils/swal';
+        import PageLayout from '@/components/common/PageLayout.vue';
 
         // Instancia del store para acceder a los getters
         const authStore = useAuthStore();
@@ -3463,7 +3545,6 @@
                 try {
                     await roleService.deleteRole(role.id);
                     
-                    // Notificación de éxito al eliminar
                     getSwalTheme().fire({
                         title: '¡Eliminado!',
                         text: 'El rol ha sido eliminado correctamente.',
@@ -3498,117 +3579,97 @@
         </script>
 
         <template>
-            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col">
-                <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
-                    
-                    <!-- Cabecera envuelta en tarjeta -->
-                    <div class="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-6 shadow-xl">
-                        <!-- Botón Volver al Panel -->
-                        <div class="mb-4">
-                            <router-link 
-                                to="/admin" 
-                                class="inline-flex items-center space-x-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors group"
-                            >
-                                <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                                <span>Volver al Panel Admin</span>
-                            </router-link>
-                        </div>
+            <PageLayout 
+                title="Gestión de Roles" 
+                description="Administra los roles del sistema y configura las acciones permitidas para cada uno."
+                :backTo="'/admin'"
+                backText="Volver al Panel Admin"
+            >
+                <!-- Slot de acciones del encabezado -->
+                <template #actions>
+                    <button 
+                        v-if="authStore.hasPermission('roles:create')"
+                        @click="openModal()"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30 shrink-0 cursor-pointer"
+                    >
+                        <PlusIcon class="w-5 h-5" />
+                        <span>Nuevo Rol</span>
+                    </button>
+                </template>
 
-                        <!-- Título, Descripción y Acción -->
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                                    <span>Gestión de Roles</span>
-                                </h1>
-                                <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">
-                                    Administra los roles del sistema y configura las acciones permitidas para cada uno.
-                                </p>
-                            </div>
-                            <button 
-                                v-if="authStore.hasPermission('roles:create')"
-                                @click="openModal()"
-                                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition-colors shadow-lg shadow-purple-600/30 shrink-0"
-                            >
-                                <PlusIcon class="w-5 h-5" />
-                                <span>Nuevo Rol</span>
-                            </button>
-                        </div>
-                    </div>        
-
-                    <!-- Tabla de Roles -->
-                    <div class="w-full bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-x-auto shadow-xl">
-                        <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-                            <thead class="bg-slate-100 dark:bg-slate-900/50 text-slate-700 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                <tr>
-                                    <th class="px-6 py-3">Nombre del Rol</th>
-                                    <th class="px-6 py-3">Descripción</th>
-                                    <th class="px-6 py-3">Usuarios</th>
-                                    <th class="px-6 py-3">Permisos Asignados</th>
-                                    <th class="px-6 py-3 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
-                                <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                    <td class="px-6 py-4 font-semibold text-slate-900 dark:text-white">
-                                        <span class="px-2.5 py-1 rounded-full text-xs font-bold border" :class="getRoleBadgeClass(role.name)">
-                                            {{ role.name }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">{{ role.description || 'Sin descripción' }}</td>
-                                    <td class="px-6 py-4 text-slate-700 dark:text-slate-300">{{ role.userCount }} usuario(s)</td>
-                                    <!-- Columna Permisos Asignados -->
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span 
-                                            v-if="role.name === 'SUPER_ADMIN'"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-500/20"
+                <!-- Contenido principal: Tabla de Roles -->
+                <div class="w-full bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-x-auto shadow-xl">
+                    <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                        <thead class="bg-slate-100 dark:bg-slate-900/50 text-slate-700 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                            <tr>
+                                <th class="px-6 py-3">Nombre del Rol</th>
+                                <th class="px-6 py-3">Descripción</th>
+                                <th class="px-6 py-3">Usuarios</th>
+                                <th class="px-6 py-3">Permisos Asignados</th>
+                                <th class="px-6 py-3 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
+                            <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                <td class="px-6 py-4 font-semibold text-slate-900 dark:text-white">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-bold border" :class="getRoleBadgeClass(role.name)">
+                                        {{ role.name }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">{{ role.description || 'Sin descripción' }}</td>
+                                <td class="px-6 py-4 text-slate-700 dark:text-slate-300">{{ role.userCount }} usuario(s)</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span 
+                                        v-if="role.name === 'SUPER_ADMIN'"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-500/20"
+                                    >
+                                        Acceso Total (Global)
+                                    </span>
+                                    <span 
+                                        v-else
+                                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50"
+                                    >
+                                        {{ role.permissions ? role.permissions.length : 0 }} permiso(s)
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button 
+                                            v-if="authStore.hasPermission('roles:update')"
+                                            @click="openModal(role)"
+                                            class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors cursor-pointer"
+                                            :title="role.name === 'SUPER_ADMIN' ? 'Ver detalles del rol' : 'Editar rol'"
                                         >
-                                            Acceso Total (Global)
-                                        </span>
-                                        <span 
-                                            v-else
-                                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50"
+                                            <PencilIcon class="w-4 h-4" />
+                                        </button>
+                                        
+                                        <button 
+                                            v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
+                                            @click="confirmDelete(role)"
+                                            class="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 rounded-lg transition-colors cursor-pointer"
+                                            title="Eliminar rol"
                                         >
-                                            {{ role.permissions ? role.permissions.length : 0 }} permiso(s)
-                                        </span>
-                                    </td>
-                                    <!-- Columna Acciones en la tabla -->
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <div class="flex items-center justify-end gap-2">
-                                            <button 
-                                                v-if="authStore.hasPermission('roles:update')"
-                                                @click="openModal(role)"
-                                                class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors"
-                                                :title="role.name === 'SUPER_ADMIN' ? 'Ver detalles del rol' : 'Editar rol'"
-                                            >
-                                                <PencilIcon class="w-4 h-4" />
-                                            </button>
-                                            
-                                            <button 
-                                                v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
-                                                @click="confirmDelete(role)"
-                                                class="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 rounded-lg transition-colors"
-                                                title="Eliminar rol"
-                                            >
-                                                <TrashIcon class="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                            <TrashIcon class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                    <!-- MODAL CREACIÓN / EDICIÓN -->
+                <!-- Slot para Modales -->
+                <template #modales>
                     <div 
                         v-if="isModalOpen" 
                         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm p-3 sm:p-4"
                     >
                         <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
                             
-                            <!-- Header -->
+                            <!-- Header del Modal -->
                             <div class="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
                                 <h2 class="text-lg font-bold text-slate-900 dark:text-white">{{ targetRole ? 'Editar Rol' : 'Crear Nuevo Rol' }}</h2>
-                                <button type="button" @click="isModalOpen = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1">✕</button>
+                                <button type="button" @click="isModalOpen = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 cursor-pointer">✕</button>
                             </div>
 
                             <!-- Formulario con scroll vertical -->
@@ -3654,7 +3715,7 @@
                                                             type="checkbox" 
                                                             :value="perm.action" 
                                                             v-model="form.permissions"
-                                                            class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-600 focus:ring-purple-500"
+                                                            class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-600 focus:ring-purple-500 cursor-pointer"
                                                         />
                                                         <span class="break-all font-medium">{{ perm.action }}</span>
                                                     </label>
@@ -3666,7 +3727,7 @@
 
                                 <!-- Footer con Botones -->
                                 <div class="flex justify-end space-x-3 p-4 sm:p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/90 shrink-0">
-                                    <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                                    <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
                                         {{ targetRole?.name === 'SUPER_ADMIN' ? 'Cerrar' : 'Cancelar' }}
                                     </button>
                                     
@@ -3674,7 +3735,7 @@
                                         v-if="targetRole?.name !== 'SUPER_ADMIN'"
                                         type="submit" 
                                         :disabled="saving" 
-                                        class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20"
+                                        class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20 cursor-pointer"
                                     >
                                         {{ saving ? 'Guardando...' : 'Guardar Rol' }}
                                     </button>
@@ -3682,20 +3743,21 @@
                             </form>
                         </div>
                     </div>
-                </div>
-            </div>
+                </template>
+            </PageLayout>
         </template>
         ```
 15. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
     ```vue
+    <!-- src/views/admin/AuditLogsView.vue -->
     <script setup>
     import { ref, onMounted, onUnmounted } from 'vue';
-    import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
     import { auditService } from '@/services';
     import flatpickr from 'flatpickr';
     import 'flatpickr/dist/flatpickr.css';
     import 'flatpickr/dist/themes/dark.css';
     import { Spanish } from 'flatpickr/dist/l10n/es.js';
+    import PageLayout from '@/components/common/PageLayout.vue';
 
     const logs = ref([]);
     const loading = ref(false);
@@ -3842,35 +3904,24 @@
     </script>
 
     <template>
-        <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex flex-col">
-            <div class="p-6 max-w-7xl mx-auto w-full space-y-6">
-                <!-- Header / Tarjeta de Encabezado con Botón de Retorno -->
-                <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
-                    <div>
-                        <router-link 
-                            to="/admin" 
-                            class="inline-flex items-center space-x-2 text-sm text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 transition-colors group"
-                        >
-                            <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                            <span>Volver al Panel Admin</span>
-                        </router-link>
-                    </div>
+        <PageLayout 
+            title="Auditoría del Sistema" 
+            description="Historial detallado de actividad y acciones ejecutadas."
+            :backTo="'/admin'"
+            backText="Volver al Panel Admin"
+        >
+            <!-- Slot para Botones de Acción (Refrescar) -->
+            <template #actions>
+                <button 
+                    @click="fetchLogs" 
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer shadow-sm"
+                >
+                    <span>Refrescar</span>
+                </button>
+            </template>
 
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Auditoría del Sistema</h1>
-                            <p class="text-sm text-slate-600 dark:text-slate-400">Historial detallado de actividad y acciones ejecutadas.</p>
-                        </div>
-                        <button 
-                            @click="fetchLogs" 
-                            class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-colors w-fit cursor-pointer shadow-sm"
-                        >
-                            <span>Refrescar</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Filtros -->
+            <!-- Slot para Filtros -->
+            <template #filters>
                 <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Buscar</label>
@@ -3918,119 +3969,122 @@
                         />
                     </div>
                 </div>
+            </template>
 
-                <!-- Tabla -->
-                <div class="bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead>
-                                <tr class="border-b border-slate-200 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none">
-                                    <th @click="handleSort('createdAt')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
-                                        <div class="flex items-center space-x-1">
-                                            <span>Fecha / Hora</span>
-                                            <span class="inline-flex flex-col text-[10px] leading-none">
-                                                <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                                <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
-                                            </span>
-                                        </div>
-                                    </th>
-
-                                    <th @click="handleSort('user')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
-                                        <div class="flex items-center space-x-1">
-                                            <span>Usuario</span>
-                                            <span class="inline-flex flex-col text-[10px] leading-none">
-                                                <span :class="sortBy === 'user' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                                <span :class="sortBy === 'user' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
-                                            </span>
-                                        </div>
-                                    </th>
-
-                                    <th @click="handleSort('action')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
-                                        <div class="flex items-center space-x-1">
-                                            <span>Acción</span>
-                                            <span class="inline-flex flex-col text-[10px] leading-none">
-                                                <span :class="sortBy === 'action' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                                <span :class="sortBy === 'action' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
-                                            </span>
-                                        </div>
-                                    </th>
-
-                                    <th @click="handleSort('entity')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
-                                        <div class="flex items-center space-x-1">
-                                            <span>Entidad</span>
-                                            <span class="inline-flex flex-col text-[10px] leading-none">
-                                                <span :class="sortBy === 'entity' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
-                                                <span :class="sortBy === 'entity' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
-                                            </span>
-                                        </div>
-                                    </th>
-
-                                    <th class="py-3 px-4 text-left">IP</th>
-                                    <th class="py-3 px-4 text-right">Detalles</th>
-                                </tr>
-                            </thead>               
-                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
-                                <tr v-if="loading">
-                                    <td colspan="6" class="text-center py-8 text-slate-500 dark:text-slate-400">Cargando registros...</td>
-                                </tr>
-                                <tr v-else-if="logs.length === 0">
-                                    <td colspan="6" class="text-center py-8 text-slate-500 dark:text-slate-400">No se encontraron eventos.</td>
-                                </tr>
-                                <tr v-for="log in logs" :key="log.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                    <td class="py-3 px-4 font-mono text-xs whitespace-nowrap text-slate-600 dark:text-slate-300">{{ formatDate(log.createdAt) }}</td>
-                                    <td class="py-3 px-4">
-                                        <div v-if="log.user" class="flex flex-col">
-                                            <span class="font-medium text-slate-900 dark:text-white">{{ log.user.name }}</span>
-                                            <span class="text-xs text-slate-500 dark:text-slate-400">{{ log.user.email }}</span>
-                                        </div>
-                                        <span v-else class="text-xs text-slate-500 dark:text-slate-400 italic">Sistema / Anónimo</span>
-                                    </td>
-                                    <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{{ log.action }}</td>
-                                    <td class="py-3 px-4">
-                                        <span :class="getEntityBadgeClass(log.entity)" class="px-2.5 py-1 text-[11px] font-semibold rounded-lg border">
-                                            {{ log.entity }}
+            <!-- Contenido Principal: Tabla y Paginación -->
+            <div class="bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none">
+                                <th @click="handleSort('createdAt')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Fecha / Hora</span>
+                                        <span class="inline-flex flex-col text-[10px] leading-none">
+                                            <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
                                         </span>
-                                    </td>
-                                    <td class="py-3 px-4 font-mono text-xs text-slate-500 dark:text-slate-400">{{ log.ipAddress || 'N/A' }}</td>
-                                    <td class="py-3 px-4 text-right">
-                                        <button 
-                                            v-if="log.details" 
-                                            @click="openDetailsModal(log)" 
-                                            class="text-xs text-yellow-600 dark:text-yellow-400 hover:underline font-medium cursor-pointer"
-                                        >
-                                            Ver JSON
-                                        </button>
-                                        <span v-else class="text-xs text-slate-400">-</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                    </div>
+                                </th>
 
-                    <!-- Paginación -->
-                    <div class="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700">
-                        <span class="text-xs text-slate-600 dark:text-slate-400">
-                            Mostrando página {{ pagination.page }} de {{ pagination.totalPages }} ({{ pagination.total }} registros)
-                        </span>
-                        <div class="flex gap-2">
-                            <button 
-                                :disabled="pagination.page <= 1" 
-                                @click="changePage(pagination.page - 1)" 
-                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
-                            >
-                                Anterior
-                            </button>
-                            <button 
-                                :disabled="pagination.page >= pagination.totalPages" 
-                                @click="changePage(pagination.page + 1)" 
-                                class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
-                            >
-                                Siguiente
-                            </button>
-                        </div>
-                    </div>
+                                <th @click="handleSort('user')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Usuario</span>
+                                        <span class="inline-flex flex-col text-[10px] leading-none">
+                                            <span :class="sortBy === 'user' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'user' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th @click="handleSort('action')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Acción</span>
+                                        <span class="inline-flex flex-col text-[10px] leading-none">
+                                            <span :class="sortBy === 'action' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'action' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th @click="handleSort('entity')" class="py-3 px-4 text-left cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Entidad</span>
+                                        <span class="inline-flex flex-col text-[10px] leading-none">
+                                            <span :class="sortBy === 'entity' && sortOrder === 'asc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▲</span>
+                                            <span :class="sortBy === 'entity' && sortOrder === 'desc' ? 'text-yellow-600 dark:text-yellow-400' : 'text-slate-400 dark:text-slate-600'">▼</span>
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th class="py-3 px-4 text-left">IP</th>
+                                <th class="py-3 px-4 text-right">Detalles</th>
+                            </tr>
+                        </thead>               
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
+                            <tr v-if="loading">
+                                <td colspan="6" class="text-center py-8 text-slate-500 dark:text-slate-400">Cargando registros...</td>
+                            </tr>
+                            <tr v-else-if="logs.length === 0">
+                                <td colspan="6" class="text-center py-8 text-slate-500 dark:text-slate-400">No se encontraron eventos.</td>
+                            </tr>
+                            <tr v-for="log in logs" :key="log.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                <td class="py-3 px-4 font-mono text-xs whitespace-nowrap text-slate-600 dark:text-slate-300">{{ formatDate(log.createdAt) }}</td>
+                                <td class="py-3 px-4">
+                                    <div v-if="log.user" class="flex flex-col">
+                                        <span class="font-medium text-slate-900 dark:text-white">{{ log.user.name }}</span>
+                                        <span class="text-xs text-slate-500 dark:text-slate-400">{{ log.user.email }}</span>
+                                    </div>
+                                    <span v-else class="text-xs text-slate-500 dark:text-slate-400 italic">Sistema / Anónimo</span>
+                                </td>
+                                <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">{{ log.action }}</td>
+                                <td class="py-3 px-4">
+                                    <span :class="getEntityBadgeClass(log.entity)" class="px-2.5 py-1 text-[11px] font-semibold rounded-lg border">
+                                        {{ log.entity }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 font-mono text-xs text-slate-500 dark:text-slate-400">{{ log.ipAddress || 'N/A' }}</td>
+                                <td class="py-3 px-4 text-right">
+                                    <button 
+                                        v-if="log.details" 
+                                        @click="openDetailsModal(log)" 
+                                        class="text-xs text-yellow-600 dark:text-yellow-400 hover:underline font-medium cursor-pointer"
+                                    >
+                                        Ver JSON
+                                    </button>
+                                    <span v-else class="text-xs text-slate-400">-</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
+                <!-- Paginación -->
+                <div class="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700">
+                    <span class="text-xs text-slate-600 dark:text-slate-400">
+                        Mostrando página {{ pagination.page }} de {{ pagination.totalPages }} ({{ pagination.total }} registros)
+                    </span>
+                    <div class="flex gap-2">
+                        <button 
+                            :disabled="pagination.page <= 1" 
+                            @click="changePage(pagination.page - 1)" 
+                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                        >
+                            Anterior
+                        </button>
+                        <button 
+                            :disabled="pagination.page >= pagination.totalPages" 
+                            @click="changePage(pagination.page + 1)" 
+                            class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slot para Modales -->
+            <template #modales>
                 <!-- Modal de Detalles JSON -->
                 <div v-if="selectedLogModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
                     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
@@ -4051,16 +4105,18 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </template>
+        </PageLayout>
     </template>
     ```
 16. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
     ```vue
+    <!-- src/views/admin/SystemDiagnosticView.vue -->
     <script setup>
     import { computed, onMounted } from 'vue';
     import { useDiagnosticStore } from '@/stores/diagnostic.store';
-    import { ChevronLeftIcon, SparklesIcon } from '@heroicons/vue/24/outline';
+    import { SparklesIcon } from '@heroicons/vue/24/outline';
+    import PageLayout from '@/components/common/PageLayout.vue';
 
     const diagnosticStore = useDiagnosticStore();
 
@@ -4098,141 +4154,131 @@
     </script>
 
     <template>
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-            <!-- Encabezado y Contenedor Superior -->
-            <div class="bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-                <!-- Botón de retorno al Panel Admin -->
-                <div class="mb-5">
-                    <router-link 
-                        to="/admin" 
-                        class="inline-flex items-center space-x-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors group"
-                    >
-                        <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                        <span>Volver al Panel Admin</span>
-                    </router-link>
+        <PageLayout 
+            title="Diagnóstico del Sistema por IA" 
+            description="Análisis inteligente del estado global, salud y seguridad de la aplicación."
+            :backTo="'/admin'"
+            backText="Volver al Panel Admin"
+        >
+            <!-- Slot para Botones de Acción (Generar Nuevo Diagnóstico) -->
+            <template #actions>
+                <button 
+                    @click="handleRefresh" 
+                    :disabled="diagnosticStore.loading"
+                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+                >
+                    <span v-if="diagnosticStore.loading" class="animate-spin text-lg">⏳</span>
+                    <SparklesIcon v-else class="w-5 h-5" />
+                    <span>{{ diagnosticStore.loading ? 'Analizando infraestructura...' : 'Generar Nuevo Diagnóstico' }}</span>
+                </button>
+            </template>
+
+            <!-- Contenido Principal -->
+            <div class="space-y-6">
+                <!-- Error Banner -->
+                <div v-if="diagnosticStore.error" class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 text-red-700 dark:text-red-300 p-4 rounded-xl flex items-center space-x-3 shadow-lg">
+                    <ExclamationTriangleIcon class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
+                    <p class="text-sm">{{ diagnosticStore.error }}</p>
                 </div>
 
-                <!-- Título y Acciones -->
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Diagnóstico del Sistema por IA</h1>
-                        <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">Análisis inteligente del estado global, salud y seguridad de la aplicación.</p>
-                    </div>
-                    <button 
-                        @click="handleRefresh" 
-                        :disabled="diagnosticStore.loading"
-                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
-                    >
-                        <span v-if="diagnosticStore.loading" class="animate-spin text-lg">⏳</span>
-                        <SparklesIcon v-else class="w-5 h-5" />
-                        <span>{{ diagnosticStore.loading ? 'Analizando infraestructura...' : 'Generar Nuevo Diagnóstico' }}</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Error Banner -->
-            <div v-if="diagnosticStore.error" class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 text-red-700 dark:text-red-300 p-4 rounded-xl flex items-center space-x-3 shadow-lg">
-                <ExclamationTriangleIcon class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
-                <p class="text-sm">{{ diagnosticStore.error }}</p>
-            </div>
-
-            <!-- Timestamp de última consulta -->
-            <div v-if="diagnosticStore.timestamp" class="bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 px-4 py-3 rounded-xl flex items-center justify-between text-sm backdrop-blur-sm shadow-sm">
-                <span class="text-slate-500 dark:text-slate-400">Último diagnóstico generado: <strong class="text-slate-900 dark:text-slate-200">{{ formattedTimestamp }}</strong></span>
-            </div>
-
-            <!-- Report Container -->
-            <div v-if="diagnosticStore.report" class="space-y-6">
-                <!-- Tarjetas de Estado General -->
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Global</span>
-                        <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getStatusColor(diagnosticStore.report.globalStatus)">
-                            {{ diagnosticStore.report.globalStatus }}
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Backend</span>
-                        <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getStatusColor(diagnosticStore.report.backendStatus)">
-                            {{ diagnosticStore.report.backendStatus }}
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Frontend</span>
-                        <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getStatusColor(diagnosticStore.report.frontendStatus)">
-                            {{ diagnosticStore.report.frontendStatus }}
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Base de Datos</span>
-                        <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getStatusColor(diagnosticStore.report.databaseStatus)">
-                            {{ diagnosticStore.report.databaseStatus }}
-                        </div>
-                    </div>
-                    <div class="col-span-2 sm:col-span-1 bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Seguridad</span>
-                        <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getSecurityColor(diagnosticStore.report.securityStatus)">
-                            {{ diagnosticStore.report.securityStatus }}
-                        </div>
-                    </div>
+                <!-- Timestamp de última consulta -->
+                <div v-if="diagnosticStore.timestamp" class="bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 px-4 py-3 rounded-xl flex items-center justify-between text-sm backdrop-blur-sm shadow-sm">
+                    <span class="text-slate-500 dark:text-slate-400">Último diagnóstico generado: <strong class="text-slate-900 dark:text-slate-200">{{ formattedTimestamp }}</strong></span>
                 </div>
 
-                <!-- Resumen Ejecutivo -->
-                <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 backdrop-blur-sm">
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                        <DocumentTextIcon class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                        Resumen Ejecutivo
-                    </h2>
-                    <p class="text-slate-700 dark:text-slate-300 leading-relaxed text-sm">{{ diagnosticStore.report.summary }}</p>
-                </div>
-
-                <!-- Detalles por Componente y Recomendaciones -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Análisis Detallado -->
-                    <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 backdrop-blur-sm flex flex-col">
-                        <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                            <CpuChipIcon class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                            Análisis Detallado
-                        </h3>
-                        <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-300 flex-1">
-                            <li class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
-                                <strong class="text-slate-900 dark:text-white block mb-0.5">Backend:</strong> 
-                                <span class="text-slate-600 dark:text-slate-300">{{ diagnosticStore.report.details.backend }}</span>
-                            </li>
-                            <li class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
-                                <strong class="text-slate-900 dark:text-white block mb-0.5">Frontend:</strong> 
-                                <span class="text-slate-600 dark:text-slate-300">{{ diagnosticStore.report.details.frontend }}</span>
-                            </li>
-                            <li class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
-                                <strong class="text-slate-900 dark:text-white block mb-0.5">Base de Datos:</strong> 
-                                <span class="text-slate-600 dark:text-slate-300">{{ diagnosticStore.report.details.database }}</span>
-                            </li>
-                            <li class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
-                                <strong class="text-slate-900 dark:text-white block mb-0.5">Seguridad:</strong> 
-                                <span class="text-slate-600 dark:text-slate-300">{{ diagnosticStore.report.details.security }}</span>
-                            </li>
-                        </ul>
+                <!-- Report Container -->
+                <div v-if="diagnosticStore.report" class="space-y-6">
+                    <!-- Tarjetas de Estado General -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
+                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Global</span>
+                            <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getStatusColor(diagnosticStore.report.globalStatus)">
+                                {{ diagnosticStore.report.globalStatus }}
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
+                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Backend</span>
+                            <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getStatusColor(diagnosticStore.report.backendStatus)">
+                                {{ diagnosticStore.report.backendStatus }}
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
+                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Frontend</span>
+                            <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getStatusColor(diagnosticStore.report.frontendStatus)">
+                                {{ diagnosticStore.report.frontendStatus }}
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
+                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Base de Datos</span>
+                            <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getStatusColor(diagnosticStore.report.databaseStatus)">
+                                {{ diagnosticStore.report.databaseStatus }}
+                            </div>
+                        </div>
+                        <div class="col-span-2 sm:col-span-1 bg-white dark:bg-slate-800/60 p-4 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
+                            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Seguridad</span>
+                            <div class="text-base sm:text-lg font-bold capitalize mt-2" :class="getSecurityColor(diagnosticStore.report.securityStatus)">
+                                {{ diagnosticStore.report.securityStatus }}
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Recomendaciones de Acción -->
-                    <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 backdrop-blur-sm flex flex-col">
-                        <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                            <CheckCircleIcon class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                            Recomendaciones de Acción
-                        </h3>
-                        <ul class="space-y-2.5 text-sm text-slate-700 dark:text-slate-300 flex-1">
-                            <li v-for="(rec, index) in diagnosticStore.report.recommendations" :key="index" class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
-                                <span class="inline-flex items-center justify-center bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-bold text-xs w-5 h-5 rounded-full shrink-0 mt-0.5 border border-indigo-200 dark:border-indigo-500/20">
-                                    {{ index + 1 }}
-                                </span>
-                                <span class="leading-relaxed">{{ rec }}</span>
-                            </li>
-                        </ul>
+                    <!-- Resumen Ejecutivo -->
+                    <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 backdrop-blur-sm">
+                        <h2 class="text-base font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                            <DocumentTextIcon class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                            Resumen Ejecutivo
+                        </h2>
+                        <p class="text-slate-700 dark:text-slate-300 leading-relaxed text-sm">{{ diagnosticStore.report.summary }}</p>
+                    </div>
+
+                    <!-- Detalles por Componente y Recomendaciones -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Análisis Detallado -->
+                        <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 backdrop-blur-sm flex flex-col">
+                            <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                <CpuChipIcon class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                Análisis Detallado
+                            </h3>
+                            <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-300 flex-1">
+                                <li class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
+                                    <strong class="text-slate-900 dark:text-white block mb-0.5">Backend:</strong> 
+                                    <span class="text-slate-600 dark:text-slate-300">{{ diagnosticStore.report.details.backend }}</span>
+                                </li>
+                                <li class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
+                                    <strong class="text-slate-900 dark:text-white block mb-0.5">Frontend:</strong> 
+                                    <span class="text-slate-600 dark:text-slate-300">{{ diagnosticStore.report.details.frontend }}</span>
+                                </li>
+                                <li class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
+                                    <strong class="text-slate-900 dark:text-white block mb-0.5">Base de Datos:</strong> 
+                                    <span class="text-slate-600 dark:text-slate-300">{{ diagnosticStore.report.details.database }}</span>
+                                </li>
+                                <li class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
+                                    <strong class="text-slate-900 dark:text-white block mb-0.5">Seguridad:</strong> 
+                                    <span class="text-slate-600 dark:text-slate-300">{{ diagnosticStore.report.details.security }}</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Recomendaciones de Acción -->
+                        <div class="bg-white dark:bg-slate-800/60 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700/60 backdrop-blur-sm flex flex-col">
+                            <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                <CheckCircleIcon class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                Recomendaciones de Acción
+                            </h3>
+                            <ul class="space-y-2.5 text-sm text-slate-700 dark:text-slate-300 flex-1">
+                                <li v-for="(rec, index) in diagnosticStore.report.recommendations" :key="index" class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/40">
+                                    <span class="inline-flex items-center justify-center bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-bold text-xs w-5 h-5 rounded-full shrink-0 mt-0.5 border border-indigo-200 dark:border-indigo-500/20">
+                                        {{ index + 1 }}
+                                    </span>
+                                    <span class="leading-relaxed">{{ rec }}</span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </template>  
+        </PageLayout>
+    </template>
     ```
 17. Crear Vista 404 (not-found):
     + Crea el archivo `frontend/src/views/errors/NotFoundView.vue`:

@@ -3,8 +3,9 @@
 import { ref, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth.store';
 import { userService } from '@/services';
-import { UserIcon, KeyIcon, ChevronLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
+import { UserIcon, KeyIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import { getSwalTheme } from '@/utils/swal';
+import PageLayout from '@/components/common/PageLayout.vue';
 
 const authStore = useAuthStore();
 const showCurrentPassword = ref(false);
@@ -233,7 +234,7 @@ const handleDrop = (event) => {
             return;
         }
 
-        // 2. Validar tamaño máximo (2MB) - ¡AQUÍ ESTÁ LA CLAVE!
+        // 2. Validar tamaño máximo (2MB)
         if (file.size > 2 * 1024 * 1024) {
             getSwalTheme().fire({
                 title: 'Archivo muy grande',
@@ -256,23 +257,13 @@ const handleDrop = (event) => {
 </script>
 
 <template>
-    <div class="max-w-4xl mx-auto px-4 py-8">
-        <!-- Botón de retorno al Dashboard -->
-        <div class="mb-6">
-            <router-link 
-                to="/dashboard" 
-                class="inline-flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors group"
-            >
-                <ChevronLeftIcon class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                <span>Volver al Dashboard</span>
-            </router-link>
-        </div>
-
-        <div class="mb-6">
-            <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Mi Perfil</h2>
-            <p class="text-sm text-slate-600 dark:text-slate-400">Administra tu información personal y seguridad de la cuenta.</p>
-        </div>
-
+    <PageLayout 
+        title="Mi Perfil" 
+        description="Administra tu información personal y seguridad de la cuenta."
+        :backTo="'/dashboard'"
+        backText="Volver al Dashboard"
+        :isAdmin="false"
+    >
         <form @submit.prevent="updateProfile" class="space-y-6">
             <!-- Sección Avatar & Datos Básicos con Drag & Drop -->
             <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm dark:shadow-xl transition-colors">
@@ -420,5 +411,5 @@ const handleDrop = (event) => {
                 </button>
             </div>
         </form>
-    </div>
+    </PageLayout>
 </template>
