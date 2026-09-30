@@ -1,11 +1,12 @@
 <!-- src/views/admin/RolesAdminView.vue -->
 <script setup>
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, h } from 'vue';
 import { roleService } from '@/services';
 import { useAuthStore } from '@/stores/auth.store';
 import { getSwalTheme } from '@/utils/swal';
 import PageLayout from '@/components/common/PageLayout.vue';
+import AdminTableLayout from '@/components/common/AdminTableLayout.vue';
 
 // Instancia del store para acceder a los getters
 const authStore = useAuthStore();
@@ -152,6 +153,65 @@ const getRoleBadgeClass = (name) => {
     }
 };
 
+// --- DEFINICIÓN DE COLUMNAS PARA TANSTACK TABLE ---
+const columns = [
+    {
+        accessorKey: 'name',
+        header: 'Nombre del Rol',
+        cell: ({ row }) => {
+            const role = row.original;
+            return h('span', { class: `px-2.5 py-1 rounded-full text-xs font-bold border ${getRoleBadgeClass(role.name)}` }, role.name);
+        }
+    },
+    {
+        accessorKey: 'description',
+        header: 'Descripción',
+        cell: ({ row }) => h('span', { class: 'text-slate-600 dark:text-slate-400 max-w-xs truncate block' }, row.original.description || 'Sin descripción')
+    },
+    {
+        accessorKey: 'userCount',
+        header: 'Usuarios',
+        cell: ({ row }) => h('span', { class: 'text-slate-700 dark:text-slate-300' }, `${row.original.userCount} usuario(s)`)
+    },
+    {
+        accessorKey: 'permissions',
+        header: 'Permisos Asignados',
+        cell: ({ row }) => {
+            const role = row.original;
+            if (role.name === 'SUPER_ADMIN') {
+                return h('span', { class: 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-500/20' }, 'Acceso Total (Global)');
+            }
+            return h('span', { class: 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50' }, `${role.permissions ? role.permissions.length : 0} permiso(s)`);
+        }
+    },
+    {
+        id: 'actions',
+        header: () => h('div', { class: 'text-right w-full' }, 'Acciones'),
+        cell: ({ row }) => {
+            const role = row.original;
+            const buttons = [];
+
+            if (authStore.hasPermission('roles:update')) {
+                buttons.push(h('button', {
+                    onClick: () => openModal(role),
+                    title: role.name === 'SUPER_ADMIN' ? 'Ver detalles del rol' : 'Editar rol',
+                    class: 'p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors cursor-pointer'
+                }, [h(PencilIcon, { class: 'w-4 h-4' })]));
+            }
+
+            if (authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN') {
+                buttons.push(h('button', {
+                    onClick: () => confirmDelete(role),
+                    title: 'Eliminar rol',
+                    class: 'p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 rounded-lg transition-colors cursor-pointer'
+                }, [h(TrashIcon, { class: 'w-4 h-4' })]));
+            }
+
+            return h('div', { class: 'flex items-center justify-end gap-2 w-full' }, buttons);
+        }
+    }
+];
+
 onMounted(() => {
     loadData();
 });
@@ -176,66 +236,11 @@ onMounted(() => {
             </button>
         </template>
 
-        <!-- Contenido principal: Tabla de Roles -->
-        <div class="w-full bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-x-auto shadow-xl">
-            <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-                <thead class="bg-slate-100 dark:bg-slate-900/50 text-slate-700 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                    <tr>
-                        <th class="px-6 py-3">Nombre del Rol</th>
-                        <th class="px-6 py-3">Descripción</th>
-                        <th class="px-6 py-3">Usuarios</th>
-                        <th class="px-6 py-3">Permisos Asignados</th>
-                        <th class="px-6 py-3 text-right">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
-                    <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                        <td class="px-6 py-4 font-semibold text-slate-900 dark:text-white">
-                            <span class="px-2.5 py-1 rounded-full text-xs font-bold border" :class="getRoleBadgeClass(role.name)">
-                                {{ role.name }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">{{ role.description || 'Sin descripción' }}</td>
-                        <td class="px-6 py-4 text-slate-700 dark:text-slate-300">{{ role.userCount }} usuario(s)</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span 
-                                v-if="role.name === 'SUPER_ADMIN'"
-                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-500/20"
-                            >
-                                Acceso Total (Global)
-                            </span>
-                            <span 
-                                v-else
-                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50"
-                            >
-                                {{ role.permissions ? role.permissions.length : 0 }} permiso(s)
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                <button 
-                                    v-if="authStore.hasPermission('roles:update')"
-                                    @click="openModal(role)"
-                                    class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors cursor-pointer"
-                                    :title="role.name === 'SUPER_ADMIN' ? 'Ver detalles del rol' : 'Editar rol'"
-                                >
-                                    <PencilIcon class="w-4 h-4" />
-                                </button>
-                                
-                                <button 
-                                    v-if="authStore.hasPermission('roles:delete') && role.name !== 'SUPER_ADMIN'"
-                                    @click="confirmDelete(role)"
-                                    class="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 rounded-lg transition-colors cursor-pointer"
-                                    title="Eliminar rol"
-                                >
-                                    <TrashIcon class="w-4 h-4" />
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <!-- Contenido principal usando AdminTableLayout -->
+        <AdminTableLayout 
+            :data="roles" 
+            :columns="columns" 
+        />
 
         <!-- Slot para Modales -->
         <template #modales>

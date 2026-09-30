@@ -1,11 +1,12 @@
 <!-- src/views/admin/UsersAdminView.vue -->
 <script setup>
+import { h, ref, onMounted } from 'vue';
 import { TrashIcon, UserGroupIcon, PencilSquareIcon, PlusIcon, MagnifyingGlassIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
-import { ref, onMounted } from 'vue';
 import { userService, roleService } from '@/services';
 import { useAuthStore } from '@/stores/auth.store';
 import { getSwalTheme } from '@/utils/swal';
 import PageLayout from '@/components/common/PageLayout.vue';
+import AdminTableLayout from '@/components/common/AdminTableLayout.vue';
 
 // Instancia del store para acceder a los getters
 const authStore = useAuthStore();
@@ -119,6 +120,98 @@ const handleSearch = () => {
 const changePage = (newPage) => {
     fetchUsers(newPage);
 };
+
+// --- DEFINICIÓN DE COLUMNAS PARA TANSTACK TABLE ---
+const columns = [
+    {
+        accessorKey: 'name',
+        header: () => h('div', { 
+            class: 'cursor-pointer hover:text-slate-900 dark:hover:text-white flex items-center space-x-1 select-none',
+            onClick: () => handleSort('name') 
+        }, [
+            h('span', {}, 'Usuario'),
+            h('span', { class: 'inline-flex flex-col text-[10px] leading-none ml-1' }, [
+                h('span', { class: sortBy.value === 'name' && sortOrder.value === 'asc' ? 'text-emerald-500 font-bold' : 'text-slate-400' }, '▲'),
+                h('span', { class: sortBy.value === 'name' && sortOrder.value === 'desc' ? 'text-emerald-500 font-bold' : 'text-slate-400' }, '▼')
+            ])
+        ]),
+        cell: ({ row }) => {
+            const user = row.original;
+            return h('div', { class: 'flex items-center' }, [
+                h('div', { class: 'w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 uppercase border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0' }, [
+                    user.avatarUrl || user.avatar 
+                        ? h('img', { src: user.avatarUrl || user.avatar, alt: user.name, class: 'w-full h-full object-cover' })
+                        : h('span', {}, user.name ? user.name.charAt(0) : 'U')
+                ]),
+                h('div', { class: 'ml-4' }, [
+                    h('div', { class: 'font-medium text-slate-900 dark:text-slate-200' }, user.name),
+                    h('div', { class: 'text-xs text-slate-500 dark:text-slate-400' }, user.email)
+                ])
+            ]);
+        }
+    },
+    {
+        accessorKey: 'roles',
+        header: 'Roles Asignados',
+        cell: ({ row }) => {
+            const user = row.original;
+            if (!user.roles || user.roles.length === 0) {
+                return h('span', { class: 'px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600' }, 'Sin permisos (Guest)');
+            }
+            return h('div', { class: 'flex flex-wrap gap-1.5' }, user.roles.map(role => 
+                h('span', { class: `px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getRoleBadgeClass(role)}` }, role)
+            ));
+        }
+    },
+    {
+        accessorKey: 'createdAt',
+        header: () => h('div', { 
+            class: 'cursor-pointer hover:text-slate-900 dark:hover:text-white flex items-center space-x-1 select-none',
+            onClick: () => handleSort('createdAt') 
+        }, [
+            h('span', {}, 'Fecha Registro'),
+            h('span', { class: 'inline-flex flex-col text-[10px] leading-none ml-1' }, [
+                h('span', { class: sortBy.value === 'createdAt' && sortOrder.value === 'asc' ? 'text-emerald-500 font-bold' : 'text-slate-400' }, '▲'),
+                h('span', { class: sortBy.value === 'createdAt' && sortOrder.value === 'desc' ? 'text-emerald-500 font-bold' : 'text-slate-400' }, '▼')
+            ])
+        ]),
+        cell: ({ row }) => h('span', { class: 'text-slate-600 dark:text-slate-400' }, formatDate(row.original.createdAt))
+    },
+    {
+        id: 'actions',
+        header: () => h('div', { class: 'text-right w-full' }, 'Acciones'),
+        cell: ({ row }) => {
+            const user = row.original;
+            const buttons = [];
+
+            if (authStore.hasPermission('users:update')) {
+                buttons.push(h('button', {
+                    onClick: () => openUserModal(user),
+                    title: 'Editar datos del usuario',
+                    class: 'h-9 w-9 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all cursor-pointer'
+                }, [h(PencilSquareIcon, { class: 'w-4 h-4' })]));
+            }
+
+            if (authStore.hasPermission('users:delete')) {
+                buttons.push(h('button', {
+                    onClick: () => confirmDeleteUser(user),
+                    title: 'Eliminar usuario',
+                    class: 'h-9 w-9 inline-flex items-center justify-center bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded-lg transition-all cursor-pointer'
+                }, [h(TrashIcon, { class: 'w-4 h-4' })]));
+            }
+
+            if (authStore.hasPermission('roles:update')) {
+                buttons.push(h('button', {
+                    onClick: () => openRoleModal(user),
+                    title: 'Editar Roles',
+                    class: 'h-9 px-3 inline-flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white rounded-lg transition-all cursor-pointer'
+                }, [h(UserGroupIcon, { class: 'w-4 h-4' })]));
+            }
+
+            return h('div', { class: 'flex items-center justify-end space-x-2 w-full' }, buttons);
+        }
+    }
+];
 
 // --- LÓGICA DE ROLES ---
 const openRoleModal = (user) => {
@@ -398,9 +491,18 @@ onMounted(() => {
             </button>
         </template>
 
-        <!-- Slot para Filtros (Barra de Búsqueda) -->
-        <template #filters>
-            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 shadow-sm rounded-2xl p-4 transition-colors">
+        <!-- Contenido principal usando AdminTableLayout con paginación de servidor centralizada -->
+        <AdminTableLayout 
+            :data="users" 
+            :columns="columns" 
+            :loading="loading"
+            :page="pagination.page"
+            :total-pages="pagination.totalPages"
+            :total="pagination.total"
+            @page-change="changePage"
+        >
+            <!-- Slot para Filtros (Barra de Búsqueda) -->
+            <template #filters>
                 <div class="relative">
                     <input
                         v-model="searchQuery"
@@ -411,141 +513,8 @@ onMounted(() => {
                     />
                     <MagnifyingGlassIcon class="w-5 h-5 text-slate-400 absolute left-3 top-3" />
                 </div>
-            </div>
-        </template>
-
-        <!-- Contenido principal: Tabla de Usuarios -->
-        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm overflow-hidden transition-colors">
-            <div v-if="loading" class="p-12 text-center text-slate-400">
-                <span class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-2"></span>
-                <p>Cargando usuarios...</p>
-            </div>
-
-            <div v-else-if="users.length === 0" class="p-12 text-center text-slate-400">
-                No se encontraron usuarios que coincidan con la búsqueda.
-            </div>
-
-            <div v-else class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider select-none transition-colors">
-                            <th @click="handleSort('name')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
-                                <div class="flex items-center space-x-1">
-                                    <span>Usuario</span>
-                                    <span class="inline-flex flex-col text-[10px] leading-none">
-                                        <span :class="sortBy === 'name' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
-                                        <span :class="sortBy === 'name' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
-                                    </span>
-                                </div>
-                            </th>
-                            <th class="px-6 py-3.5">Roles Asignados</th>
-                            <th @click="handleSort('createdAt')" class="px-6 py-3.5 cursor-pointer hover:text-white transition-colors">
-                                <div class="flex items-center space-x-1">
-                                    <span>Fecha Registro</span>
-                                    <span class="inline-flex flex-col text-[10px] leading-none">
-                                        <span :class="sortBy === 'createdAt' && sortOrder === 'asc' ? 'text-emerald-400' : 'text-slate-600'">▲</span>
-                                        <span :class="sortBy === 'createdAt' && sortOrder === 'desc' ? 'text-emerald-400' : 'text-slate-600'">▼</span>
-                                    </span>
-                                </div>
-                            </th>
-                            <th class="px-6 py-3.5 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700/60 text-sm">
-                        <tr v-for="user in users" :key="user.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 uppercase border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0 transition-colors">
-                                        <img 
-                                            v-if="user.avatarUrl || user.avatar" 
-                                            :src="user.avatarUrl || user.avatar" 
-                                            :alt="user.name"
-                                            class="w-full h-full object-cover" 
-                                        />
-                                        <span v-else>{{ user.name ? user.name.charAt(0) : 'U' }}</span>
-                                    </div>
-                                    <div class="ml-4">
-                                        <div class="font-medium text-slate-900 dark:text-slate-200">{{ user.name }}</div>
-                                        <div class="text-xs text-slate-500 dark:text-slate-400">{{ user.email }}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex flex-wrap gap-1.5">
-                                    <span
-                                        v-for="role in user.roles"
-                                        :key="role"
-                                        :class="getRoleBadgeClass(role)"
-                                        class="px-2.5 py-0.5 rounded-full text-xs font-semibold border"
-                                    >
-                                        {{ role }}
-                                    </span>
-                                    <span v-if="user.roles.length === 0" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600 transition-colors">
-                                        Sin permisos (Guest)
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
-                                {{ formatDate(user.createdAt) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right font-medium">
-                                <div class="inline-flex items-center justify-end space-x-2">
-                                    <button
-                                        v-if="authStore.hasPermission('users:update')"
-                                        @click="openUserModal(user)"
-                                        title="Editar datos del usuario"
-                                        class="h-9 w-9 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all cursor-pointer"
-                                    >
-                                        <PencilSquareIcon class="w-4 h-4" />
-                                    </button>
-
-                                    <button
-                                        v-if="authStore.hasPermission('users:delete')"
-                                        @click="confirmDeleteUser(user)"
-                                        title="Eliminar usuario"
-                                        class="h-9 w-9 inline-flex items-center justify-center bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white rounded-lg transition-all cursor-pointer"
-                                    >
-                                        <TrashIcon class="w-4 h-4" />
-                                    </button>
-
-                                    <button
-                                        v-if="authStore.hasPermission('roles:update')"
-                                        @click="openRoleModal(user)"
-                                        title="Editar Roles"
-                                        class="h-9 px-3 inline-flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white rounded-lg transition-all cursor-pointer"
-                                    >
-                                        <UserGroupIcon class="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Paginación -->
-            <div v-if="pagination.totalPages > 1" class="px-6 py-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between transition-colors">
-                <span class="text-sm text-slate-600 dark:text-slate-400">
-                    Página {{ pagination.page }} de {{ pagination.totalPages }}
-                </span>
-                <div class="flex gap-2">
-                    <button
-                        :disabled="pagination.page === 1"
-                        @click="changePage(pagination.page - 1)"
-                        class="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm cursor-pointer"
-                    >
-                        Anterior
-                    </button>
-                    <button
-                        :disabled="pagination.page === pagination.totalPages"
-                        @click="changePage(pagination.page + 1)"
-                        class="px-3 py-1 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm cursor-pointer"
-                    >
-                        Siguiente
-                    </button>
-                </div>
-            </div>
-        </div>
+            </template>
+        </AdminTableLayout>
 
         <!-- Slot para Modales -->
         <template #modales>

@@ -79,6 +79,8 @@
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
 + ◻️ Pedir repetir contraseña tanto en el register como en el profile.
++ ◻️ Homologar nombres de variables de entorno.
++ ◻️ Homologar los modales.
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ◻️ GitHub.
@@ -110,6 +112,7 @@
 + ✅ Crear backend/.env.example y frontend/.env.example
 + ✅ Recuperar credenciales (¿Olvidó su password?).
 + ✅ Mejorar el layout.
++ ✅ Homologar tablas en vistas.
 
 
 
