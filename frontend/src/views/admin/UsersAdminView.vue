@@ -6,7 +6,8 @@ import { userService, roleService } from '@/services';
 import { useAuthStore } from '@/stores/auth.store';
 import { getSwalTheme } from '@/utils/swal';
 import PageLayout from '@/components/common/PageLayout.vue';
-import AdminTableLayout from '@/components/common/AdminTableLayout.vue';
+import AdminTableLayout from '@/components/common/AdminTableLayout.vue'
+import BaseModal from '@/components/common/BaseModal.vue';;
 
 // Instancia del store para acceder a los getters
 const authStore = useAuthStore();
@@ -23,6 +24,7 @@ let searchTimeout = null;
 const selectedUser = ref(null);
 const modalRoles = ref([]);
 const availableRoles = ref([]);
+const isRoleModalOpen = ref(false);
 
 // --- ESTADOS PARA CREACIÓN / EDICIÓN COMPLETA DE USUARIO ---
 const isUserModalOpen = ref(false);
@@ -217,6 +219,7 @@ const columns = [
 const openRoleModal = (user) => {
     selectedUser.value = user;
     modalRoles.value = [...user.roles];
+    isRoleModalOpen.value = true;
 };
 
 const saveUserRoles = async () => {
@@ -225,6 +228,7 @@ const saveUserRoles = async () => {
     try {
         await userService.updateUserRoles(selectedUser.value.id, modalRoles.value);
         selectedUser.value.roles = [...modalRoles.value];
+        isRoleModalOpen.value = false;
         selectedUser.value = null;
 
         getSwalTheme().fire({
@@ -519,172 +523,174 @@ onMounted(() => {
         <!-- Slot para Modales -->
         <template #modales>
             <!-- Modal de Asignación de Roles -->
-            <div v-if="selectedUser" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl transition-colors">
-                    <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">Gestionar Roles</h3>
-                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                        Modificando permisos para <span class="text-emerald-400 font-semibold">{{ selectedUser.name }}</span>
-                    </p>
+            <BaseModal
+                v-model="isRoleModalOpen"
+                title="Gestionar Roles"
+                max-width="max-w-md"
+                @close="selectedUser = null"
+            >
+                <p class="text-sm text-slate-600 dark:text-slate-400 mb-4" v-if="selectedUser">
+                    Modificando permisos para <span class="text-emerald-400 font-semibold">{{ selectedUser.name }}</span>
+                </p>
 
-                    <div class="space-y-3 mb-6">
-                        <label v-for="role in availableRoles" :key="role" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-slate-400 dark:hover:border-slate-500 transition-colors">
-                            <input
-                                type="checkbox"
-                                :value="role"
-                                v-model="modalRoles"
-                                class="w-4 h-4 text-emerald-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500 cursor-pointer"
-                            />
-                            <span class="text-sm font-medium text-slate-900 dark:text-slate-200">{{ role }}</span>
-                        </label>
-                    </div>
-
-                    <div class="flex justify-end gap-3">
-                        <button
-                            @click="selectedUser = null"
-                            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm cursor-pointer"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            @click="saveUserRoles"
-                            :disabled="saving"
-                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm cursor-pointer"
-                        >
-                            {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
-                        </button>
-                    </div>
+                <div class="space-y-3">
+                    <label v-for="role in availableRoles" :key="role" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-slate-400 dark:hover:border-slate-500 transition-colors">
+                        <input
+                            type="checkbox"
+                            :value="role"
+                            v-model="modalRoles"
+                            class="w-4 h-4 text-emerald-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500 cursor-pointer"
+                        />
+                        <span class="text-sm font-medium text-slate-900 dark:text-slate-200">{{ role }}</span>
+                    </label>
                 </div>
-            </div>
+
+                <template #footer>
+                    <button
+                        @click="isRoleModalOpen = false; selectedUser = null"
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm cursor-pointer"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        @click="saveUserRoles"
+                        :disabled="saving"
+                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm cursor-pointer"
+                    >
+                        {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
+                    </button>
+                </template>
+            </BaseModal>
             
             <!-- Modal de Usuario (Creación / Edición) -->
-            <div v-if="isUserModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl transition-colors">
-                    <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">
-                        {{ targetUser ? 'Editar Usuario' : 'Nuevo Usuario' }}
-                    </h3>
-                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                        {{ targetUser ? `Modificando los datos de ${targetUser.name}` : 'Ingresa la información del nuevo usuario' }}
-                    </p>
+            <BaseModal
+                v-model="isUserModalOpen"
+                :title="targetUser ? 'Editar Usuario' : 'Nuevo Usuario'"
+                max-width="max-w-md"
+            >
+                <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                    {{ targetUser ? `Modificando los datos de ${targetUser.name}` : 'Ingresa la información del nuevo usuario' }}
+                </p>
 
-                    <form @submit.prevent="saveUserData" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nombre Completo</label>
+                <form id="user-form" @submit.prevent="saveUserData" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nombre Completo</label>
+                        <input
+                            v-model="userForm.name"
+                            type="text"
+                            required
+                            class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Correo Electrónico</label>
+                        <input
+                            v-model="userForm.email"
+                            type="email"
+                            required
+                            class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                        />
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-semibold uppercase text-slate-400">
+                                Contraseña {{ targetUser ? '(Opcional / Dejar en blanco)' : '' }}
+                            </label>
+                            <span v-if="!targetUser" class="text-[11px] text-amber-600 dark:text-amber-400/90 font-medium">
+                                Si se deja vacía: <code class="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-mono">{{ DEFAULT_PASSWORD }}</code>
+                            </span>
+                        </div>
+                        <div class="relative">
                             <input
-                                v-model="userForm.name"
-                                type="text"
-                                required
+                                v-model="userForm.password"
+                                :type="showUserPassword ? 'text' : 'password'"
+                                placeholder="••••••••"
                                 class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
                             />
+                            <button 
+                                type="button"
+                                @click="showUserPassword = !showUserPassword"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer"
+                            >
+                                <EyeIcon v-if="!showUserPassword" class="w-5 h-5" />
+                                <EyeSlashIcon v-else class="w-5 h-5" />
+                            </button>
                         </div>
+                    </div>
 
-                        <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Correo Electrónico</label>
-                            <input
-                                v-model="userForm.email"
-                                type="email"
-                                required
-                                class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                    <!-- Contenedor principal con eventos de Drag & Drop -->
+                    <div 
+                        class="flex items-center space-x-4 p-3 rounded-xl border-2 border-dashed transition-all duration-200"
+                        :class="isDragging ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]' : 'border-slate-300 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/30'"
+                        @dragover.prevent="isDragging = true"
+                        @dragleave.prevent="isDragging = false"
+                        @drop.prevent="handleDrop"
+                    >
+                        <div class="relative w-16 h-16 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center border border-slate-300 dark:border-slate-600 shrink-0 shadow-inner">
+                            <img 
+                                v-if="userForm.avatarUrl" 
+                                :src="userForm.avatarUrl" 
+                                :alt="userForm.name"
+                                class="w-full h-full object-cover" 
                             />
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between items-center mb-1">
-                                <label class="block text-xs font-semibold uppercase text-slate-400">
-                                    Contraseña {{ targetUser ? '(Opcional / Dejar en blanco)' : '' }}
-                                </label>
-                                <span v-if="!targetUser" class="text-[11px] text-amber-600 dark:text-amber-400/90 font-medium">
-                                    Si se deja vacía, será: <code class="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-mono">{{ DEFAULT_PASSWORD }}</code>
-                                </span>
+                            <span v-else class="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                                {{ userForm.name ? userForm.name.charAt(0).toUpperCase() : 'U' }}
+                            </span>
+                            <div v-if="uploadingAvatar" class="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <span class="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
                             </div>
-                            <div class="relative">
-                                <input
-                                    v-model="userForm.password"
-                                    :type="showUserPassword ? 'text' : 'password'"
-                                    placeholder="••••••••"
-                                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                                />
+                        </div>
+
+                        <div class="flex flex-col space-y-1.5 w-full">
+                            <div class="flex items-center gap-2">
+                                <label class="cursor-pointer px-3 py-1.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-xs text-white font-medium rounded-lg border border-slate-700 dark:border-slate-600 transition-colors inline-block text-center shadow-sm">
+                                    <span>{{ uploadingAvatar ? 'Subiendo...' : 'Subir imagen' }}</span>
+                                    <input 
+                                        ref="fileInputRef" 
+                                        type="file" 
+                                        accept="image/*" 
+                                        class="hidden" 
+                                        :disabled="uploadingAvatar"
+                                        @change="handleAvatarChange" 
+                                    />
+                                </label>
                                 <button 
-                                    type="button"
-                                    @click="showUserPassword = !showUserPassword"
-                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none cursor-pointer"
+                                    v-if="userForm.avatarUrl" 
+                                    type="button" 
+                                    :disabled="uploadingAvatar"
+                                    @click="removeAvatar"
+                                    class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 font-medium cursor-pointer"
                                 >
-                                    <EyeIcon v-if="!showUserPassword" class="w-5 h-5" />
-                                    <EyeSlashIcon v-else class="w-5 h-5" />
+                                    Eliminar
                                 </button>
                             </div>
+                            <p class="text-[11px] text-slate-600 dark:text-slate-400">
+                                <span class="text-emerald-600 dark:text-emerald-400 font-medium">Arrastra una imagen</span> o usa el botón (Máx. 2MB).
+                            </p>
                         </div>
+                    </div>
+                </form>
 
-                        <!-- Contenedor principal con eventos de Drag & Drop -->
-                        <div 
-                            class="flex items-center space-x-4 p-3 rounded-xl border-2 border-dashed transition-all duration-200 mb-4"
-                            :class="isDragging ? 'border-emerald-500 bg-emerald-500/10 scale-[1.01]' : 'border-slate-300 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/30'"
-                            @dragover.prevent="isDragging = true"
-                            @dragleave.prevent="isDragging = false"
-                            @drop.prevent="handleDrop"
-                        >
-                            <div class="relative w-16 h-16 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center border border-slate-300 dark:border-slate-600 shrink-0 shadow-inner">
-                                <img 
-                                    v-if="userForm.avatarUrl" 
-                                    :src="userForm.avatarUrl" 
-                                    :alt="userForm.name"
-                                    class="w-full h-full object-cover" 
-                                />
-                                <span v-else class="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                                    {{ userForm.name ? userForm.name.charAt(0).toUpperCase() : 'U' }}
-                                </span>
-                                <div v-if="uploadingAvatar" class="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                    <span class="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
-                                </div>
-                            </div>
-
-                            <div class="flex flex-col space-y-1.5 w-full">
-                                <div class="flex items-center gap-2">
-                                    <label class="cursor-pointer px-3 py-1.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-xs text-white font-medium rounded-lg border border-slate-700 dark:border-slate-600 transition-colors inline-block text-center shadow-sm">
-                                        <span>{{ uploadingAvatar ? 'Subiendo...' : 'Subir imagen' }}</span>
-                                        <input 
-                                            ref="fileInputRef" 
-                                            type="file" 
-                                            accept="image/*" 
-                                            class="hidden" 
-                                            :disabled="uploadingAvatar"
-                                            @change="handleAvatarChange" 
-                                        />
-                                    </label>
-                                    <button 
-                                        v-if="userForm.avatarUrl" 
-                                        type="button" 
-                                        :disabled="uploadingAvatar"
-                                        @click="removeAvatar"
-                                        class="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 font-medium cursor-pointer"
-                                    >
-                                        Eliminar
-                                    </button>
-                                </div>
-                                <p class="text-[11px] text-slate-600 dark:text-slate-400">
-                                    <span class="text-emerald-600 dark:text-emerald-400 font-medium">Arrastra una imagen</span> o usa el botón (Máx. 2MB).
-                                </p>
-                            </div>
-                        </div>                       
-
-                        <div class="flex justify-end gap-3 pt-2">
-                            <button
-                                type="button"
-                                @click="isUserModalOpen = false"
-                                class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm cursor-pointer"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                :disabled="saving || uploadingAvatar"
-                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm cursor-pointer"
-                            >
-                                {{ saving ? 'Guardando...' : (targetUser ? 'Guardar Cambios' : 'Crear Usuario') }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+                <template #footer>
+                    <button
+                        type="button"
+                        @click="isUserModalOpen = false"
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-xl transition-colors text-sm cursor-pointer"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        form="user-form"
+                        type="submit"
+                        :disabled="saving || uploadingAvatar"
+                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl disabled:opacity-50 transition-colors text-sm cursor-pointer"
+                    >
+                        {{ saving ? 'Guardando...' : (targetUser ? 'Guardar Cambios' : 'Crear Usuario') }}
+                    </button>
+                </template>
+            </BaseModal>
         </template>
     </PageLayout>
 </template>

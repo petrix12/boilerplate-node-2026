@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { getSwalTheme } from '@/utils/swal';
 import PageLayout from '@/components/common/PageLayout.vue';
 import AdminTableLayout from '@/components/common/AdminTableLayout.vue';
+import BaseModal from '@/components/common/BaseModal.vue';
 
 // Instancia del store para acceder a los getters
 const authStore = useAuthStore();
@@ -244,89 +245,82 @@ onMounted(() => {
 
         <!-- Slot para Modales -->
         <template #modales>
-            <div 
-                v-if="isModalOpen" 
-                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm p-3 sm:p-4"
+            <BaseModal
+                v-model="isModalOpen"
+                :title="targetRole ? 'Editar Rol' : 'Crear Nuevo Rol'"
+                max-width="max-w-2xl"
             >
-                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-                    
-                    <!-- Header del Modal -->
-                    <div class="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
-                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">{{ targetRole ? 'Editar Rol' : 'Crear Nuevo Rol' }}</h2>
-                        <button type="button" @click="isModalOpen = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 cursor-pointer">✕</button>
+                <!-- Formulario con ID para vincularse con los botones del footer -->
+                <form id="role-form" @submit.prevent="saveRole" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-2">Nombre del Rol</label>
+                        <input 
+                            v-model="form.name" 
+                            type="text" 
+                            required 
+                            :disabled="targetRole?.name === 'SUPER_ADMIN'"
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-purple-500 disabled:opacity-50 text-sm"
+                            placeholder="Ej: EDITOR"
+                        />
                     </div>
 
-                    <!-- Formulario con scroll vertical -->
-                    <form @submit.prevent="saveRole" class="flex flex-col flex-1 overflow-hidden min-h-0">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-2">Descripción</label>
+                        <input 
+                            v-model="form.description" 
+                            type="text" 
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-purple-500 text-sm"
+                            placeholder="Descripción breve de responsabilidades"
+                        />
+                    </div>
+
+                    <!-- Asignación de Permisos Agrupados -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-3">Permisos Asignados</label>
                         
-                        <div class="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-2">Nombre del Rol</label>
-                                <input 
-                                    v-model="form.name" 
-                                    type="text" 
-                                    required 
-                                    :disabled="targetRole?.name === 'SUPER_ADMIN'"
-                                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-purple-500 disabled:opacity-50"
-                                    placeholder="Ej: EDITOR"
-                                />
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-2">Descripción</label>
-                                <input 
-                                    v-model="form.description" 
-                                    type="text" 
-                                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
-                                    placeholder="Descripción breve de responsabilidades"
-                                />
-                            </div>
-
-                            <!-- Asignación de Permisos Agrupados -->
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-3">Permisos Asignados</label>
-                                
-                                <div v-if="form.name === 'SUPER_ADMIN'" class="p-4 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 rounded-xl text-purple-700 dark:text-purple-300 text-xs">
-                                    El rol SUPER_ADMIN cuenta con acceso absoluto e irrestricto a todas las funcionalidades del sistema.
-                                </div>
-                                
-                                <div v-else class="space-y-4">
-                                    <div v-for="(perms, moduleName) in groupedPermissions" :key="moduleName" class="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50">
-                                        <h4 class="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-3">{{ moduleName }}</h4>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <label v-for="perm in perms" :key="perm.id" class="flex items-center space-x-3 p-2.5 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 text-xs text-slate-700 dark:text-slate-300 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
-                                                <input 
-                                                    type="checkbox" 
-                                                    :value="perm.action" 
-                                                    v-model="form.permissions"
-                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                                                />
-                                                <span class="break-all font-medium">{{ perm.action }}</span>
-                                            </label>
-                                        </div>
-                                    </div>
+                        <div v-if="form.name === 'SUPER_ADMIN'" class="p-4 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 rounded-xl text-purple-700 dark:text-purple-300 text-xs">
+                            El rol SUPER_ADMIN cuenta con acceso absoluto e irrestricto a todas las funcionalidades del sistema.
+                        </div>
+                        
+                        <div v-else class="space-y-4">
+                            <div v-for="(perms, moduleName) in groupedPermissions" :key="moduleName" class="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                                <h4 class="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-3">{{ moduleName }}</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <label v-for="perm in perms" :key="perm.id" class="flex items-center space-x-3 p-2.5 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 text-xs text-slate-700 dark:text-slate-300 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+                                        <input 
+                                            type="checkbox" 
+                                            :value="perm.action" 
+                                            v-model="form.permissions"
+                                            class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                                        />
+                                        <span class="break-all font-medium">{{ perm.action }}</span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </form>
 
-                        <!-- Footer con Botones -->
-                        <div class="flex justify-end space-x-3 p-4 sm:p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/90 shrink-0">
-                            <button type="button" @click="isModalOpen = false" class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer">
-                                {{ targetRole?.name === 'SUPER_ADMIN' ? 'Cerrar' : 'Cancelar' }}
-                            </button>
-                            
-                            <button 
-                                v-if="targetRole?.name !== 'SUPER_ADMIN'"
-                                type="submit" 
-                                :disabled="saving" 
-                                class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20 cursor-pointer"
-                            >
-                                {{ saving ? 'Guardando...' : 'Guardar Rol' }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+                <template #footer>
+                    <button 
+                        type="button" 
+                        @click="isModalOpen = false" 
+                        class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                    >
+                        {{ targetRole?.name === 'SUPER_ADMIN' ? 'Cerrar' : 'Cancelar' }}
+                    </button>
+                    
+                    <button 
+                        v-if="targetRole?.name !== 'SUPER_ADMIN'"
+                        form="role-form"
+                        type="submit" 
+                        :disabled="saving" 
+                        class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50 cursor-pointer"
+                    >
+                        {{ saving ? 'Guardando...' : 'Guardar Rol' }}
+                    </button>
+                </template>
+            </BaseModal>
         </template>
     </PageLayout>
 </template>

@@ -8,10 +8,12 @@ import 'flatpickr/dist/themes/dark.css';
 import { Spanish } from 'flatpickr/dist/l10n/es.js';
 import PageLayout from '@/components/common/PageLayout.vue';
 import AdminTableLayout from '@/components/common/AdminTableLayout.vue';
+import BaseModal from '@/components/common/BaseModal.vue';
 
 const logs = ref([]);
 const loading = ref(false);
 const selectedLogModal = ref(null);
+const isDetailModalOpen = ref(false);
 
 const startDateInput = ref(null);
 const endDateInput = ref(null);
@@ -90,6 +92,7 @@ const changePage = (newPage) => {
 
 const openDetailsModal = (log) => {
     selectedLogModal.value = log;
+    isDetailModalOpen.value = true;
 };
 
 const getEntityBadgeClass = (entity) => {
@@ -323,25 +326,30 @@ onUnmounted(() => {
         <!-- Slot para Modales -->
         <template #modales>
             <!-- Modal de Detalles JSON -->
-            <div v-if="selectedLogModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
-                    <div class="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-1">
-                        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Detalles del Evento</h3>
-                        <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ selectedLogModal.action }} - {{ formatDate(selectedLogModal.createdAt) }}</span>
+            <BaseModal
+                v-model="isDetailModalOpen"
+                title="Detalles del Evento"
+                max-width="max-w-2xl"
+                @close="selectedLogModal = null"
+            >
+                <div v-if="selectedLogModal" class="space-y-4">
+                    <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                        {{ selectedLogModal.action }} - {{ formatDate(selectedLogModal.createdAt) }}
                     </div>    
                     <div class="bg-slate-900 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 overflow-y-auto overflow-x-hidden max-h-[50vh] max-w-full">
                         <pre class="text-yellow-600 dark:text-yellow-400 font-mono text-xs whitespace-pre-wrap break-all leading-relaxed select-all">{{ formatJsonDetails(selectedLogModal.details) }}</pre>
                     </div>
-                    <div class="flex justify-end">
-                        <button 
-                            @click="selectedLogModal = null" 
-                            class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
-                        >
-                            Cerrar
-                        </button>
-                    </div>
                 </div>
-            </div>
+
+                <template #footer>
+                    <button 
+                        @click="isDetailModalOpen = false; selectedLogModal = null" 
+                        class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+                    >
+                        Cerrar
+                    </button>
+                </template>
+            </BaseModal>
         </template>
     </PageLayout>
 </template>
