@@ -23,8 +23,8 @@
 | **Roles**  | `PUT`    | `/api/v1/roles/:id`               | `roles:update`            |
 | **Roles**  | `DELETE` | `/api/v1/roles/:id`               | `roles:delete`            |
 | **Audit**  | `GET`    | `/api/v1/audit-logs`              | `audit:read`              |
-| **Audit**  | `GET`    | `/api/v1/admin/system-diagnostic` | `system:logs:read`        |
-
+| **AI**     | `GET`    | `/api/v1/ai/diagnostic`           | `Autenticado`             |
+| **AI**     | `POST`   | `/api/v1/ai/chat`                 | `Autenticado`             |
 
 ## ✅ Pruebas de Endpoints
 ### 🩺 Health Check (Público)
@@ -554,7 +554,7 @@
         ```
 
 ### Probar la Ingesta de Logs
-1. Crear un registro de pruebas en la tabla `system_logs` (`/api/v1/system-logs/ingest`):
+1. Crear un registro de pruebas en la tabla `system_logs` (POST `/api/v1/system-logs/ingest`):
     ```bash
     curl -i -X POST http://localhost:3000/api/v1/system-logs/ingest \
         -H "Content-Type: application/json" \
@@ -578,4 +578,26 @@
         Keep-Alive: timeout=5
 
         {"status":"success","message":"Log registrado"}
+        ```
+
+### Prueba de IA
+1. Probar el Diagnóstico del Sistema (GET `/api/v1/ai/diagnostic`):
+    ```bash
+    curl -X GET http://localhost:3000/api/v1/ai/diagnostic \
+        -H "Authorization: Bearer $ADMIN_TOKEN"
+    ```
+    + Output:
+        ```bash
+        {"status":"success","data":{"backendStatus":"healthy","frontendStatus":"healthy","databaseStatus":"healthy","globalStatus":"healthy","securityStatus":"secure","summary":"El sistema se encuentra en un estado óptimo en el entorno de desarrollo. No se detectan errores recientes ni logs de sistema anómalos. Las operaciones de auditoría registradas corresponden a la gestión normal de roles y permisos (RBAC), sin indicios de actividad maliciosa o intentos de intrusión.","details":{"backend":"El backend Node.js/Express opera sin incidencias. La ausencia de 'recentErrors' y 'systemLogsSummary' vacíos indica estabilidad en el proceso. El entorno de desarrollo local (Node.js nativo) está funcionando correctamente sin cuellos de botella evidentes.","frontend":"El frontend Vue 3 no presenta reportes de errores. Dado que no hay métricas de rendimiento degradado ni errores de consola reportados, se asume que la interfaz de usuario está renderizando y respondiendo correctamente a las interacciones de los 21 usuarios activos.","database":"PostgreSQL muestra un estado saludable. Las operaciones de escritura (UPDATE, DELETE) sobre las tablas de usuarios y roles se han ejecutado sin fallos reportados. La consistencia de datos parece intacta dado que no hay errores de integridad o timeouts de conexión registrados.","security":"El análisis de los logs de auditoría revela actividad legítima de administración de accesos: eliminación masiva de roles de usuario, permisos de rol, y ajustes en roles específicos. No se detectan patrones de fuerza bruta, inyección SQL, escaneo de puertos ni accesos no autorizados. El estado es seguro."},"recommendations":["Mantener el monitoreo actual; no se requieren acciones inmediatas de remediación.","Verificar que las operaciones de 'DELETEMANY_USERROLE' y 'DELETE_ROLE' fueron intencionales por parte del administrador, dado que implican cambios significativos en la estructura de permisos.","Considerar la implementación de alertas proactivas si el volumen de operaciones de auditoría supera un umbral definido, para detectar cambios masivos no autorizados en producción.","Asegurar que las credenciales de la base de datos en el entorno de desarrollo no coincidan con las de producción para evitar riesgos de exposición accidental."]}}
+        ```
+2. Probar el Nuevo Chat de Asistencia (POST `/api/v1/ai/chat`):
+    ```bash
+    curl -X POST http://localhost:3000/api/v1/ai/chat \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{"message": "¿Cuáles son los comandos esenciales para levantar el entorno con Docker y Prisma?"}'
+    ```
+    + Output:
+        ```bash
+        {"status":"success","data":{"reply":"Para levantar el entorno local y gestionar la base de datos, debes ejecutar los siguientes comandos esenciales:\n\n1. **Levantar el entorno local con Docker:**\n   ```bash\n   docker compose up --build -d\n   ```\n\n2. **Ejecutar migraciones de base de datos:**\n   ```bash\n   npx prisma migrate dev\n   ```\n\n3. **Poblar la base de datos con seeders (opcional, para datos iniciales):**\n   ```bash\n   npx prisma db seed\n   ```\n\n4. **Iniciar el servidor de desarrollo backend:**\n   ```bash\n   npm run dev\n   ```"}}
         ```

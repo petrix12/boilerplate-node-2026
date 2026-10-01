@@ -177,7 +177,7 @@ FRONTEND_URL_LOCAL_VUE_CLI=http://localhost:8080
 
 
 # ===========================================
-# 🤖 INTEGRACIÓN DE IA (AI DIAGNOSTIC)
+# 🤖 INTEGRACIÓN DE IA (AI SERVICE)
 # ===========================================
 
 AI_PROVIDER=groq

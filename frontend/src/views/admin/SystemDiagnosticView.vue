@@ -1,11 +1,11 @@
 <!-- src/views/admin/SystemDiagnosticView.vue -->
 <script setup>
 import { computed, onMounted } from 'vue';
-import { useDiagnosticStore } from '@/stores/diagnostic.store';
+import { useAIStore } from '@/stores/ai.store';
 import { SparklesIcon } from '@heroicons/vue/24/outline';
 import PageLayout from '@/components/common/PageLayout.vue';
 
-const diagnosticStore = useDiagnosticStore();
+const diagnosticStore = useAIStore();
 
 const formattedTimestamp = computed(() => {
     if (!diagnosticStore.timestamp) return '';

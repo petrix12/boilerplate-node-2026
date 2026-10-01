@@ -1,12 +1,18 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import Navbar from '../components/Navbar.vue';
+import { useAuthStore } from '@/stores/auth.store';
+import Navbar from '@/components/Navbar.vue';
+import AIChatWidget from '@/components/common/AIChatWidget.vue';
 
 const route = useRoute();
+const authStore = useAuthStore();
 
 // Extrae el título definido en los meta de la ruta actual
 const pageTitle = computed(() => route.meta.title || 'Dashboard');
+
+// Verificamos si la funcionalidad de IA está activa en el sistema/usuario
+const isAiActive = computed(() => authStore.aiDiagnosticActive);
 </script>
 
 <template>
@@ -22,6 +28,9 @@ const pageTitle = computed(() => route.meta.title || 'Dashboard');
                 </transition>
             </router-view>
         </main>
+
+        <!-- Widget Flotante de IA integrado globalmente -->
+        <AIChatWidget v-if="isAiActive" />
     </div>
 </template>
 

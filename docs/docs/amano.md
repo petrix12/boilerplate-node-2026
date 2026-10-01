@@ -78,7 +78,7 @@
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
 + ◻️ Pedir repetir contraseña tanto en el register como en el profile.
-+ ◻️ Ayudante IA para la aplicación, que se puede meter en la documentación.
++ ◻️ Poner modo oscuro por defecto y ver como mejorar el footer
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ◻️ GitHub.
@@ -114,6 +114,7 @@
 + ✅ Homologar los modales.
 + ✅ Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
 + ✅ Homologar nombres de variables de entorno.
++ ✅ Ayudante IA para la aplicación, que se puede meter en la documentación.
 
 
 
@@ -210,13 +211,13 @@ DIRECT_URL      por     DB_DIRECT_URL
 │   │   ├── services
 │   │   │   ├── audit.service.js
 │   │   │   ├── auth.service.js
-│   │   │   ├── diagnostic.service.js
+│   │   │   ├── ai.service.js
 │   │   │   ├── index.js
 │   │   │   ├── role.service.js
 │   │   │   └── user.service.js
 │   │   ├── stores
 │   │   │   ├── auth.store.js
-│   │   │   └── diagnostic.store.js
+│   │   │   └── ai.store.js
 │   │   ├── views
 │   │   │   ├── admin
 │   │   │   │   ├── AdminDashboardView.vue

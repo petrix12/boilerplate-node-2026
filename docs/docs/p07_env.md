@@ -119,7 +119,7 @@
 
 
     # ===========================================
-    # 🤖 INTEGRACIÓN DE IA (AI DIAGNOSTIC)
+    # 🤖 INTEGRACIÓN DE IA (AI SERVICE)
     # ===========================================
 
     AI_PROVIDER=groq

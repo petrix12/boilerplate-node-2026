@@ -77,6 +77,9 @@
 
     # TanStack Table (versión fija recomendada para asegurar exportaciones estables con Vite)
     npm install @tanstack/vue-table@8.21.2
+
+    # Para tratar formato Markdown
+    npm install marked
     ```
 2. Reconstruir el contenedor:
     ```bash
@@ -392,47 +395,76 @@
         },
     });
     ```
-4. Store de Diagnóstico por IA con Pinia (`frontend/src/stores/diagnostic.store.js`):
+4. Store de Diagnóstico por IA con Pinia (`frontend/src/stores/ai.store.js`):
     ```js
+    /* src/stores/ai.store.js */
     import { defineStore } from 'pinia';
     import { ref } from 'vue';
-    import { diagnosticService } from '@/services/diagnostic.service';
+    import { aiService } from '@/services/ai.service';
 
-    export const useDiagnosticStore = defineStore('diagnostic', () => {
+    export const useAIStore = defineStore('ai', () => {
+        // Estados de Diagnóstico
         const report = ref(null);
         const timestamp = ref(null);
-        const loading = ref(false);
-        const error = ref(null);
+        const loadingDiagnostic = ref(false);
+        const errorDiagnostic = ref(null);
+
+        // Estados del Chat Flotante
+        const messages = ref([
+            { role: 'assistant', content: '¡Hola! Soy tu asistente técnico del boilerplate. ¿En qué te puedo ayudar hoy?' }
+        ]);
+        const loadingChat = ref(false);
+        const errorChat = ref(null);
 
         const fetchDiagnostic = async (forced = false) => {
-            // Si ya tenemos un reporte y no se fuerza la recarga, evitamos la llamada
-            if (report.value && !forced) {
-                return;
-            }
+            if (report.value && !forced) return;
 
-            loading.value = true;
-            error.value = null;
+            loadingDiagnostic.value = true;
+            errorDiagnostic.value = null;
 
             try {
-                const response = await diagnosticService.getSystemDiagnostic();
+                const response = await aiService.getSystemDiagnostic();
                 report.value = response.data;
-                timestamp.value = new Date().toISOString(); // Guardamos la fecha y hora exacta
+                timestamp.value = new Date().toISOString();
             } catch (err) {
-                error.value = err.response?.data?.message || 'Error al conectar con el servicio de diagnóstico.';
-                throw err; // Opcional: relanzar para que la vista lo maneje si es necesario
+                errorDiagnostic.value = err.response?.data?.message || 'Error al conectar con el servicio de diagnóstico.';
+                throw err;
             } finally {
-                loading.value = false;
+                loadingDiagnostic.value = false;
+            }
+        };
+
+        const sendMessage = async (text) => {
+            if (!text.trim()) return;
+
+            // Añadir mensaje del usuario localmente
+            messages.value.push({ role: 'user', content: text });
+            loadingChat.value = true;
+            errorChat.value = null;
+
+            try {
+                const response = await aiService.askAssistant(text);
+                messages.value.push({ role: 'assistant', content: response.data.reply });
+            } catch (err) {
+                errorChat.value = err.response?.data?.message || 'No he podido procesar tu respuesta.';
+                messages.value.push({ role: 'assistant', content: 'Lo siento, ha ocurrido un error al comunicarme con el servidor de IA.' });
+            } finally {
+                loadingChat.value = false;
             }
         };
 
         return {
             report,
             timestamp,
-            loading,
-            error,
-            fetchDiagnostic
+            loadingDiagnostic,
+            errorDiagnostic,
+            fetchDiagnostic,
+            messages,
+            loadingChat,
+            errorChat,
+            sendMessage
         };
-    });        
+    });      
     ```
 5. Configuración de Vue Router con Guards (`src/router/index.js`)
     + Abre o crea el archivo `frontend/src/router/index.js` y reemplaza su contenido:
@@ -493,11 +525,11 @@
                             meta: { title: 'Registros de Auditoría', requiresPermission: 'audit:read' } 
                         },
                         {
-                            path: '/admin/system-diagnostic',
+                            path: 'admin/system-diagnostic',
                             name: 'SystemDiagnostic',
                             component: () => import('@/views/admin/SystemDiagnosticView.vue'),
                             meta: { title: 'Diagnóstico del Sistema', requiresAuth: true, requiresPermission: 'system:logs:read' }
-                        }                
+                        }              
                     ]
                 },               
                 { path: '/403', name: 'forbidden', component: () => import('@/views/errors/ForbiddenView.vue'), meta: { requiresAuth: true, title: 'Acceso Denegado' } },
@@ -764,7 +796,7 @@
     ```js
     import api from '@/api/axios';
 
-    export const diagnosticService = {
+    export const aiService = {
         async getSystemDiagnostic() {
             const response = await api.get('/diagnostics/system');
             return response.data;
@@ -772,16 +804,22 @@
     };
     ```
     + Gestión exclusiva de registros de auditoría (mapea directo a `/audit-logs` en Express)
-5. Crear servico `frontend/src/services/diagnostic.service.js`:
+5. Crear servico `frontend/src/services/ai.service.js`:
     ```js
+    /* src/services/ai.service.js */
     import api from '@/api/axios';
 
-    export const diagnosticService = {
+    export const aiService = {
         async getSystemDiagnostic() {
-            const response = await api.get('/diagnostics/system');
+            const response = await api.get('/ai/diagnostic');
+            return response.data;
+        },
+
+        async askAssistant(message) {
+            const response = await api.post('/ai/chat', { message });
             return response.data;
         }
-    };    
+    };   
     ```
 6. Crear archivo unificador `frontend/src/services/index.js` (Patrón Barrel Export):
     ```js
@@ -789,7 +827,7 @@
     export { userService } from './user.service';
     export { roleService } from './role.service';
     export { auditService } from './audit.service';
-    export { diagnosticService } from './diagnostic.service';
+    export { aiService } from './ai.service';
     ```
 
 ## 🧩 Componentes
@@ -1438,7 +1476,236 @@
             </Transition>
         </template>      
         ```
-4. Componente para gestionar el modal de roles en la administración de usuarios:
+4. Componente para chat con IA:
+    + Crea el archivo `frontend/src/components/common/AIChatWidget.vue`:
+        ```vue
+        <script setup>
+        import { ref, nextTick, computed } from 'vue';
+        import { marked } from 'marked';
+        import { useAIStore } from '@/stores/ai.store';
+
+        const aiStore = useAIStore();
+        const isOpen = ref(false);
+        const isMaximized = ref(false);
+        const inputMessage = ref('');
+        const messagesContainer = ref(null);
+
+        // Obtener el nombre de la aplicación desde las variables de entorno de Vite
+        const appName = import.meta.env.VITE_APP_NAME || 'NodeVue Boilerplate';
+
+        // Configuración de marked
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+        });
+
+        const renderMarkdown = (content, role) => {
+            if (role === 'user') return escapeHtml(content);
+            return marked.parse(content);
+        };
+
+        const escapeHtml = (text) => {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        };
+
+        const toggleChat = () => {
+            isOpen.value = !isOpen.value;
+            if (isOpen.value) {
+                scrollToBottom();
+            }
+        };
+
+        const toggleMaximize = () => {
+            isMaximized.value = !isMaximized.value;
+            scrollToBottom();
+        };
+
+        const handleSend = async () => {
+            if (!inputMessage.value.trim() || aiStore.loadingChat) return;
+            
+            const text = inputMessage.value;
+            inputMessage.value = '';
+            
+            await aiStore.sendMessage(text);
+            scrollToBottom();
+        };
+
+        const scrollToBottom = () => {
+            nextTick(() => {
+                if (messagesContainer.value) {
+                    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+                }
+            });
+        };
+
+        // Lógica para arrastrar la ventana del chat por la cabecera
+        const chatWindow = ref(null);
+        const position = ref({ x: 0, y: 0 });
+        const isDragging = ref(false);
+        let startX = 0;
+        let startY = 0;
+
+        const startDrag = (e) => {
+            if (isMaximized.value) return; // No arrastrar si está maximizado
+            isDragging.value = true;
+            startX = e.clientX - position.value.x;
+            startY = e.clientY - position.value.y;
+            
+            window.addEventListener('pointermove', onDrag);
+            window.addEventListener('pointerup', stopDrag);
+        };
+
+        const onDrag = (e) => {
+            if (!isDragging.value) return;
+            position.value.x = e.clientX - startX;
+            position.value.y = e.clientY - startY;
+        };
+
+        const stopDrag = () => {
+            isDragging.value = false;
+            window.removeEventListener('pointermove', onDrag);
+            window.removeEventListener('pointerup', stopDrag);
+        };
+
+        const windowStyle = computed(() => {
+            if (isMaximized.value) {
+                return {
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '90vw',
+                    height: '85vh',
+                    maxWidth: '900px'
+                };
+            }
+            return {
+                transform: `translate(${position.value.x}px, ${position.value.y}px)`
+            };
+        });
+        </script>
+
+        <template>
+            <div class="fixed bottom-6 right-6 z-50">
+                <!-- Botón Flotante -->
+                <button 
+                    v-if="!isOpen"
+                    @click="toggleChat"
+                    class="flex items-center justify-center w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 dark:focus:ring-indigo-800"
+                    title="Asistente IA"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                </button>
+
+                <!-- Ventana del Chat -->
+                <div 
+                    ref="chatWindow"
+                    v-if="isOpen" 
+                    :style="windowStyle"
+                    :class="[
+                        'absolute bottom-20 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-200',
+                        isMaximized ? 'fixed' : 'w-[420px] h-[550px]'
+                    ]"
+                >
+                    <!-- Header (Arrastrable) -->
+                    <div 
+                        @pointerdown="startDrag"
+                        class="bg-indigo-600 px-4 py-3 text-white flex items-center justify-between select-none cursor-move"
+                    >
+                        <div class="flex items-center space-x-2 pointer-events-none">
+                            <span class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></span>
+                            <h3 class="font-semibold text-sm">Asistente IA ({{ appName }})</h3>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <!-- Botón Maximizar / Restaurar -->
+                            <button @click.stop="toggleMaximize" class="text-indigo-200 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-indigo-700 transition-colors" :title="isMaximized ? 'Restaurar' : 'Maximizar'">
+                                <span v-if="isMaximized">🗗</span>
+                                <span v-else>🗖</span>
+                            </button>
+                            <!-- Botón Cerrar -->
+                            <button @click.stop="toggleChat" class="text-indigo-200 hover:text-white text-sm px-1.5 py-0.5 rounded hover:bg-indigo-700 transition-colors" title="Cerrar">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor de Mensajes -->
+                    <div ref="messagesContainer" class="flex-1 p-4 overflow-y-auto space-y-3 text-sm bg-gray-50 dark:bg-gray-950">
+                        <div v-for="(msg, index) in aiStore.messages" :key="index" :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+                            <div 
+                                :class="[
+                                    'max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm text-sm leading-relaxed',
+                                    msg.role === 'user' 
+                                        ? 'bg-indigo-600 text-white rounded-br-none whitespace-pre-wrap' 
+                                        : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-none prose dark:prose-invert'
+                                ]"
+                                v-html="renderMarkdown(msg.content, msg.role)"
+                            ></div>
+                        </div>
+                        <div v-if="aiStore.loadingChat" class="flex justify-start">
+                            <div class="bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-bl-none px-4 py-2.5 text-xs animate-pulse">
+                                Pensando respuesta...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input de Texto -->
+                    <div class="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center space-x-2">
+                        <input 
+                            v-model="inputMessage"
+                            @keyup.enter="handleSend"
+                            type="text" 
+                            placeholder="Pregúntame sobre esta aplicación..."
+                            class="flex-1 bg-gray-100 dark:bg-gray-800 border border-transparent focus:border-indigo-500 dark:focus:border-indigo-500 text-gray-800 dark:text-gray-100 text-sm rounded-xl px-4 py-2 focus:outline-none"
+                        />
+                        <button 
+                            @click="handleSend"
+                            :disabled="aiStore.loadingChat"
+                            class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                        >
+                            Enviar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <style scoped>
+        :deep(p) {
+            margin-bottom: 0.5rem;
+        }
+        :deep(p:last-child) {
+            margin-bottom: 0;
+        }
+        :deep(ul) {
+            list-style-type: disc;
+            margin-left: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        :deep(ol) {
+            list-style-type: decimal;
+            margin-left: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        :deep(strong) {
+            font-weight: 600;
+        }
+        :deep(code) {
+            background-color: rgba(0, 0, 0, 0.08);
+            padding: 0.15rem 0.3rem;
+            border-radius: 0.25rem;
+            font-size: 0.85em;
+        }
+        .dark :deep(code) {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        </style>        
+        ```
+5. Componente para gestionar el modal de roles en la administración de usuarios:
     + Crea el archivo `frontend/src/components/admin/UserRoleModal.vue`:
         ```vue
         <!-- src/components/admin/UserRoleModal.vue -->
@@ -1539,7 +1806,7 @@
             </BaseModal>
         </template>        
         ```
-5. Componente para gestionar el modal de edición y creación de usuarios:
+6. Componente para gestionar el modal de edición y creación de usuarios:
     + Crea el archivo `frontend/src/components/admin/UserFormModal.vue`:
         ```vue
         <!-- src/components/admin/UserFormModal.vue -->
@@ -1882,7 +2149,7 @@
             </BaseModal>
         </template>        
         ```
-6. Componente para gestionar el modal de administración de roles:
+7. Componente para gestionar el modal de administración de roles:
     + Crea el archivo `frontend/src/components/admin/RoleFormModal.vue`:
         ```vue
         <!-- src/components/admin/RoleFormModal.vue -->
@@ -2041,7 +2308,7 @@
             </BaseModal>
         </template>        
         ```
-7. Componente para gestionar el modal de visualización de JSON de logs de auditorias:
+8. Componente para gestionar el modal de visualización de JSON de logs de auditorias:
     + Crea el archivo `frontend/src/components/admin/AuditDetailModal.vue`:
         ```vue
         <!-- src/components/admin/AuditDetailModal.vue -->
@@ -2112,7 +2379,7 @@
             </BaseModal>
         </template>        
         ```
-8. Componente para login con Google:
+9.  Componente para login con Google:
     + Cera el archivo `frontend/src/components/auth/GoogleAuthButton.vue`:
         ```vue
         <!-- src/components/auth/GoogleAuthButton.vue -->
@@ -2221,7 +2488,7 @@
             </div>
         </template>
         ```
-9.  Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
+10. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
     ```vue
     <template>
         <svg class="fill-current" viewBox="0 0 24 24" aria-hidden="true">
@@ -2945,12 +3212,18 @@
         <script setup>
         import { computed } from 'vue';
         import { useRoute } from 'vue-router';
-        import Navbar from '../components/Navbar.vue';
+        import { useAuthStore } from '@/stores/auth.store';
+        import Navbar from '@/components/Navbar.vue';
+        import AIChatWidget from '@/components/common/AIChatWidget.vue';
 
         const route = useRoute();
+        const authStore = useAuthStore();
 
         // Extrae el título definido en los meta de la ruta actual
         const pageTitle = computed(() => route.meta.title || 'Dashboard');
+
+        // Verificamos si la funcionalidad de IA está activa en el sistema/usuario
+        const isAiActive = computed(() => authStore.aiDiagnosticActive);
         </script>
 
         <template>
@@ -2966,6 +3239,9 @@
                         </transition>
                     </router-view>
                 </main>
+
+                <!-- Widget Flotante de IA integrado globalmente -->
+                <AIChatWidget v-if="isAiActive" />
             </div>
         </template>
 
@@ -4529,11 +4805,11 @@
     <!-- src/views/admin/SystemDiagnosticView.vue -->
     <script setup>
     import { computed, onMounted } from 'vue';
-    import { useDiagnosticStore } from '@/stores/diagnostic.store';
+    import { useAIStore } from '@/stores/ai.store';
     import { SparklesIcon } from '@heroicons/vue/24/outline';
     import PageLayout from '@/components/common/PageLayout.vue';
 
-    const diagnosticStore = useDiagnosticStore();
+    const diagnosticStore = useAIStore();
 
     const formattedTimestamp = computed(() => {
         if (!diagnosticStore.timestamp) return '';
