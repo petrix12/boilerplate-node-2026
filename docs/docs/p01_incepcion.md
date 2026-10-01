@@ -36,7 +36,7 @@ El presente documento describe la arquitectura de software, stack tecnológico e
         + Infraestructura de Despliegue: Render.com (Web Service).
         + ¿Por qué esta elección?:
             + Desacoplamiento Operativo: Al exponer una API REST pura (/api/v1/...), el backend es agnóstico del cliente. En el futuro, aplicaciones móviles (iOS/Android) o clientes de terceros podrán consumir la misma API sin cambios.
-            + Seguridad Absoluta: Las claves de entorno (DATABASE_URL, JWT_SECRET) residen exclusivamente dentro de los contenedores aislados de Render.
+            + Seguridad Absoluta: Las claves de entorno (DB_URL, JWT_SECRET) residen exclusivamente dentro de los contenedores aislados de Render.
             + Prisma ORM: Aporta un tipado estricto, previene ataques de Inyección SQL (SQLi) y permite gestionar migraciones de esquemas de base de datos de manera automatizada y declarativa.
     3. **Capa de Persistencia de Datos y Archivos**
         + Motor de Base de Datos: PostgreSQL.

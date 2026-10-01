@@ -1,13 +1,13 @@
 require('dotenv').config();
 const app = require('./app');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.APP_PORT || 3000;
 const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
 // Inicialización del Servidor
 const server = app.listen(PORT, () => {
     console.log(`🚀 Servidor ejecutándose en ${APP_URL}`);
-    console.log(`📌 Entorno: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📌 Entorno: ${process.env.APP_ENV || 'development'}`);
 });
 
 // Inicializar el Servicio de Limpieza de Logs Antiguos

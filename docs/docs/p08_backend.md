@@ -15,8 +15,8 @@
 
     datasource db {
         provider  = "postgresql"
-        url       = env("DATABASE_URL")
-        directUrl = env("DIRECT_URL")
+        url       = env("DB_URL")
+        directUrl = env("DB_DIRECT_URL")
     }
 
     // Modelo de Usuario
@@ -926,7 +926,7 @@
 
                 return {
                     timestamp: new Date().toISOString(),
-                    environment: process.env.NODE_ENV || 'development',
+                    environment: process.env.APP_ENV || 'development',
                     infrastructure: {
                         backend: 'Node.js / Express (Docker)',
                         database: `PostgreSQL (${dbStatus})`,
@@ -970,7 +970,7 @@
             const rawData = await diagnosticAggregatorService.getSystemDiagnosticData();
 
             // Inyectamos la infraestructura real declarada por entorno para evitar alucinaciones del LLM
-            rawData.environment = process.env.NODE_ENV || 'development';
+            rawData.environment = process.env.APP_ENV || 'development';
             rawData.infrastructure = process.env.APP_INFRASTRUCTURE || 'Servidor Node.js nativo genérico';
 
             // 2. Construir el prompt de sistema y usuario
@@ -3008,13 +3008,13 @@
     require('dotenv').config();
     const app = require('./app');
 
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.APP_PORT || 3000;
     const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
     // Inicialización del Servidor
     const server = app.listen(PORT, () => {
         console.log(`🚀 Servidor ejecutándose en ${APP_URL}`);
-        console.log(`📌 Entorno: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`📌 Entorno: ${process.env.APP_ENV || 'development'}`);
     });
 
     // Inicializar el Servicio de Limpieza de Logs Antiguos
@@ -3059,7 +3059,7 @@
     app.use(cors({
         origin: (origin, callback) => {
             // 1. En entorno de desarrollo permitimos cualquier petición para facilitar las pruebas
-            if (process.env.NODE_ENV === 'development') {
+            if (process.env.APP_ENV === 'development') {
                 return callback(null, true);
             }
 
@@ -3088,7 +3088,7 @@
         res.status(200).json({
             status: 'success',
             message: 'API Boilerplate-Node-2026 operativa',
-            environment: process.env.NODE_ENV,
+            environment: process.env.APP_ENV,
             timestamp: new Date().toISOString(),
         });
     });
@@ -3206,7 +3206,7 @@
             ```
     + Producción (Supabase):
         ```bash
-        DATABASE_URL="postgresql://postgres.<Project ID>:<Password>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" npx prisma migrate deploy
+        DB_URL="postgresql://postgres.<Project ID>:<Password>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" npx prisma migrate deploy
         ```
 7. Ejecutar seeders:
     + Local (Docker):
@@ -3218,7 +3218,7 @@
         ```
     + Producción (Supabase):
         ```bash
-        DATABASE_URL="postgresql://postgres.<Project ID>:<Password>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" node src/seeders/superadmin.seeder.js
+        DB_URL="postgresql://postgres.<Project ID>:<Password>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" node src/seeders/superadmin.seeder.js
         ```
 
 ## 📌 Paso 11: Plantillas

@@ -54,105 +54,151 @@ Starter kit profesional desacoplado (Decoupled Architecture) para aplicaciones w
 
 1. Mapear el dominio local
 Edita tu archivo hosts (`/etc/hosts` en Linux/WSL o `C:\Windows\System32\drivers\etc\hosts` en Windows):
-    ```Plaintext
-    127.0.0.1   boilerplate-localhost.com
-    ```
+```Plaintext
+127.0.0.1   boilerplate-localhost.com
+```
 
 2. Configurar variables de entorno
 Crea el archivo `backend/.env` basándote en la configuración de Docker:
-    ```ini
-    # ===================================================================================================
-    # CONFIGURACIÓN DEL SERVIDOR BACKEND
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
-    PORT=3000
-    APP_URL=http://localhost:3000
-    NODE_ENV=development
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
-    # PORT=10000
-    # APP_URL=https://tu-proyecto.onrender.com
-    # NODE_ENV=production
+```ini
+# ===========================================
+# 🚀 CONFIGURACIÓN DEL SERVIDOR BACKEND (APP)
+# ===========================================
 
-    # ===================================================================================================
-    # CREDENCIALES DE SUPER ADMIN (PARA CREAR USUARIO ADMINISTRADOR)
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL Y PRODUCCIÓN - - -
-    # ==========================================
-    SUPER_ADMIN_EMAIL = admin@boilerplate.com
-    SUPER_ADMIN_PASSWORD = tu_password_super_seguro
+# --- LOCAL ---
+APP_PORT=3000
+APP_URL=http://localhost:3000
+APP_INFRASTRUCTURE=Entorno de desarrollo local (Node.js nativo)
+APP_NAME="NodeVue Boilerplate | Dev"
+APP_LOGO_URL=https://boilerplate-node-2026.vercel.app/logo.png
+APP_ENV=development
 
-    # ===================================================================================================
-    # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
-    DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
-    DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
-    # DATABASE_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:6543/postgres?pgbouncer=true"
-    # DIRECT_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:5432/postgres?pgbouncer=true"
+# --- PRODUCCIÓN ---
+# APP_PORT=10000
+# APP_URL=https://boilerplate-node-2026.onrender.com
+# APP_INFRASTRUCTURE=Servidor VPS Linux nativo gestionado mediante PM2 / Systemd
+# APP_NAME="Node|Vue Boilerplate"
+# APP_LOGO_URL=https://boilerplate-node-2026.vercel.app/logo.png
+# APP_ENV=production
 
-    # ===================================================================================================
-    # ALMACENAMIENTO S3
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
-    S3_ENDPOINT="http://minio:9000"
-    S3_REGION="us-east-1"
-    S3_ACCESS_KEY_ID="minio_admin"
-    S3_SECRET_ACCESS_KEY="minio_password123"
-    S3_BUCKET_NAME="app-uploads"
-    S3_FORCE_PATH_STYLE="true" # Obligatorio para MinIO y Supabase S3
-    S3_PUBLIC_URL="http://localhost:9000/app-uploads"
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
-    # S3_ENDPOINT="https://<Project ID>.storage.supabase.co/storage/v1/s3"               
-    # S3_REGION="<Región>"
-    # S3_ACCESS_KEY_ID="<S3 Access Key>"
-    # S3_SECRET_ACCESS_KEY="<S3 Secret Access Key>"
-    # S3_BUCKET_NAME="app-uploads"
-    # S3_FORCE_PATH_STYLE="true"
-    # S3_PUBLIC_URL="https://<Project ID>.supabase.co/storage/v1/object/public/app-uploads"
 
-    # ===================================================================================================
-    # AUTENTICACIÓN (JWT)
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
-    JWT_SECRET="familytree_dev_jwt_secret_key_2026_super_secure"
-    JWT_EXPIRES_IN="7d"
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
-    # Esta token lo puedes generar con el comando: openssl rand -hex 32
-    # JWT_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX             
-    # JWT_EXPIRES_IN=24h
+# ===========================================
+# 👑 CREDENCIALES DE SUPER ADMIN
+# ===========================================
 
-    # ===================================================================================================
-    # CONFIGURACIÓN DEL FRONTEND
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
-    FRONTEND_URL=https://boilerplate-localhost.com
-    FRONTEND_URL_LOCAL_VITE=http://localhost:5173
-    FRONTEND_URL_LOCAL_VUE_CLI=http://localhost:8080
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
-    # FRONTEND_URL=https://boilerplate-node-2026.vercel.app
-    ```
+SUPER_ADMIN_EMAIL = admin@boilerplate.com
+SUPER_ADMIN_PASSWORD = tu_password_super_seguro
+
+
+# ===========================================
+# 🗄️ CONFIGURACIÓN DE BASE DE DATOS (DB)
+# ===========================================
+
+# --- LOCAL ---
+DB_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+DB_DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+
+# --- PRODUCCIÓN ---
+# DB_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:6543/postgres?pgbouncer=true"
+# DB_DIRECT_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:5432/postgres?pgbouncer=true"
+
+
+# ===========================================
+# ✉️ CONFIGURACIÓN DE CORREO (MAIL)
+# ===========================================
+
+# --- LOCAL ---
+MAIL_CONNECTION=smtp
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USER=tu_usuario_mailtrap
+MAIL_PASS=tu_password_mailtrap
+MAIL_FROM=no-reply@boilerplate.com
+MAIL_ENABLE_VERIFICATION=false
+
+# --- PRODUCCIÓN ---
+# MAIL_CONNECTION=api
+# MAIL_HOST=smtp.mailtrap.io
+# MAIL_PORT=2525
+# MAIL_USER=tu_usuario_mailtrap
+# MAIL_PASS=tu_password_mailtrap
+# MAIL_FROM=no-reply@boilerplate.com
+# MAIL_ENABLE_VERIFICATION=false
+
+
+# ===========================================
+# 📦 ALMACENAMIENTO S3 (STORAGE)
+# ===========================================
+
+# --- LOCAL ---
+S3_ENDPOINT="http://minio:9000"
+S3_REGION="us-east-1"
+S3_ACCESS_KEY_ID="minio_admin"
+S3_SECRET_ACCESS_KEY="minio_password123"
+S3_BUCKET_NAME="app-uploads"
+S3_FORCE_PATH_STYLE="true" # Obligatorio para MinIO y Supabase S3
+S3_PUBLIC_URL="http://localhost:9000/app-uploads"
+
+# --- PRODUCCIÓN ---
+# S3_ENDPOINT="https://<Project ID>.storage.supabase.co/storage/v1/s3"               
+# S3_REGION="<Región>"
+# S3_ACCESS_KEY_ID="<S3 Access Key>"
+# S3_SECRET_ACCESS_KEY="<S3 Secret Access Key>"
+# S3_BUCKET_NAME="app-uploads"
+# S3_FORCE_PATH_STYLE="true"
+# S3_PUBLIC_URL="https://<Project ID>.supabase.co/storage/v1/object/public/app-uploads"
+
+
+# ===========================================
+# 🔐 AUTENTICACIÓN Y SEGURIDAD (JWT)
+# ===========================================
+
+# --- LOCAL ---
+JWT_SECRET="familytree_dev_jwt_secret_key_2026_super_secure"
+JWT_EXPIRES_IN="7d"
+
+# --- PRODUCCIÓN ---
+# Esta token lo puedes generar con el comando: openssl rand -hex 32
+# JWT_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX             
+# JWT_EXPIRES_IN=24h
+
+
+# ===========================================
+# 🌐 CONFIGURACIÓN DEL FRONTEND (CLIENT)
+# ===========================================
+
+# --- LOCAL ---
+FRONTEND_URL=https://boilerplate-localhost.com
+FRONTEND_URL_LOCAL_VITE=http://localhost:5173
+FRONTEND_URL_LOCAL_VUE_CLI=http://localhost:8080
+
+# --- PRODUCCIÓN ---
+# FRONTEND_URL=https://boilerplate-node-2026.vercel.app
+
+
+# ===========================================
+# 🤖 INTEGRACIÓN DE IA (AI DIAGNOSTIC)
+# ===========================================
+
+AI_PROVIDER=groq
+AI_API_KEY=gsk_tu_clave_aqui_xxxxxxxxx
+AI_MODEL=qwen/qwen3.8-27b
+
+
+# ===========================================
+# 🧹 GESTIÓN DE LOGS Y RETENCIÓN
+# ===========================================
+
+LOG_RETENTION_DAYS=30
+
+
+# ===========================================
+# 🌐 AUTENTICACIÓN SOCIAL (OAUTH GOOGLE)
+# ===========================================
+
+GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=tu-client-secret    
+```
 
 3. Levantar el entorno
     ```Bash
@@ -179,11 +225,11 @@ Crea el archivo `backend/.env` basándote en la configuración de Docker:
     + Ejecuta las migraciones y seeders hacia Supabase desde la terminal de tu máquina:
         ```Bash
         # Migraciones
-        DATABASE_URL="postgresql://<USER>.<PROJECT_REF>:<PASSWORD>@<POOLER_HOST>:6543/<DB>?pgbouncer=true" 
-        DIRECT_URL="postgresql://<USER>.<PROJECT_REF>:<PASSWORD>@<POOLER_HOST>:5432/<DB>" npx prisma migrate deploy
+        DB_URL="postgresql://<USER>.<PROJECT_REF>:<PASSWORD>@<POOLER_HOST>:6543/<DB>?pgbouncer=true" 
+        DB_DIRECT_URL="postgresql://<USER>.<PROJECT_REF>:<PASSWORD>@<POOLER_HOST>:5432/<DB>" npx prisma migrate deploy
         
         # Seeders
-        DATABASE_URL="postgresql://<USER>.<PROJECT_REF>:<PASSWORD>@<POOLER_HOST>:5432/<DB>" node src/seeders/superadmin.seeder.js
+        DB_URL="postgresql://<USER>.<PROJECT_REF>:<PASSWORD>@<POOLER_HOST>:5432/<DB>" node src/seeders/superadmin.seeder.js
         ```
 2. Backend (Render)
     + Crea un Web Service en Render.com conectado al repositorio.
@@ -192,9 +238,9 @@ Crea el archivo `backend/.env` basándote en la configuración de Docker:
         + Build Command: `npm install && npx prisma generate`.
         + Start Command: `npm start`.
         + Variables de entorno en Render:
-            + NODE_ENV: `production`.
-            + DATABASE_URL: URL del Pooler de Supabase (`:6543`)
-            + DIRECT_URL: URL Directa de Supabase (`:5432`)
+            + APP_ENV: `production`.
+            + DB_URL: URL del Pooler de Supabase (`:6543`)
+            + DB_DIRECT_URL: URL Directa de Supabase (`:5432`)
 3. Frontend (Vercel)
     + Importa el proyecto en Vercel definiendo como Root Directory: `frontend`.
     + Añade la variable de entorno:

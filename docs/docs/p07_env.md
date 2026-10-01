@@ -3,58 +3,53 @@
 ## ⚙️ Backend
 1. Variables de Entorno del Backend (`backend/.env`):
     ```ini
-    # ===================================================================================================
-    # CONFIGURACIÓN DEL SERVIDOR BACKEND
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
-    PORT=3000
+    # ===========================================
+    # 🚀 CONFIGURACIÓN DEL SERVIDOR BACKEND (APP)
+    # ===========================================
+
+    # --- LOCAL ---
+    APP_PORT=3000
     APP_URL=http://localhost:3000
     APP_INFRASTRUCTURE=Entorno de desarrollo local (Node.js nativo)
     APP_NAME="NodeVue Boilerplate | Dev"
     APP_LOGO_URL=https://boilerplate-node-2026.vercel.app/logo.png
-    NODE_ENV=development
+    APP_ENV=development
 
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
-    # PORT=10000
+    # --- PRODUCCIÓN ---
+    # APP_PORT=10000
     # APP_URL=https://boilerplate-node-2026.onrender.com
     # APP_INFRASTRUCTURE=Servidor VPS Linux nativo gestionado mediante PM2 / Systemd
     # APP_NAME="Node|Vue Boilerplate"
     # APP_LOGO_URL=https://boilerplate-node-2026.vercel.app/logo.png
-    # NODE_ENV=production
+    # APP_ENV=production
 
-    # ===================================================================================================
-    # CREDENCIALES DE SUPER ADMIN (PARA CREAR USUARIO ADMINISTRADOR)
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL Y PRODUCCIÓN - - -
-    # ==========================================
+
+    # ===========================================
+    # 👑 CREDENCIALES DE SUPER ADMIN
+    # ===========================================
+
     SUPER_ADMIN_EMAIL = admin@boilerplate.com
     SUPER_ADMIN_PASSWORD = tu_password_super_seguro
 
-    # ===================================================================================================
-    # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
-    DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
-    DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
-    # DATABASE_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:6543/postgres?pgbouncer=true"
-    # DIRECT_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:5432/postgres?pgbouncer=true"
 
-    # ===================================================================================================
-    # CONFIGURACIÓN DE CORREO (MAIL)
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
+    # ===========================================
+    # 🗄️ CONFIGURACIÓN DE BASE DE DATOS (DB)
+    # ===========================================
+
+    # --- LOCAL ---
+    DB_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+    DB_DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+
+    # --- PRODUCCIÓN ---
+    # DB_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:6543/postgres?pgbouncer=true"
+    # DB_DIRECT_URL="postgresql://postgres.<Project ID>:<Database password>@aws-X-<Región>.pooler.supabase.com:5432/postgres?pgbouncer=true"
+
+
+    # ===========================================
+    # ✉️ CONFIGURACIÓN DE CORREO (MAIL)
+    # ===========================================
+
+    # --- LOCAL ---
     MAIL_CONNECTION=smtp
     MAIL_HOST=smtp.mailtrap.io
     MAIL_PORT=2525
@@ -62,9 +57,8 @@
     MAIL_PASS=tu_password_mailtrap
     MAIL_FROM=no-reply@boilerplate.com
     MAIL_ENABLE_VERIFICATION=false
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
+
+    # --- PRODUCCIÓN ---
     # MAIL_CONNECTION=api
     # MAIL_HOST=smtp.mailtrap.io
     # MAIL_PORT=2525
@@ -73,12 +67,12 @@
     # MAIL_FROM=no-reply@boilerplate.com
     # MAIL_ENABLE_VERIFICATION=false
 
-    # ===================================================================================================
-    # ALMACENAMIENTO S3
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
+
+    # ===========================================
+    # 📦 ALMACENAMIENTO S3 (STORAGE)
+    # ===========================================
+
+    # --- LOCAL ---
     S3_ENDPOINT="http://minio:9000"
     S3_REGION="us-east-1"
     S3_ACCESS_KEY_ID="minio_admin"
@@ -86,9 +80,8 @@
     S3_BUCKET_NAME="app-uploads"
     S3_FORCE_PATH_STYLE="true" # Obligatorio para MinIO y Supabase S3
     S3_PUBLIC_URL="http://localhost:9000/app-uploads"
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
+
+    # --- PRODUCCIÓN ---
     # S3_ENDPOINT="https://<Project ID>.storage.supabase.co/storage/v1/s3"               
     # S3_REGION="<Región>"
     # S3_ACCESS_KEY_ID="<S3 Access Key>"
@@ -97,54 +90,56 @@
     # S3_FORCE_PATH_STYLE="true"
     # S3_PUBLIC_URL="https://<Project ID>.supabase.co/storage/v1/object/public/app-uploads"
 
-    # ===================================================================================================
-    # AUTENTICACIÓN (JWT)
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
+
+    # ===========================================
+    # 🔐 AUTENTICACIÓN Y SEGURIDAD (JWT)
+    # ===========================================
+
+    # --- LOCAL ---
     JWT_SECRET="familytree_dev_jwt_secret_key_2026_super_secure"
     JWT_EXPIRES_IN="7d"
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
+
+    # --- PRODUCCIÓN ---
     # Esta token lo puedes generar con el comando: openssl rand -hex 32
     # JWT_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX             
     # JWT_EXPIRES_IN=24h
 
-    # ===================================================================================================
-    # CONFIGURACIÓN DEL FRONTEND
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
+
+    # ===========================================
+    # 🌐 CONFIGURACIÓN DEL FRONTEND (CLIENT)
+    # ===========================================
+
+    # --- LOCAL ---
     FRONTEND_URL=https://boilerplate-localhost.com
     FRONTEND_URL_LOCAL_VITE=http://localhost:5173
     FRONTEND_URL_LOCAL_VUE_CLI=http://localhost:8080
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
+
+    # --- PRODUCCIÓN ---
     # FRONTEND_URL=https://boilerplate-node-2026.vercel.app
 
-    # ===================================================================================================
-    # IA Diagnostic Configuration
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL | PRODUCCIÓN - - -
-    # ==========================================
+
+    # ===========================================
+    # 🤖 INTEGRACIÓN DE IA (AI DIAGNOSTIC)
+    # ===========================================
+
     AI_PROVIDER=groq
     AI_API_KEY=gsk_tu_clave_aqui_xxxxxxxxx
     AI_MODEL=qwen/qwen3.8-27b
+
+
+    # ===========================================
+    # 🧹 GESTIÓN DE LOGS Y RETENCIÓN
+    # ===========================================
+
     LOG_RETENTION_DAYS=30
 
-    # ===================================================================================================
-    # LOGIN AUTH - REDES SOCIALES
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL | PRODUCCIÓN - - -
-    # ==========================================
+
+    # ===========================================
+    # 🌐 AUTENTICACIÓN SOCIAL (OAUTH GOOGLE)
+    # ===========================================
+
     GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
-    GOOGLE_CLIENT_SECRET=tu-client-secret    
+    GOOGLE_CLIENT_SECRET=tu-client-secret   
     ```
 2. Actualizar variables de entorno en `https://render.com`.
 

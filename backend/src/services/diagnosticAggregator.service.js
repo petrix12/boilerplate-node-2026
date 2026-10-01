@@ -58,7 +58,7 @@ const diagnosticAggregatorService = {
 
             return {
                 timestamp: new Date().toISOString(),
-                environment: process.env.NODE_ENV || 'development',
+                environment: process.env.APP_ENV || 'development',
                 infrastructure: {
                     backend: 'Node.js / Express (Docker)',
                     database: `PostgreSQL (${dbStatus})`,

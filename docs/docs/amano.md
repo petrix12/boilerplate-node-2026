@@ -78,7 +78,7 @@
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
 + ◻️ Pedir repetir contraseña tanto en el register como en el profile.
-+ ◻️ Homologar nombres de variables de entorno.
++ ◻️ Ayudante IA para la aplicación, que se puede meter en la documentación.
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ◻️ GitHub.
@@ -113,8 +113,14 @@
 + ✅ Homologar tablas en vistas.
 + ✅ Homologar los modales.
 + ✅ Crear plantillas para las vistas y crear componentes para que las vistas no sean tan grandes.
++ ✅ Homologar nombres de variables de entorno.
 
 
+
+PORT 		    por 	APP_PORT
+NODE_ENV	    por 	APP_ENV
+DATABASE_URL    por     DB_URL
+DIRECT_URL      por     DB_DIRECT_URL
 
 ## Estructura del proyecto
 ├── backend

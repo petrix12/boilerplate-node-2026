@@ -170,8 +170,8 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
 
     datasource db {
         provider  = "postgresql" // O el motor que estés usando (mysql, sqlite, etc.)
-        url       = env("DATABASE_URL")
-        directUrl = env("DIRECT_URL")
+        url       = env("DB_URL")
+        directUrl = env("DB_DIRECT_URL")
     }
 
     // Añade este modelo de prueba para que 'prisma generate' funcione
@@ -190,15 +190,15 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     # ==========================================
     # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
     # ==========================================
-    PORT=3000
+    APP_PORT=3000
     APP_URL=http://localhost:3000
-    NODE_ENV=development
+    APP_ENV=development
 
     # ==========================================
     # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS LOCAL
     # ==========================================
-    DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
-    DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+    DB_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+    DB_DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
     ```
 9.  Crear `backend/.gitignore`:
     ```text
@@ -218,7 +218,7 @@ A diferencia de un monolito, la arquitectura desacoplada requiere separar el có
     const cors = require('cors');
 
     const app = express();
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.APP_PORT || 3000;
     const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
     app.use(cors());

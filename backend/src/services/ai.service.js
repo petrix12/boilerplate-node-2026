@@ -17,7 +17,7 @@ const aiService = {
         const rawData = await diagnosticAggregatorService.getSystemDiagnosticData();
 
         // Inyectamos la infraestructura real declarada por entorno para evitar alucinaciones del LLM
-        rawData.environment = process.env.NODE_ENV || 'development';
+        rawData.environment = process.env.APP_ENV || 'development';
         rawData.infrastructure = process.env.APP_INFRASTRUCTURE || 'Servidor Node.js nativo genérico';
 
         // 2. Construir el prompt de sistema y usuario

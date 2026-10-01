@@ -230,8 +230,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - PORT=3000
+      - APP_ENV=development
+      - APP_PORT=3000
       - APP_URL=https://boilerplate-localhost.com
     env_file:
       - ./backend/.env
@@ -273,7 +273,7 @@ services:
     ports:
       - "5555:5555"
     environment:
-      - DATABASE_URL=postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db
+      - DB_URL=postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
@@ -314,15 +314,15 @@ volumes:
       # ==========================================
       # CONFIGURACIÓN DEL SERVIDOR BACKEND LOCAL
       # ==========================================
-      PORT=3000
+      APP_PORT=3000
       APP_URL=https://boilerplate-localhost.com
-      NODE_ENV=development
+      APP_ENV=development
 
       # ==========================================
       # CONFIGURACIÓN DEL SERVIDOR DE BASE DE DATOS LOCAL
       # ==========================================        
-      DATABASE_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
-      DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+      DB_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
+      DB_DIRECT_URL="postgresql://dev_user:dev_password@postgres_dev:5432/boilerplate_db"
 
       # ==========================================
       # CONFIGURACIÓN DEL BUCKET DE ALMACENAMIENTO DE ARCHIVOS LOCAL

@@ -5,8 +5,8 @@
 2. Ir a `Project Settings` > `Database` y copiar la cadena de conexión URI (modo Transaction o Session).
 3. Aplicar las migraciones desde tu entorno local hacia la base de datos de producción:
     ```bash
-    DATABASE_URL="postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:6543/<DATABASE_NAME>?pgbouncer=true" 
-    DIRECT_URL="postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:5432/<DATABASE_NAME>" npx prisma migrate deploy                
+    DB_URL="postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:6543/<DATABASE_NAME>?pgbouncer=true" 
+    DB_DIRECT_URL="postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:5432/<DATABASE_NAME>" npx prisma migrate deploy                
     ```
     + Estructura de variables para la documentación:
         + `<USER>`: Usuario por defecto de la base de datos (habitualmente postgres).
@@ -14,15 +14,15 @@
         + `<ENCODED_PASSWORD>`: Contraseña de la base de datos con caracteres especiales codificados en formato URL (ejemplo: = se convierte en %3D, # en %23).
         + `<POOLER_HOST>`: Host del Connection Pooler asignado a tu región en Supabase (ej. aws-1-eu-west-1.pooler.supabase.com).
         + `<DATABASE_NAME>`: Nombre de la base de datos lógica (por defecto postgres).
-        + DATABASE_URL (Puerto 6543): Conexión en modo Transaction (?pgbouncer=true) utilizada por la aplicación Node.js en producción.
-        + DIRECT_URL (Puerto 5432): Conexión en modo Session que requiere Prisma CLI para ejecutar migraciones directas sin pasar por PgBouncer.
+        + DB_URL (Puerto 6543): Conexión en modo Transaction (?pgbouncer=true) utilizada por la aplicación Node.js en producción.
+        + DB_DIRECT_URL (Puerto 5432): Conexión en modo Session que requiere Prisma CLI para ejecutar migraciones directas sin pasar por PgBouncer.
 
 ## 🌱 Ejecutar seeder en producción (Supabase)
 1. Abre la terminal en la carpeta de tu `backend`.
 2. Ejecuta el comando de seed pasando la cadena de conexión de producción de Supabase:
     ```bash
-    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" npx prisma db seed
-    DATABASE_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" node src/seeders/superadmin.seeder.js
+    DB_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" npx prisma db seed
+    DB_URL="postgres://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:<PORT>/<DATABASE_NAME>" node src/seeders/superadmin.seeder.js
     ```
     + Asegúrate de reemplazar las credenciales por las reales de Supabase, tal como hiciste al aplicar las migraciones.
 
@@ -43,11 +43,11 @@
         + Start Command: npm start (o node server.js / node index.js, dependiendo de cómo arranques tu servidor en el package.json)
         + Instance Type: Free ($0/mo)
     + Configuración de Variables de Entorno: Desplázate hasta la sección Environment Variables y añade:
-        + PORT: `10000`
+        + APP_PORT: `10000`
         + APP_URL: `https://boilerplate-node.onrender.com`
-        + NODE_ENV: `production`
-        + DATABASE_URL: `postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:6543/<DATABASE_NAME>?pgbouncer=true`
-        + DIRECT_URL: `postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:5432/<DATABASE_NAME>`
+        + APP_ENV: `production`
+        + DB_URL: `postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:6543/<DATABASE_NAME>?pgbouncer=true`
+        + DB_DIRECT_URL: `postgresql://<USER>.<PROJECT_REF>:<ENCODED_PASSWORD>@<POOLER_HOST>:5432/<DATABASE_NAME>`
     + Haz clic en `Deploy Web Service`.
     + Copia la URL pública generada (ej. [https://boilerplate-node-2026.onrender.com](https://boilerplate-node-2026.onrender.com)).
 3. Prueba de funcionamiento:

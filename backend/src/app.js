@@ -22,7 +22,7 @@ const allowedOrigins = [
 app.use(cors({
     origin: (origin, callback) => {
         // 1. En entorno de desarrollo permitimos cualquier petición para facilitar las pruebas
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.APP_ENV === 'development') {
             return callback(null, true);
         }
 
@@ -51,7 +51,7 @@ app.get('/api/v1/health', (req, res) => {
     res.status(200).json({
         status: 'success',
         message: 'API Boilerplate-Node-2026 operativa',
-        environment: process.env.NODE_ENV,
+        environment: process.env.APP_ENV,
         timestamp: new Date().toISOString(),
     });
 });
