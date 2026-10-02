@@ -1,18 +1,11 @@
 <!-- src/views/admin/AdminDashboardView.vue -->
 <script setup>
-    import { computed, onMounted } from 'vue';
+    import { computed } from 'vue';
     import { useAuthStore } from '@/stores/auth.store';
     import { UsersIcon, ShieldCheckIcon, DocumentChartBarIcon, CpuChipIcon } from '@heroicons/vue/24/outline';
     import PageLayout from '@/components/common/PageLayout.vue';
 
     const authStore = useAuthStore();
-
-    // Aseguramos que si por alguna razón el user no está completo al entrar, se consulte al backend
-    onMounted(async () => {
-        if (authStore.token && (!authStore.user || !authStore.user.hasOwnProperty('aiDiagnostic'))) {
-            await authStore.fetchUser();
-        }
-    });
 
     const isAiActive = computed(() => authStore.aiDiagnosticActive);
 </script>

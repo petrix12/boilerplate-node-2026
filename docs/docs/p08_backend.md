@@ -1444,6 +1444,8 @@
 
             const token = generateToken(user, userRoles, userPermissions);
 
+            const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';
+
             await prisma.auditLog.create({
                 data: {
                     action: 'LOGIN_SUCCESS',
@@ -1466,6 +1468,9 @@
                         avatarUrl: user.avatarUrl, 
                         roles: userRoles, 
                         permissions: userPermissions 
+                    },
+                    features: {
+                        aiDiagnostic: isAiEnabled
                     },
                     token,
                 },
@@ -2615,6 +2620,7 @@
     ```
 8. `backend/src/controllers/googleAuth.controller.js`: Controlador para Auth con Google:
     ```js
+    /* src/controllers/googleAuth.controller.js */
     const googleAuthService = require('../services/googleAuth.service');
     const { getClientIp } = require('../utils/request.utils');
     const prisma = require('../config/prisma');
@@ -2640,10 +2646,28 @@
                 }
             });
 
+            // Evaluamos si la característica de IA está activa en el entorno
+            const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';
+
+            // Estructuramos la respuesta asegurando el bloque features al mismo nivel que user y token,
+            // respetando lo que devuelva result (por si incluye isNewUser u otras propiedades)
+            const responseData = {
+                user: result.user,
+                token: result.token,
+                features: {
+                    aiDiagnostic: isAiEnabled
+                }
+            };
+
+            // Si result tenía más propiedades (como isNewUser), las conservamos
+            if (result.isNewUser !== undefined) {
+                responseData.isNewUser = result.isNewUser;
+            }
+
             return res.status(200).json({
                 status: 'success',
                 message: 'Inicio de sesión con Google exitoso',
-                data: result
+                data: responseData
             });
         } catch (error) {
             console.error('Error en googleLogin:', error.message);
@@ -2654,7 +2678,7 @@
         }
     };
 
-    module.exports = { googleLogin };    
+    module.exports = { googleLogin };  
     ```
     + Este controlador actúa únicamente como puente HTTP, delegando la lógica al servicio y registrando auditorías si es necesario.
 

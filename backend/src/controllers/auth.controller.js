@@ -188,6 +188,8 @@ const login = async (req, res) => {
 
         const token = generateToken(user, userRoles, userPermissions);
 
+        const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';
+
         await prisma.auditLog.create({
             data: {
                 action: 'LOGIN_SUCCESS',
@@ -210,6 +212,9 @@ const login = async (req, res) => {
                     avatarUrl: user.avatarUrl, 
                     roles: userRoles, 
                     permissions: userPermissions 
+                },
+                features: {
+                    aiDiagnostic: isAiEnabled
                 },
                 token,
             },

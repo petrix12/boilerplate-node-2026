@@ -1,3 +1,4 @@
+/* src/stores/auth.store.js */
 import { defineStore } from 'pinia';
 import { authService } from '@/services/auth.service';
 
@@ -52,14 +53,20 @@ export const useAuthStore = defineStore('auth', {
             this.error = null;
             try {
                 const res = await authService.login(credentials);
-                const data = res.data || res; // Soporta tanto si viene envuelto en .data como plano
+                // 'res' es response.data del servicio, que contiene: { status, message, data: { user, features, token } }
+                const responseData = res.data || res;
                 
-                this.token = data.token;
+                const token = responseData.token;
+                const userObj = responseData.user || {};
+                const featuresObj = responseData.features || {};
+
+                this.token = token;
                 this.user = {
-                    ...data.user,
-                    ...(data.features || {})
+                    ...userObj,
+                    ...featuresObj
                 };
-                localStorage.setItem('token', data.token);
+                
+                localStorage.setItem('token', token);
 
                 return res;
             } catch (err) {
@@ -76,16 +83,20 @@ export const useAuthStore = defineStore('auth', {
             this.error = null;
             try {
                 const res = await authService.loginWithGoogle(idToken);
-                const data = res.data || res;
+                const responseData = res.data || res;
 
-                this.token = data.token;
+                const token = responseData.token;
+                const userObj = responseData.user || {};
+                const featuresObj = responseData.features || {};
+
+                this.token = token;
                 this.user = {
-                    ...data.user,
-                    ...(data.features || {})
+                    ...userObj,
+                    ...featuresObj
                 };
-                localStorage.setItem('token', data.token);
 
-                // Retornamos el objeto completo para que el componente lea 'isNewUser'
+                localStorage.setItem('token', token);
+
                 return res;
             } catch (err) {
                 this.error = err.response?.data?.message || 'Error en la autenticación con Google';
@@ -93,7 +104,7 @@ export const useAuthStore = defineStore('auth', {
             } finally {
                 this.loading = false;
             }
-        },
+        },        
 
         // 2. Registrar Usuario
         async register(userData) {
