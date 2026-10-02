@@ -9,7 +9,8 @@ import PageLayout from '@/components/common/PageLayout.vue';
 
 const authStore = useAuthStore();
 const showCurrentPassword = ref(false);
-const showNewPassword = ref(false)
+const showNewPassword = ref(false);
+const showNewPasswordConfirmation = ref(false); // Estado para el ojito de confirmación
 const fileInputRef = ref(null);
 const saving = ref(false);
 
@@ -22,6 +23,7 @@ const profileForm = ref({
     email: authStore.user?.email || '',
     currentPassword: '',
     newPassword: '',
+    newPassword_confirmation: '', // Campo añadido para confirmar la nueva contraseña
     avatarUrl: authStore.user?.avatarUrl || null,
     avatarFile: null
 });
@@ -90,13 +92,24 @@ const updateProfile = async () => {
     }
 
     // Validación de contraseña si intenta cambiarla
-    if (passwordProvided && !profileForm.value.currentPassword) {
-        getSwalTheme().fire({
-            title: 'Campo requerido',
-            text: 'Debes ingresar tu contraseña actual para establecer una nueva.',
-            icon: 'warning'
-        });
-        return;
+    if (passwordProvided) {
+        if (!profileForm.value.currentPassword) {
+            getSwalTheme().fire({
+                title: 'Campo requerido',
+                text: 'Debes ingresar tu contraseña actual para establecer una nueva.',
+                icon: 'warning'
+            });
+            return;
+        }
+
+        if (profileForm.value.newPassword !== profileForm.value.newPassword_confirmation) {
+            getSwalTheme().fire({
+                title: 'Atención',
+                text: 'La nueva contraseña y su confirmación no coinciden.',
+                icon: 'error'
+            });
+            return;
+        }
     }
 
     saving.value = true;
@@ -139,6 +152,7 @@ const updateProfile = async () => {
         // Limpieza de campos de contraseña y archivos
         profileForm.value.currentPassword = '';
         profileForm.value.newPassword = '';
+        profileForm.value.newPassword_confirmation = '';
         profileForm.value.avatarFile = null;
         if (fileInputRef.value) fileInputRef.value.value = '';
 
@@ -355,7 +369,7 @@ const handleDrop = (event) => {
                     Cambiar Contraseña
                 </h3>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <!-- Contraseña Actual -->
                     <div>
                         <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Contraseña Actual</label>
@@ -393,6 +407,27 @@ const handleDrop = (event) => {
                                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
                             >
                                 <EyeIcon v-if="!showNewPassword" class="w-5 h-5" />
+                                <EyeSlashIcon v-else class="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Confirmar Nueva Contraseña -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Confirmar Nueva Contraseña</label>
+                        <div class="relative">
+                            <input 
+                                v-model="profileForm.newPassword_confirmation" 
+                                :type="showNewPasswordConfirmation ? 'text' : 'password'" 
+                                placeholder="••••••••" 
+                                class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                            />
+                            <button 
+                                type="button"
+                                @click="showNewPasswordConfirmation = !showNewPasswordConfirmation"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                            >
+                                <EyeIcon v-if="!showNewPasswordConfirmation" class="w-5 h-5" />
                                 <EyeSlashIcon v-else class="w-5 h-5" />
                             </button>
                         </div>

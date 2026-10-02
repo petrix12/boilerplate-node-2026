@@ -12,6 +12,7 @@ const authStore = useAuthStore();
 const router = useRouter();
 const hasLogoError = ref(false);
 const showPassword = ref(false);
+const showPasswordConfirmation = ref(false);
 
 const handleLogoError = () => {
     hasLogoError.value = true;
@@ -22,11 +23,24 @@ const form = ref({
     lastName: '',
     email: '',
     password: '',
+    password_confirmation: '', // Añadido para la confirmación
 });
 
 const handleSubmit = async () => {
     try {
         authStore.error = null;
+
+        // Validación previa en frontend por seguridad y mejor UX
+        if (form.value.password !== form.value.password_confirmation) {
+            authStore.error = 'Las contraseñas no coinciden.';
+            getSwalTheme().fire({
+                icon: 'error',
+                title: 'Atención',
+                text: 'Las contraseñas ingresadas no coinciden.',
+                confirmButtonColor: '#059669'
+            });
+            return;
+        }
 
         const response = await authService.register(form.value);
         
@@ -38,7 +52,7 @@ const handleSubmit = async () => {
                 title: '¡Registro Exitoso!',
                 text: successMessage,
                 confirmButtonText: 'Ir a Iniciar Sesión',
-                confirmButtonColor: '#059669' // esmeralda
+                confirmButtonColor: '#059669'
             });
 
             router.push({ name: 'login' }); 
@@ -148,6 +162,29 @@ const handleSubmit = async () => {
                             class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
                         >
                             <EyeIcon v-if="!showPassword" class="w-5 h-5" />
+                            <EyeSlashIcon v-else class="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Nuevo campo: Confirmar Contraseña -->
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Confirmar Contraseña</label>
+                    <div class="relative">
+                        <input
+                            v-model="form.password_confirmation"
+                            :type="showPasswordConfirmation ? 'text' : 'password'"
+                            required
+                            class="w-full px-4 py-2 pr-10 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
+                            placeholder="••••••••"
+                        />
+                        <!-- Botón del ojito para confirmación -->
+                        <button 
+                            type="button"
+                            @click="showPasswordConfirmation = !showPasswordConfirmation"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                        >
+                            <EyeIcon v-if="!showPasswordConfirmation" class="w-5 h-5" />
                             <EyeSlashIcon v-else class="w-5 h-5" />
                         </button>
                     </div>

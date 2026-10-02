@@ -196,16 +196,17 @@
         ```
 2. Store de tema oscuro (`frontend/src/stores/theme.store.js`):
    ```js
-    // src/stores/theme.store.js
+    /*  src/stores/theme.store.js */
     import { defineStore } from 'pinia';
     import { ref, watch } from 'vue';
 
     export const useThemeStore = defineStore('theme', () => {
-        // Inicializar leyendo del localStorage o de las preferencias del sistema operativo
+        // Inicializar leyendo del localStorage, o por defecto 'true' (modo oscuro) si no hay nada guardado
         const savedTheme = localStorage.getItem('theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         
-        const isDark = ref(savedTheme ? savedTheme === 'dark' : prefersDark);
+        // Si hay un tema guardado lo usa; si no, por defecto será oscuro (true) en lugar de depender solo del sistema
+        const isDark = ref(savedTheme ? savedTheme === 'dark' : (savedTheme === null ? true : prefersDark));
 
         // Función para aplicar o quitar la clase 'dark' en la etiqueta <html>
         const applyTheme = (dark) => {
@@ -233,7 +234,7 @@
             isDark,
             toggleTheme,
         };
-    });   
+    });
    ```
 3. Store de Autenticación con Pinia (`frontend/src/stores/auth.store.js`)
     ```js
@@ -2644,6 +2645,7 @@
         const router = useRouter();
         const hasLogoError = ref(false);
         const showPassword = ref(false);
+        const showPasswordConfirmation = ref(false);
 
         const handleLogoError = () => {
             hasLogoError.value = true;
@@ -2654,11 +2656,24 @@
             lastName: '',
             email: '',
             password: '',
+            password_confirmation: '', // Añadido para la confirmación
         });
 
         const handleSubmit = async () => {
             try {
                 authStore.error = null;
+
+                // Validación previa en frontend por seguridad y mejor UX
+                if (form.value.password !== form.value.password_confirmation) {
+                    authStore.error = 'Las contraseñas no coinciden.';
+                    getSwalTheme().fire({
+                        icon: 'error',
+                        title: 'Atención',
+                        text: 'Las contraseñas ingresadas no coinciden.',
+                        confirmButtonColor: '#059669'
+                    });
+                    return;
+                }
 
                 const response = await authService.register(form.value);
                 
@@ -2670,7 +2685,7 @@
                         title: '¡Registro Exitoso!',
                         text: successMessage,
                         confirmButtonText: 'Ir a Iniciar Sesión',
-                        confirmButtonColor: '#059669' // esmeralda
+                        confirmButtonColor: '#059669'
                     });
 
                     router.push({ name: 'login' }); 
@@ -2780,6 +2795,29 @@
                                     class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
                                 >
                                     <EyeIcon v-if="!showPassword" class="w-5 h-5" />
+                                    <EyeSlashIcon v-else class="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Nuevo campo: Confirmar Contraseña -->
+                        <div>
+                            <label class="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Confirmar Contraseña</label>
+                            <div class="relative">
+                                <input
+                                    v-model="form.password_confirmation"
+                                    :type="showPasswordConfirmation ? 'text' : 'password'"
+                                    required
+                                    class="w-full px-4 py-2 pr-10 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
+                                    placeholder="••••••••"
+                                />
+                                <!-- Botón del ojito para confirmación -->
+                                <button 
+                                    type="button"
+                                    @click="showPasswordConfirmation = !showPasswordConfirmation"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none"
+                                >
+                                    <EyeIcon v-if="!showPasswordConfirmation" class="w-5 h-5" />
                                     <EyeSlashIcon v-else class="w-5 h-5" />
                                 </button>
                             </div>
@@ -3459,7 +3497,8 @@
 
         const authStore = useAuthStore();
         const showCurrentPassword = ref(false);
-        const showNewPassword = ref(false)
+        const showNewPassword = ref(false);
+        const showNewPasswordConfirmation = ref(false); // Estado para el ojito de confirmación
         const fileInputRef = ref(null);
         const saving = ref(false);
 
@@ -3472,6 +3511,7 @@
             email: authStore.user?.email || '',
             currentPassword: '',
             newPassword: '',
+            newPassword_confirmation: '', // Campo añadido para confirmar la nueva contraseña
             avatarUrl: authStore.user?.avatarUrl || null,
             avatarFile: null
         });
@@ -3540,13 +3580,24 @@
             }
 
             // Validación de contraseña si intenta cambiarla
-            if (passwordProvided && !profileForm.value.currentPassword) {
-                getSwalTheme().fire({
-                    title: 'Campo requerido',
-                    text: 'Debes ingresar tu contraseña actual para establecer una nueva.',
-                    icon: 'warning'
-                });
-                return;
+            if (passwordProvided) {
+                if (!profileForm.value.currentPassword) {
+                    getSwalTheme().fire({
+                        title: 'Campo requerido',
+                        text: 'Debes ingresar tu contraseña actual para establecer una nueva.',
+                        icon: 'warning'
+                    });
+                    return;
+                }
+
+                if (profileForm.value.newPassword !== profileForm.value.newPassword_confirmation) {
+                    getSwalTheme().fire({
+                        title: 'Atención',
+                        text: 'La nueva contraseña y su confirmación no coinciden.',
+                        icon: 'error'
+                    });
+                    return;
+                }
             }
 
             saving.value = true;
@@ -3589,6 +3640,7 @@
                 // Limpieza de campos de contraseña y archivos
                 profileForm.value.currentPassword = '';
                 profileForm.value.newPassword = '';
+                profileForm.value.newPassword_confirmation = '';
                 profileForm.value.avatarFile = null;
                 if (fileInputRef.value) fileInputRef.value.value = '';
 
@@ -3805,7 +3857,7 @@
                             Cambiar Contraseña
                         </h3>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <!-- Contraseña Actual -->
                             <div>
                                 <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Contraseña Actual</label>
@@ -3843,6 +3895,27 @@
                                         class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
                                     >
                                         <EyeIcon v-if="!showNewPassword" class="w-5 h-5" />
+                                        <EyeSlashIcon v-else class="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Confirmar Nueva Contraseña -->
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Confirmar Nueva Contraseña</label>
+                                <div class="relative">
+                                    <input 
+                                        v-model="profileForm.newPassword_confirmation" 
+                                        :type="showNewPasswordConfirmation ? 'text' : 'password'" 
+                                        placeholder="••••••••" 
+                                        class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                                    />
+                                    <button 
+                                        type="button"
+                                        @click="showNewPasswordConfirmation = !showNewPasswordConfirmation"
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                                    >
+                                        <EyeIcon v-if="!showNewPasswordConfirmation" class="w-5 h-5" />
                                         <EyeSlashIcon v-else class="w-5 h-5" />
                                     </button>
                                 </div>
