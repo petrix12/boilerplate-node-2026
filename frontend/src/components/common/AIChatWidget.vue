@@ -1,5 +1,6 @@
+<!-- src/components/common/AIChatWidget.vue -->
 <script setup>
-import { ref, nextTick, computed } from 'vue';
+import { ref, nextTick, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import { useAIStore } from '@/stores/ai.store';
 
@@ -8,6 +9,22 @@ const isOpen = ref(false);
 const isMaximized = ref(false);
 const inputMessage = ref('');
 const messagesContainer = ref(null);
+
+// Detectar ancho de pantalla reactivo para evitar problemas al redimensionar
+const windowWidth = ref(window.innerWidth);
+const handleResize = () => {
+    windowWidth.value = window.innerWidth;
+};
+
+onMounted(() => {
+    window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', handleResize);
+});
+
+const isMobile = computed(() => windowWidth.value < 640);
 
 // Obtener el nombre de la aplicación desde las variables de entorno de Vite
 const appName = import.meta.env.VITE_APP_NAME || 'NodeVue Boilerplate';
@@ -40,6 +57,7 @@ const toggleChat = () => {
 };
 
 const toggleMaximize = () => {
+    if (isMobile.value) return; // En móvil no permitimos maximizar
     isMaximized.value = !isMaximized.value;
     scrollToBottom();
 };
@@ -70,7 +88,7 @@ let startX = 0;
 let startY = 0;
 
 const startDrag = (e) => {
-    if (isMaximized.value) return; // No arrastrar si está maximizado
+    if (isMaximized.value || isMobile.value) return; // No arrastrar si está maximizado o en móvil
     isDragging.value = true;
     startX = e.clientX - position.value.x;
     startY = e.clientY - position.value.y;
@@ -92,6 +110,9 @@ const stopDrag = () => {
 };
 
 const windowStyle = computed(() => {
+    if (isMobile.value) {
+        return {}; // En móvil se posiciona mediante clases CSS fijas
+    }
     if (isMaximized.value) {
         return {
             top: '50%',
@@ -109,7 +130,7 @@ const windowStyle = computed(() => {
 </script>
 
 <template>
-    <div class="fixed bottom-6 right-6 z-50">
+    <div class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
         <!-- Botón Flotante -->
         <button 
             v-if="!isOpen"
@@ -128,22 +149,27 @@ const windowStyle = computed(() => {
             v-if="isOpen" 
             :style="windowStyle"
             :class="[
-                'absolute bottom-20 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-200',
-                isMaximized ? 'fixed' : 'w-[420px] h-[550px]'
+                'absolute bottom-16 right-0 sm:bottom-20 sm:right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-200',
+                isMaximized ? 'fixed' : 'w-[calc(100vw-2rem)] sm:w-[420px] h-[500px] sm:h-[550px]',
+                'max-w-[calc(100vw-2rem)] sm:max-w-none'
             ]"
         >
-            <!-- Header (Arrastrable) -->
+            <!-- Header (Arrastrable solo en desktop) -->
             <div 
                 @pointerdown="startDrag"
-                class="bg-indigo-600 px-4 py-3 text-white flex items-center justify-between select-none cursor-move"
+                class="bg-indigo-600 px-4 py-3 text-white flex items-center justify-between select-none sm:cursor-move"
             >
                 <div class="flex items-center space-x-2 pointer-events-none">
                     <span class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></span>
-                    <h3 class="font-semibold text-sm">Asistente IA ({{ appName }})</h3>
+                    <h3 class="font-semibold text-sm truncate max-w-[200px] sm:max-w-none">Asistente IA ({{ appName }})</h3>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <!-- Botón Maximizar / Restaurar -->
-                    <button @click.stop="toggleMaximize" class="text-indigo-200 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-indigo-700 transition-colors" :title="isMaximized ? 'Restaurar' : 'Maximizar'">
+                    <!-- Botón Maximizar / Restaurar (Oculto en móvil) -->
+                    <button 
+                        @click.stop="toggleMaximize" 
+                        class="hidden sm:inline-flex text-indigo-200 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-indigo-700 transition-colors" 
+                        :title="isMaximized ? 'Restaurar' : 'Maximizar'"
+                    >
                         <span v-if="isMaximized">🗗</span>
                         <span v-else>🗖</span>
                     </button>
@@ -178,7 +204,7 @@ const windowStyle = computed(() => {
                     v-model="inputMessage"
                     @keyup.enter="handleSend"
                     type="text" 
-                    placeholder="Pregúntame sobre esta aplicación..."
+                    placeholder="Pregúntame sobre esta aplicación..." 
                     class="flex-1 bg-gray-100 dark:bg-gray-800 border border-transparent focus:border-indigo-500 dark:focus:border-indigo-500 text-gray-800 dark:text-gray-100 text-sm rounded-xl px-4 py-2 focus:outline-none"
                 />
                 <button 

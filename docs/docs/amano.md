@@ -84,7 +84,6 @@
     + ◻️ Apple (Sign in with Apple).
     + ◻️ Meta (Facebook Login) / Instagram.
     + ◻️ X (antes Twitter) / LinkedIn.
-+ ◻️ Pedir repetir contraseña tanto en el register como en el profile.
 
 
 ### Terminadas
@@ -115,6 +114,7 @@
 + ✅ Homologar nombres de variables de entorno.
 + ✅ Ayudante IA para la aplicación, que se puede meter en la documentación.
 + ✅ Poner modo oscuro por defecto y ver como mejorar el footer.
++ ✅ Pedir repetir contraseña tanto en el register como en el profile.
 
 
 
