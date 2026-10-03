@@ -523,6 +523,9 @@
                 { path: '/verify-email', name: 'VerifyEmail', component: () => import('@/views/auth/VerifyEmailView.vue'), meta: { requiresGuest: true } },
                 { path: '/forgot-password', name: 'forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue') },
                 { path: '/reset-password', name: 'reset-password', component: () => import('@/views/auth/ResetPasswordView.vue') },
+                { path: '/privacy', name: 'privacy', component: () => import('@/views/legal/PrivacyPolicyView.vue'), meta: { requiresAuth: false } },
+                { path: '/terms', name: 'terms', component: () => import('@/views/legal/TermsView.vue'), meta: { requiresAuth: false } },
+                { path: '/data-deletion', name: 'data-deletion', component: () => import('@/views/legal/DataDeletionView.vue'), meta: { requiresAuth: false } },
                 {
                     // Rutas protegidas que comparten el mismo Navbar sin pestañeos
                     path: '/',
@@ -645,17 +648,17 @@
     ```
 7. Helper `frontend/src/utils/swal.js`:
     ```js
+    /* src/utils/swal.js */
     import Swal from 'sweetalert2';
 
     export const getSwalTheme = () => {
-        // Obtenemos los estilos calculados del elemento raíz del documento
+        const isDark = document.documentElement.classList.contains('dark');
         const rootStyles = getComputedStyle(document.documentElement);
         
-        const surfaceColor = rootStyles.getPropertyValue('--surface-app').trim();
-        const textColor = rootStyles.getPropertyValue('--text-app').trim();
-        const borderColor = rootStyles.getPropertyValue('--border-app').trim();
-
-        const isDark = document.documentElement.classList.contains('dark');
+        // Obtenemos las variables o asignamos un color seguro según el modo actual
+        const surfaceColor = rootStyles.getPropertyValue('--surface-app').trim() || (isDark ? '#1e293b' : '#ffffff');
+        const textColor = rootStyles.getPropertyValue('--text-app').trim() || (isDark ? '#f8fafc' : '#1e293b');
+        const borderColor = rootStyles.getPropertyValue('--border-app').trim() || (isDark ? '#334155' : '#e2e8f0');
 
         return Swal.mixin({
             background: surfaceColor,
@@ -668,12 +671,11 @@
                     : 'px-5 py-2.5 rounded-xl font-medium text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors'
             },
             buttonsStyling: false,
-            // Inyectamos dinámicamente el color del borde mediante estilo en línea por popup
             didOpen: (popup) => {
                 popup.style.borderColor = borderColor;
             }
         });
-    };   
+    };
     ```
 
 ## ⚡ Establecer los servicios (`src/services/`)
@@ -2476,8 +2478,7 @@
         const authStore = useAuthStore();
         const router = useRouter();
         const loading = ref(false);
-        const hiddenGoogleContainer = ref(null);
-        let googleBtnElement = null;
+        const googleButtonContainer = ref(null);
 
         onMounted(() => {
             const scriptId = 'google-gsi-script';
@@ -2502,46 +2503,18 @@
                     use_fedcm_for_prompt: true
                 });
 
-                if (hiddenGoogleContainer.value) {
-                    // Limpiamos por si acaso
-                    hiddenGoogleContainer.value.innerHTML = '';
+                if (googleButtonContainer.value) {
+                    googleButtonContainer.value.innerHTML = '';
                     
-                    // Renderizamos el botón de Google en modo tipo icono o estándar pero oculto/invisible
-                    window.google.accounts.id.renderButton(hiddenGoogleContainer.value, {
+                    // Renderizamos el botón oficial de Google dimensionado al 100% del contenedor
+                    window.google.accounts.id.renderButton(googleButtonContainer.value, {
                         type: 'standard',
                         theme: 'outline',
                         size: 'large',
+                        text: 'continue_with',
+                        width: '400' // Forzamos un ancho amplio para que se adapte al contenedor flexible
                     });
-
-                    // Esperamos un momento a que el iframe inyecte el div role="button" interno de Google
-                    setTimeout(() => {
-                        if (hiddenGoogleContainer.value) {
-                            googleBtnElement = hiddenGoogleContainer.value.querySelector('div[role="button"]');
-                        }
-                    }, 500);
                 }
-            }
-        };
-
-        // Función que ejecuta el botón personalizado y dispara el clic del iframe real de Google
-        const triggerGoogleLogin = () => {
-            if (!googleBtnElement) {
-                // Intentamos buscarlo nuevamente por si tardó un poco más en cargar
-                if (hiddenGoogleContainer.value) {
-                    googleBtnElement = hiddenGoogleContainer.value.querySelector('div[role="button"]');
-                }
-            }
-
-            if (googleBtnElement) {
-                googleBtnElement.click();
-            } else {
-                getSwalTheme().fire({
-                    icon: 'info',
-                    title: 'Cargando Google',
-                    text: 'El servicio de Google se está inicializando. Inténtalo de nuevo en un segundo.',
-                    background: '#1e293b',
-                    color: '#f8fafc',
-                });
             }
         };
 
@@ -2572,8 +2545,6 @@
                     icon: 'error',
                     title: 'Error de autenticación',
                     text: authStore.error || 'No se pudo iniciar sesión con Google',
-                    background: '#1e293b',
-                    color: '#f8fafc',
                 });
             } finally {
                 loading.value = false;
@@ -2582,14 +2553,9 @@
         </script>
 
         <template>
-            <div class="w-full relative">
-                <!-- 1. Botón personalizado con Tailwind exactamente idéntico al de Facebook -->
-                <button 
-                    type="button" 
-                    @click="triggerGoogleLogin"
-                    :disabled="loading"
-                    class="w-full h-[40px] flex items-center justify-center gap-3 px-4 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium transition-colors shadow-sm disabled:opacity-50">
-                    <!-- Logo oficial de Google SVG -->
+            <div class="w-full relative h-[40px]">
+                <!-- 1. Tu botón visual personalizado con Tailwind (actúa como la cara visible idéntica a Facebook) -->
+                <div class="absolute inset-0 w-full h-[40px] flex items-center justify-center gap-3 px-4 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium transition-colors shadow-sm pointer-events-none">
                     <svg class="w-4 h-4" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
                         <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.2 21.32 7.32 24 12 24z"/>
@@ -2597,10 +2563,11 @@
                         <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.32 0 3.2 2.68 1.19 6.29l4.08 3.15c.95-2.85 3.6-4.69 6.73-4.69z"/>
                     </svg>
                     <span>{{ loading ? 'Conectando...' : text }}</span>
-                </button>
+                </div>
 
-                <!-- 2. Contenedor fantasma de Google (Oculto visualmente pero activo en DOM para cumplir con el SDK) -->
-                <div ref="hiddenGoogleContainer" class="absolute inset-0 opacity-0 pointer-events-none overflow-hidden"></div>
+                <!-- 2. El botón real de Google renderizado de forma invisible pero con opacidad 0 y por ENCIMA del tuyo, 
+                    capturando directamente el clic del usuario de forma nativa sin fallos de SDK -->
+                <div ref="googleButtonContainer" class="absolute inset-0 w-full h-full opacity-0 overflow-hidden cursor-pointer flex items-center justify-center [&>div]:w-full [&>div]:h-full [&_iframe]:w-full [&_iframe]:h-full"></div>
             </div>
         </template>
         ```
@@ -2609,7 +2576,7 @@
         ```vue
         <!-- src/components/auth/FacebookAuthButton.vue -->
         <script setup>
-        import { ref, onMounted } from 'vue';
+        import { ref, onMounted, computed } from 'vue';
         import { useRouter } from 'vue-router';
         import { useAuthStore } from '@/stores/auth.store';
         import { getSwalTheme } from '@/utils/swal';
@@ -2629,9 +2596,14 @@
         const router = useRouter();
         const loading = ref(false);
 
+        // Verificamos si la variable de entorno está presente para decidir si mostramos el botón
+        const appId = import.meta.env.VITE_SOCIAL_META_CLIENT_ID;
+        const isConfigured = computed(() => {
+            return appId && appId !== 'tu-facebook-app-id' && appId.trim() !== '';
+        });
+
         onMounted(() => {
-            const appId = import.meta.env.VITE_SOCIAL_META_CLIENT_ID;
-            if (!appId || appId === 'tu-facebook-app-id') return;
+            if (!isConfigured.value) return;
 
             window.fbAsyncInit = function() {
                 window.FB.init({
@@ -2655,12 +2627,11 @@
 
         const handleFacebookLogin = () => {
             if (!window.FB) {
+                // Usamos getSwalTheme() respetando el estándar del proyecto para alertas limpias
                 getSwalTheme().fire({
                     icon: 'error',
                     title: 'SDK no disponible',
                     text: 'El SDK de Facebook aún se está cargando. Inténtalo de nuevo en unos segundos.',
-                    background: '#1e293b',
-                    color: '#f8fafc',
                 });
                 return;
             }
@@ -2695,8 +2666,6 @@
                                 icon: 'error',
                                 title: 'Error de autenticación',
                                 text: authStore.error || 'No se pudo iniciar sesión con Facebook',
-                                background: '#1e293b',
-                                color: '#f8fafc',
                             });
                         })
                         .finally(() => {
@@ -2711,13 +2680,8 @@
         </script>
 
         <template>
-            <div class="w-full relative">
-                <!-- 
-                Ajustamos las clases para que calcen simétricamente con el iframe de Google:
-                - h-[40px] o h-[44px] (según el size 'large' de Google)
-                - rounded-lg (para que las esquinas coincidan con el contenedor de Google)
-                - text-sm / font-medium (tipografía estándar del botón GSI)
-                -->
+            <!-- Renderizado condicional: Si no hay credenciales configuradas, el componente no se pinta en el DOM -->
+            <div v-if="isConfigured" class="w-full relative">
                 <button 
                     type="button" 
                     @click="handleFacebookLogin"
@@ -2729,7 +2693,7 @@
                     <span>{{ loading ? 'Conectando...' : text }}</span>
                 </button>
             </div>
-        </template>        
+        </template>     
         ```
 11. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
     ```vue
@@ -5330,4 +5294,112 @@
                 </div>
             </div>
         </template>       
+        ```
+19. Crear vista de políticas de privacidad:
+    + Crea el archivo `frontend/src/views/legal/PrivacyPolicyView.vue`:
+        ```vue
+        <!-- src/views/legal/PrivacyPolicyView.vue -->
+        <script setup>
+        import { useRouter } from 'vue-router';
+        const router = useRouter();
+        </script>
+
+        <template>
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8 border border-slate-200 dark:border-slate-700">
+                    <button @click="router.back()" class="mb-6 text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium">
+                        ← Volver
+                    </button>
+                    <h1 class="text-3xl font-bold mb-4">Política de Privacidad</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Última actualización: Octubre de 2026</p>
+                    
+                    <div class="space-y-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                        <p>En <strong>NodeVue Boilerplate</strong>, valoramos tu privacidad. Esta política describe qué datos recopilamos y cómo los utilizamos.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">1. Información que recopilamos</h2>
+                        <p>Cuando inicias sesión a través de proveedores externos (como Google o Facebook), recopilamos únicamente los datos básicos proporcionados por tu perfil autorizado (nombre, correo electrónico y foto de perfil) necesarios para autenticar tu cuenta.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">2. Uso de la información</h2>
+                        <p>La información recopilada se utiliza exclusivamente para gestionar el acceso a tu cuenta de usuario dentro de la plataforma y garantizar la seguridad de la sesión.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">3. Modificaciones</h2>
+                        <p>Este texto es una plantilla base para desarrolladores. Puedes modificar esta sección libremente para adaptarla a los requerimientos legales específicos de tu aplicación final en producción.</p>
+                    </div>
+                </div>
+            </div>
+        </template>        
+        ```
+20. Crear vista de condiciones de servicio:
+    + Crea el archivo `frontend/src/views/legal/TermsView.vue`:
+        ```vue
+        <!-- src/views/legal/TermsView.vue -->
+        <script setup>
+        import { useRouter } from 'vue-router';
+        const router = useRouter();
+        </script>
+
+        <template>
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8 border border-slate-200 dark:border-slate-700">
+                    <button @click="router.back()" class="mb-6 text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium">
+                        ← Volver
+                    </button>
+                    <h1 class="text-3xl font-bold mb-4">Condiciones del Servicio</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Última actualización: Octubre de 2026</p>
+                    
+                    <div class="space-y-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                        <p>Bienvenido a <strong>NodeVue Boilerplate</strong>. Al utilizar nuestra aplicación, aceptas los siguientes términos y condiciones de uso.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">1. Uso de la Cuenta</h2>
+                        <p>Eres responsable de mantener la seguridad de tu cuenta y de todas las actividades que ocurran bajo ella. Nos reservamos el derecho de suspender cuentas que incumplan las normas de seguridad.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">2. Propiedad Intelectual</h2>
+                        <p>La estructura del software, código base y diseños predeterminados pertenecen al ecosistema del boilerplate. Eres libre de adaptarlo para tus proyectos comerciales o personales.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">3. Modificaciones del Servicio</h2>
+                        <p>Esta sección es totalmente personalizable para el desarrollador. Modifica estos términos según las reglas comerciales de tu producto final.</p>
+                    </div>
+                </div>
+            </div>
+        </template>        
+        ```
+21. Crear vista de políticas de eliminación de datos:
+    + Crea el archivo `frontend/src/views/legal/DataDeletionView.vue`:
+        ```vue
+        <!-- src/views/legal/DataDeletionView.vue -->
+        <script setup>
+        import { useRouter } from 'vue-router';
+        const router = useRouter();
+        </script>
+
+        <template>
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8 border border-slate-200 dark:border-slate-700">
+                    <button @click="router.back()" class="mb-6 text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium">
+                        ← Volver
+                    </button>
+                    <h1 class="text-3xl font-bold mb-4">Instrucciones para la Eliminación de Datos de Usuario</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Conforme a las políticas de Meta y Facebook</p>
+                    
+                    <div class="space-y-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                        <p>De acuerdo con la normativa de privacidad de Facebook, los usuarios tienen derecho a solicitar la eliminación de sus datos vinculados a nuestra aplicación.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">¿Cómo eliminar tus datos?</h2>
+                        <ol class="list-decimal list-inside space-y-2">
+                            <li>Inicia sesión en tu cuenta dentro de <strong>NodeVue Boilerplate</strong>.</li>
+                            <li>Dirígete a la sección de <strong>Configuración de Perfil</strong>.</li>
+                            <li>Haz clic en el botón de <strong>Eliminar Cuenta / Borrar Datos</strong>. Esto purgará automáticamente tu información de nuestras bases de datos locales.</li>
+                        </ol>
+
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">Eliminación mediante Facebook</h2>
+                        <p>Si iniciaste sesión usando Facebook, puedes eliminar la actividad de nuestra app directamente desde la configuración de tu cuenta de Facebook:</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Ve a la <strong>Configuración y privacidad</strong> de tu cuenta de Facebook.</li>
+                            <li>Entra en <strong>Aplicaciones y sitios web</strong>.</li>
+                            <li>Busca nuestra aplicación y haz clic en <strong>Eliminar</strong> para revocar el acceso y solicitar la eliminación de los datos asociados.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </template>        
         ```

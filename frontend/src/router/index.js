@@ -11,6 +11,9 @@ const router = createRouter({
         { path: '/verify-email', name: 'VerifyEmail', component: () => import('@/views/auth/VerifyEmailView.vue'), meta: { requiresGuest: true } },
         { path: '/forgot-password', name: 'forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue') },
         { path: '/reset-password', name: 'reset-password', component: () => import('@/views/auth/ResetPasswordView.vue') },
+        { path: '/privacy', name: 'privacy', component: () => import('@/views/legal/PrivacyPolicyView.vue'), meta: { requiresAuth: false } },
+        { path: '/terms', name: 'terms', component: () => import('@/views/legal/TermsView.vue'), meta: { requiresAuth: false } },
+        { path: '/data-deletion', name: 'data-deletion', component: () => import('@/views/legal/DataDeletionView.vue'), meta: { requiresAuth: false } },
         {
             // Rutas protegidas que comparten el mismo Navbar sin pestañeos
             path: '/',
