@@ -1,6 +1,6 @@
 <!-- src/components/auth/FacebookAuthButton.vue -->
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
 import { getSwalTheme } from '@/utils/swal';
@@ -20,9 +20,14 @@ const authStore = useAuthStore();
 const router = useRouter();
 const loading = ref(false);
 
+// Verificamos si la variable de entorno está presente para decidir si mostramos el botón
+const appId = import.meta.env.VITE_SOCIAL_META_CLIENT_ID;
+const isConfigured = computed(() => {
+    return appId && appId !== 'tu-facebook-app-id' && appId.trim() !== '';
+});
+
 onMounted(() => {
-    const appId = import.meta.env.VITE_SOCIAL_META_CLIENT_ID;
-    if (!appId || appId === 'tu-facebook-app-id') return;
+    if (!isConfigured.value) return;
 
     window.fbAsyncInit = function() {
         window.FB.init({
@@ -46,12 +51,11 @@ onMounted(() => {
 
 const handleFacebookLogin = () => {
     if (!window.FB) {
+        // Usamos getSwalTheme() respetando el estándar del proyecto para alertas limpias
         getSwalTheme().fire({
             icon: 'error',
             title: 'SDK no disponible',
             text: 'El SDK de Facebook aún se está cargando. Inténtalo de nuevo en unos segundos.',
-            background: '#1e293b',
-            color: '#f8fafc',
         });
         return;
     }
@@ -86,8 +90,6 @@ const handleFacebookLogin = () => {
                         icon: 'error',
                         title: 'Error de autenticación',
                         text: authStore.error || 'No se pudo iniciar sesión con Facebook',
-                        background: '#1e293b',
-                        color: '#f8fafc',
                     });
                 })
                 .finally(() => {
@@ -102,13 +104,8 @@ const handleFacebookLogin = () => {
 </script>
 
 <template>
-    <div class="w-full relative">
-        <!-- 
-          Ajustamos las clases para que calcen simétricamente con el iframe de Google:
-          - h-[40px] o h-[44px] (según el size 'large' de Google)
-          - rounded-lg (para que las esquinas coincidan con el contenedor de Google)
-          - text-sm / font-medium (tipografía estándar del botón GSI)
-        -->
+    <!-- Renderizado condicional: Si no hay credenciales configuradas, el componente no se pinta en el DOM -->
+    <div v-if="isConfigured" class="w-full relative">
         <button 
             type="button" 
             @click="handleFacebookLogin"
