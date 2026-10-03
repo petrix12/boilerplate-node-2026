@@ -1,4 +1,4 @@
-/* src/services/googleAuth.service.js */
+/* src/services/facebookAuth.service.js */
 const prisma = require('../config/prisma');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -11,25 +11,24 @@ const generateToken = (user, roles = [], permissions = []) => {
     );
 };
 
-const googleAuthService = {
-    async authenticateWithGoogle(idToken) {
-        // Validar el token directamente con Google
-        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+const facebookAuthService = {
+    async authenticateWithFacebook(accessToken) {
+        // Validar el token y obtener datos del usuario desde la Graph API de Facebook
+        // Pedimos los campos id, name, email y picture
+        const response = await fetch(`https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=${accessToken}`);
+        
         if (!response.ok) {
-            throw new Error('Token de Google inválido o expirado');
+            throw new Error('Token de Facebook inválido o expirado');
         }
 
-        const googleData = await response.json();
-        const { email, name, picture, aud } = googleData;
-
-        // Validar que el token corresponda a nuestro Client ID
-        if (aud !== process.env.SOCIAL_GOOGLE_CLIENT_ID) {
-            throw new Error('El token de Google no pertenece a esta aplicación');
-        }
+        const facebookData = await response.json();
+        const { email, name, picture } = facebookData;
 
         if (!email) {
-            throw new Error('La cuenta de Google no proporcionó un correo electrónico');
+            throw new Error('La cuenta de Facebook no proporcionó un correo electrónico (es necesario para registrarse)');
         }
+
+        const avatarUrl = picture?.data?.url || null;
 
         // Buscar si el usuario ya existe en la base de datos
         let user = await prisma.user.findUnique({
@@ -58,9 +57,9 @@ const googleAuthService = {
             user = await prisma.user.create({
                 data: {
                     email,
-                    name: name || 'Usuario de Google',
+                    name: name || 'Usuario de Facebook',
                     password: randomPassword,
-                    avatarUrl: picture || null,
+                    avatarUrl: avatarUrl,
                     roles: userRole ? { create: { roleId: userRole.id } } : undefined
                 },
                 include: {
@@ -108,4 +107,4 @@ const googleAuthService = {
     }
 };
 
-module.exports = googleAuthService;
+module.exports = facebookAuthService;

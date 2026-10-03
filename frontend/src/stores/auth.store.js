@@ -104,6 +104,35 @@ export const useAuthStore = defineStore('auth', {
             } finally {
                 this.loading = false;
             }
+        },
+        
+        // 1.2 Iniciar Sesión con Facebook
+        async loginWithFacebook(accessToken) {
+            this.loading = true;
+            this.error = null;
+            try {
+                const res = await authService.loginWithFacebook(accessToken);
+                const responseData = res.data || res;
+
+                const token = responseData.token;
+                const userObj = responseData.user || {};
+                const featuresObj = responseData.features || {};
+
+                this.token = token;
+                this.user = {
+                    ...userObj,
+                    ...featuresObj
+                };
+
+                localStorage.setItem('token', token);
+
+                return res;
+            } catch (err) {
+                this.error = err.response?.data?.message || 'Error en la autenticación con Facebook';
+                throw err;
+            } finally {
+                this.loading = false;
+            }
         },        
 
         // 2. Registrar Usuario

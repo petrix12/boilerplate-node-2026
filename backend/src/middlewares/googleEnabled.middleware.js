@@ -1,6 +1,6 @@
 const checkGoogleAuthEnabled = (req, res, next) => {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = process.env.SOCIAL_GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.SOCIAL_GOOGLE_CLIENT_SECRET;
 
     if (!clientId || clientId.trim() === '' || !clientSecret || clientSecret.trim() === '') {
         return res.status(404).json({

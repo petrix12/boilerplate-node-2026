@@ -3,6 +3,7 @@ const router = express.Router();
 
 const authRoutes = require('./auth.routes');
 const googleAuthRoutes = require('./googleAuth.routes');
+const facebookAuthRoutes = require('./facebookAuth.routes');
 const userRoutes = require('./user.routes');
 const roleRoutes = require('./role.routes');
 const auditRoutes = require('./audit.routes');
@@ -12,6 +13,7 @@ const aiRoutes = require('./ai.routes');
 // Definición limpia de módulos
 router.use('/auth', authRoutes);
 router.use('/auth', googleAuthRoutes);
+router.use('/auth', facebookAuthRoutes);
 router.use('/users', userRoutes);
 router.use('/roles', roleRoutes);
 router.use('/audit-logs', auditRoutes);

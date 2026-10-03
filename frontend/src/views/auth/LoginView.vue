@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
+import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -111,8 +112,11 @@ const handleSubmit = async () => {
                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-white dark:bg-slate-800 px-2 text-slate-500 dark:text-slate-400">O</span></div>
             </div>
 
-            <!-- Botón de Google aislado -->
-            <GoogleAuthButton text="Iniciar sesión con Google" />            
+            <!-- Botones de Autenticación Social -->
+            <div class="space-y-3">
+                <GoogleAuthButton text="Iniciar sesión con Google" />            
+                <FacebookAuthButton text="Iniciar sesión con Facebook" />            
+            </div>
 
             <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
                 ¿No tienes cuenta?

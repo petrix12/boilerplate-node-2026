@@ -655,8 +655,8 @@
 7. `backend/src/middlewares/googleEnabled.middleware.js`: Garantiza que si las credenciales no existen o están vacías, el endpoint devuelva 404 (bloqueando su uso por completo):
     ```js
     const checkGoogleAuthEnabled = (req, res, next) => {
-        const clientId = process.env.GOOGLE_CLIENT_ID;
-        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+        const clientId = process.env.SOCIAL_GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.SOCIAL_GOOGLE_CLIENT_SECRET;
 
         if (!clientId || clientId.trim() === '' || !clientSecret || clientSecret.trim() === '') {
             return res.status(404).json({
@@ -668,6 +668,24 @@
     };
 
     module.exports = { checkGoogleAuthEnabled };    
+    ```
+8. `backend/src/middlewares/facebookEnabled.middleware.js`: Garantiza que si las credenciales no existen o están vacías, el endpoint devuelva 404 (bloqueando su uso por completo):
+    ```js
+    /* src/middlewares/facebookEnabled.middleware.js */
+    const checkFacebookAuthEnabled = (req, res, next) => {
+        const appId = process.env.SOCIAL_META_CLIENT_ID;
+        const appSecret = process.env.SOCIAL_META_CLIENT_SECRET;
+
+        if (!appId || appId.trim() === '' || !appSecret || appSecret.trim() === '') {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'El inicio de sesión con Facebook no está habilitado.'
+            });
+        }
+        next();
+    };
+
+    module.exports = { checkFacebookAuthEnabled };    
     ```
 
 ## 💼 Paso 5: Servicios de Negocio (`src/services/`)
@@ -1137,6 +1155,7 @@
     ```
 7. Creaar servicio de Auth con Google (`backend/src/services/googleAuth.service.js`):
     ```js
+    /* src/services/googleAuth.service.js */
     const prisma = require('../config/prisma');
     const jwt = require('jsonwebtoken');
     const bcrypt = require('bcryptjs');
@@ -1161,7 +1180,7 @@
             const { email, name, picture, aud } = googleData;
 
             // Validar que el token corresponda a nuestro Client ID
-            if (aud !== process.env.GOOGLE_CLIENT_ID) {
+            if (aud !== process.env.SOCIAL_GOOGLE_CLIENT_ID) {
                 throw new Error('El token de Google no pertenece a esta aplicación');
             }
 
@@ -1246,9 +1265,123 @@
         }
     };
 
-    module.exports = googleAuthService;   
+    module.exports = googleAuthService;  
     ```
     + Este archivo contendrá toda la lógica de validación con Google, gestión de usuarios en Prisma y emisión de tokens.
+8. Creaar servicio de Auth con Facebook (`backend/src/services/facebookAuth.service.js`):
+    ```js
+    /* src/services/facebookAuth.service.js */
+    const prisma = require('../config/prisma');
+    const jwt = require('jsonwebtoken');
+    const bcrypt = require('bcryptjs');
+
+    const generateToken = (user, roles = [], permissions = []) => {
+        return jwt.sign(
+            { id: user.id, email: user.email, roles, permissions },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        );
+    };
+
+    const facebookAuthService = {
+        async authenticateWithFacebook(accessToken) {
+            // Validar el token y obtener datos del usuario desde la Graph API de Facebook
+            // Pedimos los campos id, name, email y picture
+            const response = await fetch(`https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=${accessToken}`);
+            
+            if (!response.ok) {
+                throw new Error('Token de Facebook inválido o expirado');
+            }
+
+            const facebookData = await response.json();
+            const { email, name, picture } = facebookData;
+
+            if (!email) {
+                throw new Error('La cuenta de Facebook no proporcionó un correo electrónico (es necesario para registrarse)');
+            }
+
+            const avatarUrl = picture?.data?.url || null;
+
+            // Buscar si el usuario ya existe en la base de datos
+            let user = await prisma.user.findUnique({
+                where: { email },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: { include: { permission: true } }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            let isNewUser = false;
+
+            // Si no existe, lo registramos automáticamente con el rol por defecto 'USER'
+            if (!user) {
+                isNewUser = true;
+                const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
+                const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
+
+                user = await prisma.user.create({
+                    data: {
+                        email,
+                        name: name || 'Usuario de Facebook',
+                        password: randomPassword,
+                        avatarUrl: avatarUrl,
+                        roles: userRole ? { create: { roleId: userRole.id } } : undefined
+                    },
+                    include: {
+                        roles: {
+                            include: {
+                                role: {
+                                    include: {
+                                        permissions: { include: { permission: true } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (!user.isActive) {
+                throw new Error('La cuenta de usuario está desactivada');
+            }
+
+            // Extraer roles y permisos para el JWT
+            const userRoles = user.roles.map(ur => ur.role.name);
+            const permissionsSet = new Set();
+            user.roles.forEach(ur => {
+                ur.role.permissions.forEach(rp => {
+                    permissionsSet.add(rp.permission.action);
+                });
+            });
+            const userPermissions = Array.from(permissionsSet);
+
+            const token = generateToken(user, userRoles, userPermissions);
+
+            return {
+                isNewUser,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    roles: userRoles,
+                    permissions: userPermissions
+                },
+                token
+            };
+        }
+    };
+
+    module.exports = facebookAuthService;    
+    ```
+    + Aquí es donde nos conectamos a la Graph API de Facebook para validar el token (o el accessToken que nos manda el frontend) y obtener el perfil del usuario.
 
 ## 🎮 Paso 7: Controladores de la API (`src/controllers/`)
 + Implementa la capa de orquestación de respuesta para cada dominio:
@@ -2681,7 +2814,67 @@
     module.exports = { googleLogin };  
     ```
     + Este controlador actúa únicamente como puente HTTP, delegando la lógica al servicio y registrando auditorías si es necesario.
+9. `backend/src/controllers/facebookAuth.controller.js`: Controlador para Auth con Facebook:
+    ```js
+    /* src/controllers/facebookAuth.controller.js */
+    const facebookAuthService = require('../services/facebookAuth.service');
+    const { getClientIp } = require('../utils/request.utils');
+    const prisma = require('../config/prisma');
 
+    const facebookLogin = async (req, res) => {
+        try {
+            const { accessToken } = req.body;
+            if (!accessToken) {
+                return res.status(400).json({ status: 'fail', message: 'El accessToken de Facebook es obligatorio' });
+            }
+
+            const result = await facebookAuthService.authenticateWithFacebook(accessToken);
+
+            // Registrar auditoría de éxito
+            await prisma.auditLog.create({
+                data: {
+                    action: 'FACEBOOK_LOGIN_SUCCESS',
+                    entity: 'Auth',
+                    entityId: String(result.user.id),
+                    ipAddress: getClientIp(req),
+                    user: { connect: { id: result.user.id } },
+                    details: JSON.stringify({ email: result.user.email })
+                }
+            });
+
+            // Evaluamos si la característica de IA está activa en el entorno
+            const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';
+
+            // Estructuramos la respuesta asegurando el bloque features al mismo nivel
+            const responseData = {
+                user: result.user,
+                token: result.token,
+                features: {
+                    aiDiagnostic: isAiEnabled
+                }
+            };
+
+            if (result.isNewUser !== undefined) {
+                responseData.isNewUser = result.isNewUser;
+            }
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Inicio de sesión con Facebook exitoso',
+                data: responseData
+            });
+        } catch (error) {
+            console.error('Error en facebookLogin:', error.message);
+            return res.status(401).json({
+                status: 'fail',
+                message: error.message || 'Error al autenticar con Facebook'
+            });
+        }
+    };
+
+    module.exports = { facebookLogin };   
+    ```
+    + Este archivo gestiona la petición HTTP, invoca al servicio, registra la auditoría y añade el bloque de la IA (features) exactamente igual que Google.
 
 ## 🛣️ Paso 8: Definición de Rutas (`src/routes/`)
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
@@ -2836,6 +3029,7 @@
     ```
 7. `backend/src/routes/googleAuth.routes.js`: Define las rutas protegidas por el middleware de entorno:
     ```js
+    /* src/routes/googleAuth.routes.js */
     const express = require('express');
     const router = express.Router();
     const { googleLogin } = require('../controllers/googleAuth.controller');
@@ -2848,13 +3042,29 @@
 
     module.exports = router;
     ```
-8.  `backend/src/routes/index.js`: Router central que registra todos los módulos:
+8. `backend/src/routes/facebookAuth.routes.js`: Define las rutas protegidas por el middleware de entorno:
+    ```js
+    /* src/routes/facebookAuth.routes.js */
+    const express = require('express');
+    const router = express.Router();
+    const { facebookLogin } = require('../controllers/facebookAuth.controller');
+    const { checkFacebookAuthEnabled } = require('../middlewares/facebookEnabled.middleware');
+
+    // Validar que las credenciales de Facebook estén habilitadas
+    router.use(checkFacebookAuthEnabled);
+
+    router.post('/facebook', facebookLogin);
+
+    module.exports = router;    
+    ```
+9.  `backend/src/routes/index.js`: Router central que registra todos los módulos:
     ```js
     const express = require('express');
     const router = express.Router();
 
     const authRoutes = require('./auth.routes');
     const googleAuthRoutes = require('./googleAuth.routes');
+    const facebookAuthRoutes = require('./facebookAuth.routes');
     const userRoutes = require('./user.routes');
     const roleRoutes = require('./role.routes');
     const auditRoutes = require('./audit.routes');
@@ -2864,6 +3074,7 @@
     // Definición limpia de módulos
     router.use('/auth', authRoutes);
     router.use('/auth', googleAuthRoutes);
+    router.use('/auth', facebookAuthRoutes);
     router.use('/users', userRoutes);
     router.use('/roles', roleRoutes);
     router.use('/audit-logs', auditRoutes);

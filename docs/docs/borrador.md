@@ -23,7 +23,7 @@
 + Las vistas para registrarse y hacer login tienen un diseño bastante sobrio y moderno, y permiten hacerlo:
     + Vía tradicional, proporcionando un password y una contraseña.
     + Vía autenticación por Google.
-    + **Nota**: Es importanta destacar que si no se proporciona algunas de estas variables de entorno `GOOGLE_CLIENT_ID` o `GOOGLE_CLIENT_SECRET` en el backend, la opción de hacer login y register por Google quedará deshabilitada.
+    + **Nota**: Es importanta destacar que si no se proporciona algunas de estas variables de entorno `SOCIAL_GOOGLE_CLIENT_ID` o `SOCIAL_GOOGLE_CLIENT_SECRET` en el backend, la opción de hacer login y register por Google quedará deshabilitada.
 + Luego de registrarse y hacer login, el usuario será redirigido al dashboard de la aplicación, el cual, igualmente tiene un diseño sobrio y moderno. Esta vista esta pensada para que el desarrollador la desmonte y la adapte a la naturaleza de su proyecto.
 + El dashboard de la app dispone de un Navbar con un diseño moderno, que muestra el logo de la empresa y el nombre de la aplicación, seguido de la vista en la que se encuentra, y al otro extremo un avatar del usuario logueado seguido de su nombre, que al hacer clic sobre ellos, se muestra un menú desplegable que permite ir al la vista de configuración del usuario y cerrar sesión.
 + La aplicación también contempla un sistema de roles y permisos, y si el usuario dispone de los permisos necesario para ir al panel de administración, este enlace también se mostrará en el menú desplegable.

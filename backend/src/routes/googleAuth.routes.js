@@ -1,4 +1,4 @@
-// backend/src/routes/googleAuth.routes.js
+/* src/routes/googleAuth.routes.js */
 const express = require('express');
 const router = express.Router();
 const { googleLogin } = require('../controllers/googleAuth.controller');

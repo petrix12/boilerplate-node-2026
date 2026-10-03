@@ -344,6 +344,35 @@
                 } finally {
                     this.loading = false;
                 }
+            },
+            
+            // 1.2 Iniciar Sesión con Facebook
+            async loginWithFacebook(accessToken) {
+                this.loading = true;
+                this.error = null;
+                try {
+                    const res = await authService.loginWithFacebook(accessToken);
+                    const responseData = res.data || res;
+
+                    const token = responseData.token;
+                    const userObj = responseData.user || {};
+                    const featuresObj = responseData.features || {};
+
+                    this.token = token;
+                    this.user = {
+                        ...userObj,
+                        ...featuresObj
+                    };
+
+                    localStorage.setItem('token', token);
+
+                    return res;
+                } catch (err) {
+                    this.error = err.response?.data?.message || 'Error en la autenticación con Facebook';
+                    throw err;
+                } finally {
+                    this.loading = false;
+                }
             },        
 
             // 2. Registrar Usuario
@@ -677,6 +706,12 @@
             const response = await api.post('/auth/google', { idToken });
             return response.data;
         },
+
+        // Iniciar sesión con Facebook
+        async loginWithFacebook(accessToken) {
+            const response = await api.post('/auth/facebook', { accessToken });
+            return response.data;
+        },    
 
         // Obtener perfil autenticado actual
         async getMe() {
@@ -2417,7 +2452,7 @@
             </BaseModal>
         </template>        
         ```
-9.  Componente para login con Google:
+9. Componente para login con Google:
     + Cera el archivo `frontend/src/components/auth/GoogleAuthButton.vue`:
         ```vue
         <!-- src/components/auth/GoogleAuthButton.vue -->
@@ -2427,7 +2462,6 @@
         import { useAuthStore } from '@/stores/auth.store';
         import { getSwalTheme } from '@/utils/swal';
 
-        // Única llamada a defineProps combinando ambas propiedades
         const props = defineProps({
             text: {
                 type: String,
@@ -2442,7 +2476,8 @@
         const authStore = useAuthStore();
         const router = useRouter();
         const loading = ref(false);
-        const googleButtonRef = ref(null);
+        const hiddenGoogleContainer = ref(null);
+        let googleBtnElement = null;
 
         onMounted(() => {
             const scriptId = 'google-gsi-script';
@@ -2462,21 +2497,51 @@
         const initGoogleClient = () => {
             if (window.google) {
                 window.google.accounts.id.initialize({
-                    client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+                    client_id: import.meta.env.VITE_SOCIAL_GOOGLE_CLIENT_ID,
                     callback: handleCredentialResponse,
                     use_fedcm_for_prompt: true
                 });
 
-                if (googleButtonRef.value) {
-                    window.google.accounts.id.renderButton(googleButtonRef.value, {
+                if (hiddenGoogleContainer.value) {
+                    // Limpiamos por si acaso
+                    hiddenGoogleContainer.value.innerHTML = '';
+                    
+                    // Renderizamos el botón de Google en modo tipo icono o estándar pero oculto/invisible
+                    window.google.accounts.id.renderButton(hiddenGoogleContainer.value, {
                         type: 'standard',
-                        theme: 'filled_black',
+                        theme: 'outline',
                         size: 'large',
-                        text: 'continue_with',
-                        shape: 'rectangular',
-                        logo_alignment: 'left'
                     });
+
+                    // Esperamos un momento a que el iframe inyecte el div role="button" interno de Google
+                    setTimeout(() => {
+                        if (hiddenGoogleContainer.value) {
+                            googleBtnElement = hiddenGoogleContainer.value.querySelector('div[role="button"]');
+                        }
+                    }, 500);
                 }
+            }
+        };
+
+        // Función que ejecuta el botón personalizado y dispara el clic del iframe real de Google
+        const triggerGoogleLogin = () => {
+            if (!googleBtnElement) {
+                // Intentamos buscarlo nuevamente por si tardó un poco más en cargar
+                if (hiddenGoogleContainer.value) {
+                    googleBtnElement = hiddenGoogleContainer.value.querySelector('div[role="button"]');
+                }
+            }
+
+            if (googleBtnElement) {
+                googleBtnElement.click();
+            } else {
+                getSwalTheme().fire({
+                    icon: 'info',
+                    title: 'Cargando Google',
+                    text: 'El servicio de Google se está inicializando. Inténtalo de nuevo en un segundo.',
+                    background: '#1e293b',
+                    color: '#f8fafc',
+                });
             }
         };
 
@@ -2485,13 +2550,10 @@
             try {
                 const idToken = response.credential;
                 const result = await authStore.loginWithGoogle(idToken);
-                
                 const resData = result.data || result;
 
-                // Redirigimos al dashboard primero
                 await router.push({ name: 'dashboard' });
 
-                // Si estamos en el flujo de registro y el backend indicó que la cuenta ya existía
                 if (props.isRegisterContext && resData.isNewUser === false) {
                     getSwalTheme().fire({
                         icon: 'info',
@@ -2521,12 +2583,155 @@
 
         <template>
             <div class="w-full relative">
-                <!-- Contenedor donde Google inyectará su botón interactivo y seguro -->
-                <div ref="googleButtonRef" class="w-full flex justify-center overflow-hidden rounded-lg"></div>
+                <!-- 1. Botón personalizado con Tailwind exactamente idéntico al de Facebook -->
+                <button 
+                    type="button" 
+                    @click="triggerGoogleLogin"
+                    :disabled="loading"
+                    class="w-full h-[40px] flex items-center justify-center gap-3 px-4 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium transition-colors shadow-sm disabled:opacity-50">
+                    <!-- Logo oficial de Google SVG -->
+                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.2 21.32 7.32 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.4s.13-1.68.38-2.4V6.29H1.19C.43 7.82 0 9.55 0 11.84s.43 4.02 1.19 5.55l4.08-3.15z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.32 0 3.2 2.68 1.19 6.29l4.08 3.15c.95-2.85 3.6-4.69 6.73-4.69z"/>
+                    </svg>
+                    <span>{{ loading ? 'Conectando...' : text }}</span>
+                </button>
+
+                <!-- 2. Contenedor fantasma de Google (Oculto visualmente pero activo en DOM para cumplir con el SDK) -->
+                <div ref="hiddenGoogleContainer" class="absolute inset-0 opacity-0 pointer-events-none overflow-hidden"></div>
             </div>
         </template>
         ```
-10. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
+10. Componente para login con Facebook:
+    + Cera el archivo `frontend/src/components/auth/FacebookAuthButton.vue`:
+        ```vue
+        <!-- src/components/auth/FacebookAuthButton.vue -->
+        <script setup>
+        import { ref, onMounted } from 'vue';
+        import { useRouter } from 'vue-router';
+        import { useAuthStore } from '@/stores/auth.store';
+        import { getSwalTheme } from '@/utils/swal';
+
+        const props = defineProps({
+            text: {
+                type: String,
+                default: 'Continuar con Facebook'
+            },
+            isRegisterContext: {
+                type: Boolean,
+                default: false
+            }
+        });
+
+        const authStore = useAuthStore();
+        const router = useRouter();
+        const loading = ref(false);
+
+        onMounted(() => {
+            const appId = import.meta.env.VITE_SOCIAL_META_CLIENT_ID;
+            if (!appId || appId === 'tu-facebook-app-id') return;
+
+            window.fbAsyncInit = function() {
+                window.FB.init({
+                    appId: appId,
+                    cookie: true,
+                    xfbml: true,
+                    version: 'v18.0'
+                });
+            };
+
+            const scriptId = 'facebook-jssdk';
+            if (!document.getElementById(scriptId)) {
+                const js = document.createElement('script');
+                js.id = scriptId;
+                js.src = 'https://connect.facebook.net/es_ES/sdk.js';
+                js.async = true;
+                js.defer = true;
+                document.head.appendChild(js);
+            }
+        });
+
+        const handleFacebookLogin = () => {
+            if (!window.FB) {
+                getSwalTheme().fire({
+                    icon: 'error',
+                    title: 'SDK no disponible',
+                    text: 'El SDK de Facebook aún se está cargando. Inténtalo de nuevo en unos segundos.',
+                    background: '#1e293b',
+                    color: '#f8fafc',
+                });
+                return;
+            }
+
+            loading.value = true;
+            
+            window.FB.login((response) => {
+                if (response.authResponse) {
+                    const accessToken = response.authResponse.accessToken;
+                    
+                    authStore.loginWithFacebook(accessToken)
+                        .then(async (result) => {
+                            const resData = result.data || result;
+                            await router.push({ name: 'dashboard' });
+
+                            if (props.isRegisterContext && resData.isNewUser === false) {
+                                getSwalTheme().fire({
+                                    icon: 'info',
+                                    title: '¡Hola de nuevo!',
+                                    text: 'Detectamos que ya tenías una cuenta registrada, por lo que hemos iniciado sesión directamente.',
+                                    toast: true,
+                                    position: 'center',
+                                    showConfirmButton: true,
+                                    confirmButtonText: 'Entendido',
+                                    timer: 7500
+                                });
+                            }
+                        })
+                        .catch((err) => {
+                            console.error('Error al autenticar con el backend:', err);
+                            getSwalTheme().fire({
+                                icon: 'error',
+                                title: 'Error de autenticación',
+                                text: authStore.error || 'No se pudo iniciar sesión con Facebook',
+                                background: '#1e293b',
+                                color: '#f8fafc',
+                            });
+                        })
+                        .finally(() => {
+                            loading.value = false;
+                        });
+                } else {
+                    loading.value = false;
+                    console.log('El usuario canceló el inicio de sesión o no autorizó completamente.');
+                }
+            }, { scope: 'email,public_profile' });
+        };
+        </script>
+
+        <template>
+            <div class="w-full relative">
+                <!-- 
+                Ajustamos las clases para que calcen simétricamente con el iframe de Google:
+                - h-[40px] o h-[44px] (según el size 'large' de Google)
+                - rounded-lg (para que las esquinas coincidan con el contenedor de Google)
+                - text-sm / font-medium (tipografía estándar del botón GSI)
+                -->
+                <button 
+                    type="button" 
+                    @click="handleFacebookLogin"
+                    :disabled="loading"
+                    class="w-full h-[40px] flex items-center justify-center gap-3 px-4 rounded-lg bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-medium transition-colors shadow-sm disabled:opacity-50">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.27-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    <span>{{ loading ? 'Conectando...' : text }}</span>
+                </button>
+            </div>
+        </template>        
+        ```
+11. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
     ```vue
     <template>
         <svg class="fill-current" viewBox="0 0 24 24" aria-hidden="true">
@@ -2548,6 +2753,7 @@
         import { useAuthStore } from '@/stores/auth.store';
         import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
+        import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
 
         const authStore = useAuthStore();
         const router = useRouter();
@@ -2654,8 +2860,11 @@
                         <div class="relative flex justify-center text-xs uppercase"><span class="bg-white dark:bg-slate-800 px-2 text-slate-500 dark:text-slate-400">O</span></div>
                     </div>
 
-                    <!-- Botón de Google aislado -->
-                    <GoogleAuthButton text="Iniciar sesión con Google" />            
+                    <!-- Botones de Autenticación Social -->
+                    <div class="space-y-3">
+                        <GoogleAuthButton text="Iniciar sesión con Google" />            
+                        <FacebookAuthButton text="Iniciar sesión con Facebook" />            
+                    </div>
 
                     <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
                         ¿No tienes cuenta?
@@ -2676,6 +2885,7 @@
         import { authService } from '@/services/auth.service';
         import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
+        import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
         import { getSwalTheme } from '@/utils/swal';
 
         const authStore = useAuthStore();
@@ -2693,14 +2903,13 @@
             lastName: '',
             email: '',
             password: '',
-            password_confirmation: '', // Añadido para la confirmación
+            password_confirmation: '',
         });
 
         const handleSubmit = async () => {
             try {
                 authStore.error = null;
 
-                // Validación previa en frontend por seguridad y mejor UX
                 if (form.value.password !== form.value.password_confirmation) {
                     authStore.error = 'Las contraseñas no coinciden.';
                     getSwalTheme().fire({
@@ -2713,7 +2922,6 @@
                 }
 
                 const response = await authService.register(form.value);
-                
                 const successMessage = response.message || 'Registro exitoso';
 
                 if (response.requiresVerification) {
@@ -2825,7 +3033,6 @@
                                     class="w-full px-4 py-2 pr-10 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
                                     placeholder="••••••••"
                                 />
-                                <!-- Botón del ojito -->
                                 <button 
                                     type="button"
                                     @click="showPassword = !showPassword"
@@ -2837,7 +3044,6 @@
                             </div>
                         </div>
 
-                        <!-- Nuevo campo: Confirmar Contraseña -->
                         <div>
                             <label class="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Confirmar Contraseña</label>
                             <div class="relative">
@@ -2848,7 +3054,6 @@
                                     class="w-full px-4 py-2 pr-10 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
                                     placeholder="••••••••"
                                 />
-                                <!-- Botón del ojito para confirmación -->
                                 <button 
                                     type="button"
                                     @click="showPasswordConfirmation = !showPasswordConfirmation"
@@ -2875,8 +3080,11 @@
                         <div class="relative flex justify-center text-xs uppercase"><span class="bg-white dark:bg-slate-800 px-2 text-slate-500 dark:text-slate-400">O</span></div>
                     </div>
 
-                    <!-- Mismo componente reutilizado con otro texto -->
-                    <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
+                    <!-- Botones de Autenticación Social (Apilados ordenadamente) -->
+                    <div class="space-y-3">
+                        <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
+                        <FacebookAuthButton text="Registrarse con Facebook" :isRegisterContext="true" />            
+                    </div>
 
                     <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
                         ¿Ya tienes cuenta?

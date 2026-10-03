@@ -138,8 +138,16 @@
     # 🌐 AUTENTICACIÓN SOCIAL (OAUTH GOOGLE)
     # ===========================================
 
-    GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
-    GOOGLE_CLIENT_SECRET=tu-client-secret   
+    SOCIAL_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+    SOCIAL_GOOGLE_CLIENT_SECRET=tu-client-secret
+
+
+    # ===========================================
+    # 🌐 AUTENTICACIÓN SOCIAL (OAUTH FACEBOOK)
+    # ===========================================
+
+    SOCIAL_META_CLIENT_ID=tu-facebook-app-id
+    SOCIAL_META_CLIENT_SECRET=tu-facebook-app-secret
     ```
 2. Actualizar variables de entorno en `https://render.com`.
 
@@ -169,7 +177,7 @@
     # ==========================================
     # - - - LOCAL | PRODUCCIÓN - - -
     # ==========================================
-    VITE_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+    VITE_SOCIAL_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
 
     # ===================================================================================================
     # URL DE LA DOCUMENTACIÓN DE LA API

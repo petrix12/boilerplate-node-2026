@@ -193,11 +193,14 @@ LOG_RETENTION_DAYS=30
 
 
 # ===========================================
-# 🌐 AUTENTICACIÓN SOCIAL (OAUTH GOOGLE)
+# 🌐 AUTENTICACIÓN SOCIAL MEDIA
 # ===========================================
 
-GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=tu-client-secret    
+SOCIAL_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+SOCIAL_GOOGLE_CLIENT_SECRET=tu-client-secret
+
+SOCIAL_META_CLIENT_ID=tu-facebook-app-id
+SOCIAL_META_CLIENT_SECRET=tu-facebook-app-secret  
 ```
 
 3. Levantar el entorno

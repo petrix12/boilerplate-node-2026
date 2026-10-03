@@ -26,6 +26,12 @@ export const authService = {
         return response.data;
     },
 
+    // Iniciar sesión con Facebook
+    async loginWithFacebook(accessToken) {
+        const response = await api.post('/auth/facebook', { accessToken });
+        return response.data;
+    },    
+
     // Obtener perfil autenticado actual
     async getMe() {
         const response = await api.get('/auth/me');

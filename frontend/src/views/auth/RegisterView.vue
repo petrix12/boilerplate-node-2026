@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { authService } from '@/services/auth.service';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
+import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
 import { getSwalTheme } from '@/utils/swal';
 
 const authStore = useAuthStore();
@@ -23,14 +24,13 @@ const form = ref({
     lastName: '',
     email: '',
     password: '',
-    password_confirmation: '', // Añadido para la confirmación
+    password_confirmation: '',
 });
 
 const handleSubmit = async () => {
     try {
         authStore.error = null;
 
-        // Validación previa en frontend por seguridad y mejor UX
         if (form.value.password !== form.value.password_confirmation) {
             authStore.error = 'Las contraseñas no coinciden.';
             getSwalTheme().fire({
@@ -43,7 +43,6 @@ const handleSubmit = async () => {
         }
 
         const response = await authService.register(form.value);
-        
         const successMessage = response.message || 'Registro exitoso';
 
         if (response.requiresVerification) {
@@ -155,7 +154,6 @@ const handleSubmit = async () => {
                             class="w-full px-4 py-2 pr-10 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
                             placeholder="••••••••"
                         />
-                        <!-- Botón del ojito -->
                         <button 
                             type="button"
                             @click="showPassword = !showPassword"
@@ -167,7 +165,6 @@ const handleSubmit = async () => {
                     </div>
                 </div>
 
-                <!-- Nuevo campo: Confirmar Contraseña -->
                 <div>
                     <label class="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Confirmar Contraseña</label>
                     <div class="relative">
@@ -178,7 +175,6 @@ const handleSubmit = async () => {
                             class="w-full px-4 py-2 pr-10 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
                             placeholder="••••••••"
                         />
-                        <!-- Botón del ojito para confirmación -->
                         <button 
                             type="button"
                             @click="showPasswordConfirmation = !showPasswordConfirmation"
@@ -205,8 +201,11 @@ const handleSubmit = async () => {
                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-white dark:bg-slate-800 px-2 text-slate-500 dark:text-slate-400">O</span></div>
             </div>
 
-            <!-- Mismo componente reutilizado con otro texto -->
-            <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
+            <!-- Botones de Autenticación Social (Apilados ordenadamente) -->
+            <div class="space-y-3">
+                <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
+                <FacebookAuthButton text="Registrarse con Facebook" :isRegisterContext="true" />            
+            </div>
 
             <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
                 ¿Ya tienes cuenta?
