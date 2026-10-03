@@ -1,14 +1,14 @@
+/* src/utils/swal.js */
 import Swal from 'sweetalert2';
 
 export const getSwalTheme = () => {
-    // Obtenemos los estilos calculados del elemento raíz del documento
+    const isDark = document.documentElement.classList.contains('dark');
     const rootStyles = getComputedStyle(document.documentElement);
     
-    const surfaceColor = rootStyles.getPropertyValue('--surface-app').trim();
-    const textColor = rootStyles.getPropertyValue('--text-app').trim();
-    const borderColor = rootStyles.getPropertyValue('--border-app').trim();
-
-    const isDark = document.documentElement.classList.contains('dark');
+    // Obtenemos las variables o asignamos un color seguro según el modo actual
+    const surfaceColor = rootStyles.getPropertyValue('--surface-app').trim() || (isDark ? '#1e293b' : '#ffffff');
+    const textColor = rootStyles.getPropertyValue('--text-app').trim() || (isDark ? '#f8fafc' : '#1e293b');
+    const borderColor = rootStyles.getPropertyValue('--border-app').trim() || (isDark ? '#334155' : '#e2e8f0');
 
     return Swal.mixin({
         background: surfaceColor,
@@ -21,7 +21,6 @@ export const getSwalTheme = () => {
                 : 'px-5 py-2.5 rounded-xl font-medium text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors'
         },
         buttonsStyling: false,
-        // Inyectamos dinámicamente el color del borde mediante estilo en línea por popup
         didOpen: (popup) => {
             popup.style.borderColor = borderColor;
         }

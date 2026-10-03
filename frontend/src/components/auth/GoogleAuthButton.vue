@@ -19,8 +19,7 @@ const props = defineProps({
 const authStore = useAuthStore();
 const router = useRouter();
 const loading = ref(false);
-const hiddenGoogleContainer = ref(null);
-let googleBtnElement = null;
+const googleButtonContainer = ref(null);
 
 onMounted(() => {
     const scriptId = 'google-gsi-script';
@@ -45,46 +44,18 @@ const initGoogleClient = () => {
             use_fedcm_for_prompt: true
         });
 
-        if (hiddenGoogleContainer.value) {
-            // Limpiamos por si acaso
-            hiddenGoogleContainer.value.innerHTML = '';
+        if (googleButtonContainer.value) {
+            googleButtonContainer.value.innerHTML = '';
             
-            // Renderizamos el botón de Google en modo tipo icono o estándar pero oculto/invisible
-            window.google.accounts.id.renderButton(hiddenGoogleContainer.value, {
+            // Renderizamos el botón oficial de Google dimensionado al 100% del contenedor
+            window.google.accounts.id.renderButton(googleButtonContainer.value, {
                 type: 'standard',
                 theme: 'outline',
                 size: 'large',
+                text: 'continue_with',
+                width: '400' // Forzamos un ancho amplio para que se adapte al contenedor flexible
             });
-
-            // Esperamos un momento a que el iframe inyecte el div role="button" interno de Google
-            setTimeout(() => {
-                if (hiddenGoogleContainer.value) {
-                    googleBtnElement = hiddenGoogleContainer.value.querySelector('div[role="button"]');
-                }
-            }, 500);
         }
-    }
-};
-
-// Función que ejecuta el botón personalizado y dispara el clic del iframe real de Google
-const triggerGoogleLogin = () => {
-    if (!googleBtnElement) {
-        // Intentamos buscarlo nuevamente por si tardó un poco más en cargar
-        if (hiddenGoogleContainer.value) {
-            googleBtnElement = hiddenGoogleContainer.value.querySelector('div[role="button"]');
-        }
-    }
-
-    if (googleBtnElement) {
-        googleBtnElement.click();
-    } else {
-        getSwalTheme().fire({
-            icon: 'info',
-            title: 'Cargando Google',
-            text: 'El servicio de Google se está inicializando. Inténtalo de nuevo en un segundo.',
-            background: '#1e293b',
-            color: '#f8fafc',
-        });
     }
 };
 
@@ -115,8 +86,6 @@ const handleCredentialResponse = async (response) => {
             icon: 'error',
             title: 'Error de autenticación',
             text: authStore.error || 'No se pudo iniciar sesión con Google',
-            background: '#1e293b',
-            color: '#f8fafc',
         });
     } finally {
         loading.value = false;
@@ -125,14 +94,9 @@ const handleCredentialResponse = async (response) => {
 </script>
 
 <template>
-    <div class="w-full relative">
-        <!-- 1. Botón personalizado con Tailwind exactamente idéntico al de Facebook -->
-        <button 
-            type="button" 
-            @click="triggerGoogleLogin"
-            :disabled="loading"
-            class="w-full h-[40px] flex items-center justify-center gap-3 px-4 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium transition-colors shadow-sm disabled:opacity-50">
-            <!-- Logo oficial de Google SVG -->
+    <div class="w-full relative h-[40px]">
+        <!-- 1. Tu botón visual personalizado con Tailwind (actúa como la cara visible idéntica a Facebook) -->
+        <div class="absolute inset-0 w-full h-[40px] flex items-center justify-center gap-3 px-4 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium transition-colors shadow-sm pointer-events-none">
             <svg class="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
                 <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.2 21.32 7.32 24 12 24z"/>
@@ -140,9 +104,10 @@ const handleCredentialResponse = async (response) => {
                 <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.32 0 3.2 2.68 1.19 6.29l4.08 3.15c.95-2.85 3.6-4.69 6.73-4.69z"/>
             </svg>
             <span>{{ loading ? 'Conectando...' : text }}</span>
-        </button>
+        </div>
 
-        <!-- 2. Contenedor fantasma de Google (Oculto visualmente pero activo en DOM para cumplir con el SDK) -->
-        <div ref="hiddenGoogleContainer" class="absolute inset-0 opacity-0 pointer-events-none overflow-hidden"></div>
+        <!-- 2. El botón real de Google renderizado de forma invisible pero con opacidad 0 y por ENCIMA del tuyo, 
+             capturando directamente el clic del usuario de forma nativa sin fallos de SDK -->
+        <div ref="googleButtonContainer" class="absolute inset-0 w-full h-full opacity-0 overflow-hidden cursor-pointer flex items-center justify-center [&>div]:w-full [&>div]:h-full [&_iframe]:w-full [&_iframe]:h-full"></div>
     </div>
 </template>
