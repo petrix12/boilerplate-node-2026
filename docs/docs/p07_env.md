@@ -135,60 +135,56 @@
 
 
     # ===========================================
-    # 🌐 AUTENTICACIÓN SOCIAL (OAUTH GOOGLE)
+    # 🌐 AUTENTICACIÓN SOCIAL MEDIA
     # ===========================================
 
     SOCIAL_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
     SOCIAL_GOOGLE_CLIENT_SECRET=tu-client-secret
 
-
-    # ===========================================
-    # 🌐 AUTENTICACIÓN SOCIAL (OAUTH FACEBOOK)
-    # ===========================================
-
     SOCIAL_META_CLIENT_ID=tu-facebook-app-id
     SOCIAL_META_CLIENT_SECRET=tu-facebook-app-secret
+
+    SOCIAL_LINKEDIN_CLIENT_ID=tu_client_id
+    SOCIAL_LINKEDIN_CLIENT_SECRET=tu_client_secret
     ```
 2. Actualizar variables de entorno en `https://render.com`.
 
 ## 💻 Frontend
 1. Variables de Entorno del Frontend (`frontend/.env`):
     ```ini
-    # ===================================================================================================
-    # CONFIGURACIÓN DEL SERVIDOR FRONTEND
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
+    # ===========================================
+    # 💻 CONFIGURACIÓN DEL SERVIDOR FRONTEND
+    # ===========================================
+
+    # --- LOCAL ---
     # Con Docker
     VITE_API_BASE_URL=https://boilerplate-localhost.com/api/v1
     # Sin Docker
     # VITE_API_BASE_URL=http://localhost:3000/api/v1
     VITE_APP_NAME="NodeVue Boilerplate | Dev"
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
+
+    # --- PRODUCCIÓN --
     # VITE_API_BASE_URL=https://tu-proyecto.onrender.com/api/v1
     # VITE_APP_NAME="Node|Vue Boilerplate"
 
-    # ===================================================================================================
-    # LOGIN AUTH - REDES SOCIALES
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL | PRODUCCIÓN - - -
-    # ==========================================
-    VITE_SOCIAL_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
 
-    # ===================================================================================================
-    # URL DE LA DOCUMENTACIÓN DE LA API
-    # ===================================================================================================
-    # ==========================================
-    # - - - LOCAL - - -
-    # ==========================================
+    # ===========================================
+    # 🔐 LOGIN AUTH - REDES SOCIALES
+    # ===========================================
+
+    VITE_SOCIAL_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+    VITE_SOCIAL_META_CLIENT_ID=tu-facebook-app-id
+    VITE_SOCIAL_LINKEDIN_CLIENT_ID=tu-linkedin-client-id
+
+
+    # ===========================================
+    # 📚 URL DE LA DOCUMENTACIÓN DE LA API
+    # ===========================================
+
+    # --- LOCAL ---
     VITE_DOCS_URL=http://docs.boilerplate-localhost.com
-    # ==========================================
-    # - - - PRODUCCIÓN - - -
-    # ==========================================
+
+    # --- PRODUCCIÓN --
     # VITE_DOCS_URL=https://boilerplate-node-2026-docs-docs.vercel.app
     ```
 2. Actualizar variables de entorno en `https://vercel.com`.

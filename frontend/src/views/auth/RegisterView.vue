@@ -7,6 +7,7 @@ import { authService } from '@/services/auth.service';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
+import LinkedInAuthButton from '@/components/auth/LinkedInAuthButton.vue';
 import { getSwalTheme } from '@/utils/swal';
 
 const authStore = useAuthStore();
@@ -204,7 +205,8 @@ const handleSubmit = async () => {
             <!-- Botones de Autenticación Social (Apilados ordenadamente) -->
             <div class="space-y-3">
                 <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
-                <FacebookAuthButton text="Registrarse con Facebook" :isRegisterContext="true" />            
+                <FacebookAuthButton text="Registrarse con Facebook" :isRegisterContext="true" />
+                <LinkedInAuthButton text="Registrarse con LinkedIn" />
             </div>
 
             <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">

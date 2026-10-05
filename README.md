@@ -201,6 +201,9 @@ SOCIAL_GOOGLE_CLIENT_SECRET=tu-client-secret
 
 SOCIAL_META_CLIENT_ID=tu-facebook-app-id
 SOCIAL_META_CLIENT_SECRET=tu-facebook-app-secret  
+
+SOCIAL_LINKEDIN_CLIENT_ID=tu_client_id
+SOCIAL_LINKEDIN_CLIENT_SECRET=tu_client_secret
 ```
 
 3. Levantar el entorno

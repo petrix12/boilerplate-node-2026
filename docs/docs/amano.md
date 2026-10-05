@@ -79,11 +79,10 @@
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
+    + ✅ Meta (Facebook Login).
     + ◻️ GitHub.
-    + ◻️ Microsoft (Microsoft Entra ID / Outlook / Azure).
-    + ◻️ Apple (Sign in with Apple).
-    + ◻️ Meta (Facebook Login) / Instagram.
-    + ◻️ X (antes Twitter) / LinkedIn.
+    + ◻️ Instagram.
+    + ◻️ LinkedIn.
 + ◻️ Casar bien esta ruta del backend backend/src/routes con esta del frontend frontend/src/services (hacer backend y el frontend queden bien sincronizados)
 
 

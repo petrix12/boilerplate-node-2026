@@ -55,7 +55,71 @@ En la sección Configuración de la app > Básica obtendrás:
 ### Paso 4: Configurar el Backend (Laravel / tu API)
 Estas credenciales tendrás que llevarlas a las variables de entorno de tu backend (por ejemplo, en el archivo .env de Laravel si estás usando Socialite):
 ```ini
-FACEBOOK_CLIENT_ID=tu_app_id_aqui
-FACEBOOK_CLIENT_SECRET=tu_app_secret_aqui
-FACEBOOK_REDIRECT_URL=http://localhost:8000/api/auth/facebook/callback
+SOCIAL_META_CLIENT_ID=tu-facebook-app-id
+SOCIAL_META_CLIENT_SECRET=tu-facebook-app-secret
 ```
+
+### Variables de Facebook importantes configurar
++ `Configuración de la app > Básica`:
+    + Nombre visible: `Boilerplate`.
+    + Dominios de la app:
+        + `boilerplate-localhost.com`.
+        + `127.0.0.1`.
+        + `boilerplate-node-2026.vercel.app`.
+    + Correo electrónico de contacto: `bazo.pedro@gmail.com`.
+    + URL de la política de privacidad: `https://boilerplate-node-2026.vercel.app/privacy`.
+    + URL de Condiciones del servicio: `https://boilerplate-node-2026.vercel.app/terms`.
+    + Eliminación de datos de usuario:
+        + URL de instrucciones para la eliminación de datos
+            + `https://boilerplate-node-2026.vercel.app/data-deletion`.
+    + Ícono de la app: adjuntar el ícono de la aplicación.
+    + `Sitio web > URL del sitio`: `https://boilerplate-node-2026.vercel.app`.
++ `Casos de uso > Personalizar`:
+    + Permisos y funciones (Agregar):
+        + email
+        + public_profile
+    + `Copnfigurar > Configuración del cliente de OAuth`:
+        + Inicio de sesión del cliente de OAuth: `Si`.
+        + Inicio de sesión de OAuth web: `No`.
+        + Forzar reautenticación de OAuth web: `No`.
+        + Usar modo estricto para URI de redireccionamiento: `Si`.
+        + Aplicar HTTPS: `Si`.
+        + Inicio de sesión de OAuth de navegador integrado: `No`.
+        + URI de redireccionamiento de OAuth válidos:
+            + `https://boilerplate-localhost.com/login`.
+            + `https://boilerplate-localhost.com/`.
+            + `https://boilerplate-node-2026.vercel.app/login`.
+            + `https://boilerplate-node-2026.vercel.app/`.
+        + Dominios permitidos para el SDK para JavaScript:
+            + `https://boilerplate-localhost.com/`.
+            + `https://boilerplate-node-2026.vercel.app/`.
+
+## 🇱 Linkedin
+### Paso 1: Crear la aplicación en LinkedIn Developer
+1. Entra al [LinkedIn Developer Portal](https://developer.linkedin.com/) e inicia sesión con tu cuenta personal o de empresa de LinkedIn.
+2. En la barra de navegación superior, haz clic en Create app (Crear aplicación).
+3. Completa el formulario de registro:
+    + App name: El nombre de tu aplicación (por ejemplo, `NodeVue Boilerplate`).
+    + LinkedIn Page: Debes vincular una página de empresa de LinkedIn de la cual seas administrador (es un requisito obligatorio de LinkedIn para crear aplicaciones que usen la API). Si no tienes una, tendrás que crear una página de empresa sencilla previamente.
+        + Si no tienes ninguna: Crear una página de empresa en LinkedIn toma menos de 2 minutos. Ve a tu perfil personal de LinkedIn, busca en el menú de la barra lateral o superior la sección de organizaciones/empresas ("Páginas" -> "Crear una página de empresa"), ponle un nombre genérico que encaje con tu marca o con el boilerplate (por ejemplo, el nombre de tu estudio o un nombre comercial temporal), sube cualquier logo y ¡listo! Con eso ya podrás seleccionarla en el portal de desarrolladores.
+    + Privacy policy URL: La URL de la política de privacidad de tu web (la que creamos antes).
+    + App logo: Sube un logotipo representativo.
+4. Acepta los términos de la plataforma y haz clic en Create app.
+
+### Paso 2: Configurar los Productos (Permisos de Login)
+Una vez creada la app, estarás en el panel de control de tu aplicación:
+1. Ve a la pestaña Products (Productos).
+2. Busca el producto llamado Sign In with LinkedIn using OpenID Connect (Iniciar sesión con LinkedIn usando OpenID Connect) y haz clic en Request (Solicitar). Se aprobará de inmediato.
+
+### Paso 3: Obtener el Client ID y Client Secret
+1. En la misma interfaz de tu aplicación, dirígete a la pestaña Auth (Autenticación).
+2. Aquí encontrarás directamente los dos valores que necesitas:
+    + Client ID: Es el identificador público de tu aplicación. Cópialo y asígnalo a tu variable `SOCIAL_LINKEDIN_CLIENT_ID`.
+    + Client Secret: Haz clic en el botón para mostrarlo o generarlo. Cópialo y asígnalo a tu variable `SOCIAL_LINKEDIN_CLIENT_SECRET`. (Guárdalo bien, ya que por seguridad solo se muestra completo una vez).
+
+### Paso 4: Configurar las URLs de redirección (OAuth 2.0 redirects)
+Aprovechando que estás en la pestaña Auth, baja hasta la sección de Authorized redirect URLs (URLs de redirección autorizadas) y añade las URLs de retorno de tu frontend o backend según corresponda (por ejemplo, http://localhost:5173/auth/linkedin/callback o la ruta de tu entorno de producción).
++ Authorized redirect URLs for your app:
+    + `https://boilerplate-node-2026.vercel.app/auth/linkedin/callback`.
+    + `https://boilerplate-localhost.com/auth/linkedin/callback`.
+

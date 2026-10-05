@@ -687,6 +687,24 @@
 
     module.exports = { checkFacebookAuthEnabled };    
     ```
+9. `backend/src/middlewares/linkedinEnabled.middleware.js`: Valida que las credenciales de LinkedIn estén configuradas en las variables de entorno, exactamente igual que con Google y Facebook:
+    ```js
+    /* src/middlewares/linkedinEnabled.middleware.js */
+    const checkLinkedinAuthEnabled = (req, res, next) => {
+        const clientId = process.env.SOCIAL_LINKEDIN_CLIENT_ID;
+        const clientSecret = process.env.SOCIAL_LINKEDIN_CLIENT_SECRET;
+
+        if (!clientId || clientId.trim() === '' || !clientSecret || clientSecret.trim() === '') {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'El inicio de sesión con LinkedIn no está habilitado.'
+            });
+        }
+        next();
+    };
+
+    module.exports = { checkLinkedinAuthEnabled };   
+    ```
 
 ## 💼 Paso 5: Servicios de Negocio (`src/services/`)
 + Crea la lógica de negocio independiente de las rutas HTTP:
@@ -1382,6 +1400,11 @@
     module.exports = facebookAuthService;    
     ```
     + Aquí es donde nos conectamos a la Graph API de Facebook para validar el token (o el accessToken que nos manda el frontend) y obtener el perfil del usuario.
+9. Creaar servicio de Auth con Linkedin (`backend/src/services/linkedinAuth.service.js`):
+    ```js
+    
+    ```
+    + Maneja el intercambio del código de autorización o token de acceso de LinkedIn con la API oficial (`https://api.linkedin.com/v2/userinfo` o validación de token), busca/crea el usuario y emite el JWT del sistema.
 
 ## 🎮 Paso 7: Controladores de la API (`src/controllers/`)
 + Implementa la capa de orquestación de respuesta para cada dominio:
@@ -2875,6 +2898,66 @@
     module.exports = { facebookLogin };   
     ```
     + Este archivo gestiona la petición HTTP, invoca al servicio, registra la auditoría y añade el bloque de la IA (features) exactamente igual que Google.
+10. `backend/src/controllers/linkedinAuth.controller.js`: Controlador para Auth con Linkedin:
+    ```js
+    /* src/controllers/linkedinAuth.controller.js */
+    const linkedinAuthService = require('../services/linkedinAuth.service');
+    const { getClientIp } = require('../utils/request.utils');
+    const prisma = require('../config/prisma');
+
+    const linkedinLogin = async (req, res) => {
+        try {
+            const { accessToken } = req.body;
+            if (!accessToken) {
+                return res.status(400).json({ status: 'fail', message: 'El accessToken de LinkedIn es obligatorio' });
+            }
+
+            const result = await linkedinAuthService.authenticateWithLinkedin(accessToken);
+
+            // Registrar auditoría de éxito
+            await prisma.auditLog.create({
+                data: {
+                    action: 'LINKEDIN_LOGIN_SUCCESS',
+                    entity: 'Auth',
+                    entityId: String(result.user.id),
+                    ipAddress: getClientIp(req),
+                    user: { connect: { id: result.user.id } },
+                    details: JSON.stringify({ email: result.user.email })
+                }
+            });
+
+            // Evaluamos si la característica de IA está activa en el entorno
+            const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';
+
+            const responseData = {
+                user: result.user,
+                token: result.token,
+                features: {
+                    aiDiagnostic: isAiEnabled
+                }
+            };
+
+            if (result.isNewUser !== undefined) {
+                responseData.isNewUser = result.isNewUser;
+            }
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Inicio de sesión con LinkedIn exitoso',
+                data: responseData
+            });
+        } catch (error) {
+            console.error('Error en linkedinLogin:', error.message);
+            return res.status(401).json({
+                status: 'fail',
+                message: error.message || 'Error al autenticar con LinkedIn'
+            });
+        }
+    };
+
+    module.exports = { linkedinLogin };    
+    ```
+    + Sigue exactamente la misma estructura de auditoría y respuesta que el de Google.
 
 ## 🛣️ Paso 8: Definición de Rutas (`src/routes/`)
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
@@ -3057,7 +3140,21 @@
 
     module.exports = router;    
     ```
-9.  `backend/src/routes/index.js`: Router central que registra todos los módulos:
+9. `backend/src/routes/linkedinAuth.routes.js`: Define las rutas protegidas por el middleware de entorno:
+    ```js
+    /* src/routes/linkedinAuth.routes.js */
+    const express = require('express');
+    const router = express.Router();
+    const { linkedinLogin } = require('../controllers/linkedinAuth.controller');
+    const { checkLinkedinAuthEnabled } = require('../middlewares/linkedinEnabled.middleware');
+
+    router.use(checkLinkedinAuthEnabled);
+
+    router.post('/linkedin', linkedinLogin);
+
+    module.exports = router;    
+    ```
+10. `backend/src/routes/index.js`: Router central que registra todos los módulos:
     ```js
     const express = require('express');
     const router = express.Router();
@@ -3065,6 +3162,7 @@
     const authRoutes = require('./auth.routes');
     const googleAuthRoutes = require('./googleAuth.routes');
     const facebookAuthRoutes = require('./facebookAuth.routes');
+    const linkedinAuthRoutes = require('./linkedinAuth.routes');
     const userRoutes = require('./user.routes');
     const roleRoutes = require('./role.routes');
     const auditRoutes = require('./audit.routes');
@@ -3075,6 +3173,7 @@
     router.use('/auth', authRoutes);
     router.use('/auth', googleAuthRoutes);
     router.use('/auth', facebookAuthRoutes);
+    router.use('/auth', linkedinAuthRoutes);
     router.use('/users', userRoutes);
     router.use('/roles', roleRoutes);
     router.use('/audit-logs', auditRoutes);

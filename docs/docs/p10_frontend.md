@@ -373,6 +373,35 @@
                 } finally {
                     this.loading = false;
                 }
+            },
+            
+            // 1.3 Iniciar Sesión con LinkedIn
+            async loginWithLinkedIn(code) {
+                this.loading = true;
+                this.error = null;
+                try {
+                    const res = await authService.loginWithLinkedIn(code);
+                    const responseData = res.data || res;
+
+                    const token = responseData.token;
+                    const userObj = responseData.user || {};
+                    const featuresObj = responseData.features || {};
+
+                    this.token = token;
+                    this.user = {
+                        ...userObj,
+                        ...featuresObj
+                    };
+
+                    localStorage.setItem('token', token);
+
+                    return res;
+                } catch (err) {
+                    this.error = err.response?.data?.message || 'Error en la autenticación con LinkedIn';
+                    throw err;
+                } finally {
+                    this.loading = false;
+                }
             },        
 
             // 2. Registrar Usuario
@@ -523,6 +552,7 @@
                 { path: '/verify-email', name: 'VerifyEmail', component: () => import('@/views/auth/VerifyEmailView.vue'), meta: { requiresGuest: true } },
                 { path: '/forgot-password', name: 'forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue') },
                 { path: '/reset-password', name: 'reset-password', component: () => import('@/views/auth/ResetPasswordView.vue') },
+                { path: '/auth/linkedin/callback', name: 'linkedin-callback', component: () => import('@/views/auth/LinkedInCallbackView.vue'), meta: { requiresGuest: true, title: 'Callback LinkedIn' } },
                 { path: '/privacy', name: 'privacy', component: () => import('@/views/legal/PrivacyPolicyView.vue'), meta: { requiresAuth: false } },
                 { path: '/terms', name: 'terms', component: () => import('@/views/legal/TermsView.vue'), meta: { requiresAuth: false } },
                 { path: '/data-deletion', name: 'data-deletion', component: () => import('@/views/legal/DataDeletionView.vue'), meta: { requiresAuth: false } },
@@ -712,6 +742,12 @@
         // Iniciar sesión con Facebook
         async loginWithFacebook(accessToken) {
             const response = await api.post('/auth/facebook', { accessToken });
+            return response.data;
+        },
+        
+        // Iniciar sesión con LinkedIn
+        async loginWithLinkedIn(accessToken) {
+            const response = await api.post('/auth/linkedin', { accessToken });
             return response.data;
         },    
 
@@ -2695,7 +2731,54 @@
             </div>
         </template>     
         ```
-11. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
+11. Componente para login con Linkedin:
+    + Cera el archivo `frontend/src/components/auth/LinkedInAuthButton.vue`:
+        ```vue
+        <!-- src/components/auth/LinkedInAuthButton.vue -->
+        <script setup>
+        import { ref, computed } from 'vue';
+
+        const props = defineProps({
+            text: {
+                type: String,
+                default: 'Continuar con LinkedIn'
+            }
+        });
+
+        // Verificamos si la variable de entorno está presente para decidir si mostramos el botón
+        const clientId = import.meta.env.VITE_SOCIAL_LINKEDIN_CLIENT_ID;
+        const isConfigured = computed(() => {
+            return clientId && clientId !== 'tu-linkedin-client-id' && clientId.trim() !== '';
+        });
+
+        const handleLinkedInLogin = () => {
+            if (!isConfigured.value) return;
+
+            const redirectUri = `${window.location.origin}/auth/linkedin/callback`;
+            const scope = 'openid profile email';
+            
+            // URL oficial de autorización de LinkedIn OAuth 2.0
+            const linkedInAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
+
+            window.location.href = linkedInAuthUrl;
+        };
+        </script>
+
+        <template>
+            <div v-if="isConfigured" class="w-full relative">
+                <button 
+                    type="button" 
+                    @click="handleLinkedInLogin"
+                    class="w-full h-[40px] flex items-center justify-center gap-3 px-4 rounded-lg bg-[#0A66C2] hover:bg-[#095196] text-white text-sm font-medium transition-colors shadow-sm">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+                    </svg>
+                    <span>{{ text }}</span>
+                </button>
+            </div>
+        </template>        
+        ```
+12. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
     ```vue
     <template>
         <svg class="fill-current" viewBox="0 0 24 24" aria-hidden="true">
@@ -2718,6 +2801,7 @@
         import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
         import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
+        import LinkedInAuthButton from '@/components/auth/LinkedInAuthButton.vue';
 
         const authStore = useAuthStore();
         const router = useRouter();
@@ -2827,7 +2911,8 @@
                     <!-- Botones de Autenticación Social -->
                     <div class="space-y-3">
                         <GoogleAuthButton text="Iniciar sesión con Google" />            
-                        <FacebookAuthButton text="Iniciar sesión con Facebook" />            
+                        <FacebookAuthButton text="Iniciar sesión con Facebook" />
+                        <LinkedInAuthButton text="Continuar con LinkedIn" />
                     </div>
 
                     <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
@@ -2850,6 +2935,7 @@
         import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
         import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
+        import LinkedInAuthButton from '@/components/auth/LinkedInAuthButton.vue';
         import { getSwalTheme } from '@/utils/swal';
 
         const authStore = useAuthStore();
@@ -3047,7 +3133,8 @@
                     <!-- Botones de Autenticación Social (Apilados ordenadamente) -->
                     <div class="space-y-3">
                         <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
-                        <FacebookAuthButton text="Registrarse con Facebook" :isRegisterContext="true" />            
+                        <FacebookAuthButton text="Registrarse con Facebook" :isRegisterContext="true" />
+                        <LinkedInAuthButton text="Registrarse con LinkedIn" />
                     </div>
 
                     <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
@@ -3331,7 +3418,77 @@
             </div>
         </template>        
         ```
-7. Rediseñar la Landing Page:
+7. Vista Callback de Linkedin:
+    + Crea el archivo `frontend/src/views/auth/LinkedInCallbackView.vue`:
+        ```vue
+        <!-- src/views/auth/LinkedInCallbackView.vue -->
+        <script setup>
+        import { onMounted } from 'vue';
+        import { useRoute, useRouter } from 'vue-router';
+        import { useAuthStore } from '@/stores/auth.store';
+        import { getSwalTheme } from '@/utils/swal';
+
+        const route = useRoute();
+        const router = useRouter();
+        const authStore = useAuthStore();
+
+        onMounted(async () => {
+            const code = route.query.code;
+            const error = route.query.error;
+
+            if (error) {
+                getSwalTheme().fire({
+                    icon: 'error',
+                    title: 'Error de autenticación',
+                    text: 'El usuario canceló o hubo un error con LinkedIn.',
+                });
+                router.push('/login');
+                return;
+            }
+
+            if (code) {
+                try {
+                    const result = await authStore.loginWithLinkedIn(code);
+                    const resData = result.data || result;
+                    
+                    await router.push({ name: 'dashboard' });
+
+                    getSwalTheme().fire({
+                        icon: 'success',
+                        title: '¡Bienvenido!',
+                        text: 'Has iniciado sesión con LinkedIn correctamente.',
+                        toast: true,
+                        position: 'center',
+                        showConfirmButton: true,
+                        confirmButtonText: 'Entendido',
+                        timer: 5000
+                    });
+                } catch (err) {
+                    console.error('Error al autenticar con LinkedIn en el backend:', err);
+                    getSwalTheme().fire({
+                        icon: 'error',
+                        title: 'Error de autenticación',
+                        text: authStore.error || 'No se pudo completar la autenticación con LinkedIn.',
+                    });
+                    router.push('/login');
+                }
+            } else {
+                router.push('/login');
+            }
+        });
+        </script>
+
+        <template>
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-slate-800 dark:text-slate-100">
+                <div class="text-center space-y-4">
+                    <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <h2 class="text-xl font-semibold">Autenticando con LinkedIn...</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Por favor, espera un momento mientras validamos tus credenciales.</p>
+                </div>
+            </div>
+        </template>        
+        ```
+8. Rediseñar la Landing Page:
     + Reemplaza el contenido de `frontend/src/views/HomeView.vue` para que la raíz / muestre una bienvenida profesional:
         ```vue
         <script setup>
@@ -3453,7 +3610,7 @@
             </div>
         </template>
         ```
-8. Crear el Layout Principal (`frontend/src/layouts/AppLayout.vue`)
+9.  Crear el Layout Principal (`frontend/src/layouts/AppLayout.vue`)
     + Crea un layout que envuelva todas las páginas autenticadas:
         ```vue
         <script setup>
@@ -3503,7 +3660,7 @@
         }
         </style>
         ```
-9. Vista Protegida del Dashboard:
+10. Vista Protegida del Dashboard:
     + Crea el archivo `frontend/src/views/DashboardView.vue`:
         ```vue
         <!-- src/views/DashboardView.vue -->
@@ -3692,7 +3849,7 @@
             </div>
         </template>
         ```
-10. Vista de Configuración / Perfil (`frontend/src/views/ProfileView.vue`)
+11. Vista de Configuración / Perfil (`frontend/src/views/ProfileView.vue`)
     + Crearemos la nueva pantalla de perfil limpia y estructurada:
         ```vue
         <!-- src/views/ProfileView.vue -->
@@ -4146,7 +4303,7 @@
             </PageLayout>
         </template>
         ```
-11. Limpiar `App.vue`:
+12. Limpiar `App.vue`:
     + Abre `frontend/src/App.vue` y reemplaza todo su contenido con esto:
         ```vue
         <script setup>
@@ -4159,7 +4316,7 @@
             <RouterView />
         </template>
         ```
-12. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
+13. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
     ```vue
     <!-- src/views/admin/AdminDashboardView.vue -->
     <script setup>
@@ -4248,7 +4405,7 @@
         </PageLayout>
     </template>
     ```
-13. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
+14. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
     + Crea la carpeta src/views/admin/ si no existe y añade la vista:
         ```vue
         <!-- src/views/admin/UsersAdminView.vue -->
@@ -4555,7 +4712,7 @@
             </PageLayout>
         </template>
         ```
-14. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
+15. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
     + Crea el componente `RolesAdminView.vue` para la interfaz de gestión de roles y asignación de permisos:
         ```vue
         <!-- src/views/admin/RolesAdminView.vue -->
@@ -4753,7 +4910,7 @@
             </PageLayout>
         </template>
         ```
-15. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
+16. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
     ```vue
         <!-- src/views/admin/AuditLogsView.vue -->
         <script setup>
@@ -5075,7 +5232,7 @@
             </PageLayout>
         </template>
     ```
-16. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
+17. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
     ```vue
     <!-- src/views/admin/SystemDiagnosticView.vue -->
     <script setup>
@@ -5246,7 +5403,7 @@
         </PageLayout>
     </template>
     ```
-17. Crear Vista 404 (not-found):
+18. Crear Vista 404 (not-found):
     + Crea el archivo `frontend/src/views/errors/NotFoundView.vue`:
         ```vue
         <template>
@@ -5265,7 +5422,7 @@
             </div>
         </template>        
         ```
-18. Crear Vista 403 (forbidden):
+19. Crear Vista 403 (forbidden):
     + Crea el archivo `frontend/src/views/errors/ForbiddenView.vue`:
         ```vue
         <template>
@@ -5295,7 +5452,7 @@
             </div>
         </template>       
         ```
-19. Crear vista de políticas de privacidad:
+20. Crear vista de políticas de privacidad:
     + Crea el archivo `frontend/src/views/legal/PrivacyPolicyView.vue`:
         ```vue
         <!-- src/views/legal/PrivacyPolicyView.vue -->
@@ -5329,7 +5486,7 @@
             </div>
         </template>        
         ```
-20. Crear vista de condiciones de servicio:
+21. Crear vista de condiciones de servicio:
     + Crea el archivo `frontend/src/views/legal/TermsView.vue`:
         ```vue
         <!-- src/views/legal/TermsView.vue -->
@@ -5363,7 +5520,7 @@
             </div>
         </template>        
         ```
-21. Crear vista de políticas de eliminación de datos:
+22. Crear vista de políticas de eliminación de datos:
     + Crea el archivo `frontend/src/views/legal/DataDeletionView.vue`:
         ```vue
         <!-- src/views/legal/DataDeletionView.vue -->
