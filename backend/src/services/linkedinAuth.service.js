@@ -13,13 +13,15 @@ const generateToken = (user, roles = [], permissions = []) => {
 const linkedinAuthService = {
     async authenticateWithLinkedin(code) {
         // 1. Intercambiar el 'code' por el 'access_token' de LinkedIn
+        //const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'https://boilerplate-localhost.com';
+        const frontendUrl = process.env.FRONTEND_URL;
+        
         const tokenParams = new URLSearchParams({
             grant_type: 'authorization_code',
             code: code,
             client_id: process.env.SOCIAL_LINKEDIN_CLIENT_ID,
             client_secret: process.env.SOCIAL_LINKEDIN_CLIENT_SECRET,
-            // Asegúrate de que esta URL de redirección coincida exactamente con la de tu frontend/LinkedIn
-            redirect_uri: `${process.env.VITE_APP_URL || 'https://boilerplate-localhost.com'}/auth/linkedin/callback`
+            redirect_uri: `${frontendUrl}/auth/linkedin/callback`
         });
 
         const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
