@@ -7,6 +7,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
 import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
 import LinkedInAuthButton from '@/components/auth/LinkedInAuthButton.vue';
+import InstagramAuthButton from '@/components/auth/InstagramAuthButton.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -118,6 +119,7 @@ const handleSubmit = async () => {
                 <GoogleAuthButton text="Iniciar sesión con Google" />            
                 <FacebookAuthButton text="Iniciar sesión con Facebook" />
                 <LinkedInAuthButton text="Continuar con LinkedIn" />
+                <InstagramAuthButton text="Iniciar sesión con Instagram" />
             </div>
 
             <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">

@@ -1,6 +1,7 @@
+/* src/services/instagramAuth.service.js */
 const prisma = require('../config/prisma');
 const jwt = require('jsonwebtoken');
-const bcrypt = fn => bcrypt; // (o mantén tu importación de bcryptjs como la tenías)
+const bcrypt = require('bcryptjs');
 
 const generateToken = (user, roles = [], permissions = []) => {
     return jwt.sign(
@@ -10,57 +11,27 @@ const generateToken = (user, roles = [], permissions = []) => {
     );
 };
 
-const linkedinAuthService = {
-    async authenticateWithLinkedin(code) {
-        // 1. Intercambiar el 'code' por el 'access_token' de LinkedIn
-        const frontendUrl = process.env.FRONTEND_URL;
+const instagramAuthService = {
+    async authenticateWithInstagram(accessToken) {
+        // Consultar a la Graph API pidiendo también el email
+        const response = await fetch(`https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`);
         
-        const tokenParams = new URLSearchParams({
-            grant_type: 'authorization_code',
-            code: code,
-            client_id: process.env.SOCIAL_LINKEDIN_CLIENT_ID,
-            client_secret: process.env.SOCIAL_LINKEDIN_CLIENT_SECRET,
-            redirect_uri: `${frontendUrl}/auth/linkedin/callback`
-        });
-
-        const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: tokenParams.toString()
-        });
-
-        if (!tokenResponse.ok) {
-            throw new Error('No se pudo obtener el token de acceso de LinkedIn. Código inválido o expirado.');
-        }
-
-        const tokenData = await tokenResponse.json();
-        const accessToken = tokenData.access_token;
-
-        if (!accessToken) {
-            throw new Error('LinkedIn no devolvió un token de acceso válido.');
-        }
-
-        // 2. Consultar la información del usuario usando el access_token real
-        const response = await fetch('https://api.linkedin.com/v2/userinfo', {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            }
-        });
-
         if (!response.ok) {
-            throw new Error('Token de LinkedIn inválido o expirado al consultar el perfil');
+            throw new Error('Token de Instagram inválido o expirado');
         }
 
-        const linkedinData = await response.json();
-        const { email, name, picture } = linkedinData;
+        const instagramData = await response.json();
+        const { id, name: accountName, email: socialEmail } = instagramData;
 
-        if (!email) {
-            throw new Error('La cuenta de LinkedIn no proporcionó un correo electrónico');
+        if (!id) {
+            throw new Error('No se pudo obtener el identificador de la cuenta de usuario');
         }
 
-        // 3. Lógica de búsqueda / creación de usuario (mantén tu código de Prisma tal cual)
+        // Si Meta devuelve un correo real, lo usamos; si viene vacío, usamos el sintético
+        const email = socialEmail || `${id}@instagram.oauth.local`;
+        const name = accountName ? `Usuario (${accountName})` : 'Usuario de Instagram';
+
+        // Buscar si el usuario ya existe por su email (ya sea el real o el sintético anterior)
         let user = await prisma.user.findUnique({
             where: { email },
             include: {
@@ -81,15 +52,14 @@ const linkedinAuthService = {
         if (!user) {
             isNewUser = true;
             const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
-            const bcryptjs = require('bcryptjs');
-            const randomPassword = await bcryptjs.hash(Math.random().toString(36), 10);
+            const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
 
             user = await prisma.user.create({
                 data: {
                     email,
-                    name: name || 'Usuario de LinkedIn',
+                    name,
                     password: randomPassword,
-                    avatarUrl: picture || null,
+                    avatarUrl: null,
                     roles: userRole ? { create: { roleId: userRole.id } } : undefined
                 },
                 include: {
@@ -136,4 +106,4 @@ const linkedinAuthService = {
     }
 };
 
-module.exports = linkedinAuthService;
+module.exports = instagramAuthService;

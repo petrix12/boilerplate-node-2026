@@ -36,6 +36,12 @@ export const authService = {
     async loginWithLinkedIn(accessToken) {
         const response = await api.post('/auth/linkedin', { accessToken });
         return response.data;
+    },
+    
+    // Iniciar sesión con Instagram
+    async loginWithInstagram(accessToken) {
+        const response = await api.post('/auth/instagram', { accessToken });
+        return response.data;
     },    
 
     // Obtener perfil autenticado actual

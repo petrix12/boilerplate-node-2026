@@ -162,6 +162,35 @@ export const useAuthStore = defineStore('auth', {
             } finally {
                 this.loading = false;
             }
+        },
+        
+        // 1.4 Iniciar Sesión con Instagram
+        async loginWithInstagram(accessToken) {
+            this.loading = true;
+            this.error = null;
+            try {
+                const res = await authService.loginWithInstagram(accessToken);
+                const responseData = res.data || res;
+
+                const token = responseData.token;
+                const userObj = responseData.user || {};
+                const featuresObj = responseData.features || {};
+
+                this.token = token;
+                this.user = {
+                    ...userObj,
+                    ...featuresObj
+                };
+
+                localStorage.setItem('token', token);
+
+                return res;
+            } catch (err) {
+                this.error = err.response?.data?.message || 'Error en la autenticación con Instagram';
+                throw err;
+            } finally {
+                this.loading = false;
+            }
         },        
 
         // 2. Registrar Usuario

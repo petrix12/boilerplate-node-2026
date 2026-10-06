@@ -34,7 +34,7 @@ SOCIAL_GOOGLE_CLIENT_ID=aqui-pegas-tu-client-id.apps.googleusercontent.com
 SOCIAL_GOOGLE_CLIENT_SECRET=aqui-pegas-tu-client-secret
 ```
 
-## 🇫 Facebook
+## 🇫 Facebook e Instagram
 ### Paso 1: Crear y configurar la App en Meta for Developers
 1. Entra en developers.facebook.com e inicia sesión con tu cuenta personal o de desarrollador.
 2. Ve a Mis Apps y haz clic en Crear una app.
@@ -57,6 +57,9 @@ Estas credenciales tendrás que llevarlas a las variables de entorno de tu backe
 ```ini
 SOCIAL_META_CLIENT_ID=tu-facebook-app-id
 SOCIAL_META_CLIENT_SECRET=tu-facebook-app-secret
+
+SOCIAL_INSTAGRAM_CLIENT_ID=tu-facebook-app-id
+SOCIAL_INSTAGRAM_CLIENT_SECRET=tu-facebook-app-secret
 ```
 
 ### Variables de Facebook importantes configurar

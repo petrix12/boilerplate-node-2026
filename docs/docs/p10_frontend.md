@@ -402,6 +402,35 @@
                 } finally {
                     this.loading = false;
                 }
+            },
+            
+            // 1.4 Iniciar Sesión con Instagram
+            async loginWithInstagram(accessToken) {
+                this.loading = true;
+                this.error = null;
+                try {
+                    const res = await authService.loginWithInstagram(accessToken);
+                    const responseData = res.data || res;
+
+                    const token = responseData.token;
+                    const userObj = responseData.user || {};
+                    const featuresObj = responseData.features || {};
+
+                    this.token = token;
+                    this.user = {
+                        ...userObj,
+                        ...featuresObj
+                    };
+
+                    localStorage.setItem('token', token);
+
+                    return res;
+                } catch (err) {
+                    this.error = err.response?.data?.message || 'Error en la autenticación con Instagram';
+                    throw err;
+                } finally {
+                    this.loading = false;
+                }
             },        
 
             // 2. Registrar Usuario
@@ -748,6 +777,12 @@
         // Iniciar sesión con LinkedIn
         async loginWithLinkedIn(accessToken) {
             const response = await api.post('/auth/linkedin', { accessToken });
+            return response.data;
+        },
+        
+        // Iniciar sesión con Instagram
+        async loginWithInstagram(accessToken) {
+            const response = await api.post('/auth/instagram', { accessToken });
             return response.data;
         },    
 
@@ -2778,7 +2813,133 @@
             </div>
         </template>        
         ```
-12. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
+12. Componente para login con Linkedin:
+    + Cera el archivo `frontend/src/components/auth/InstagramAuthButton.vue`:
+        ```vue
+        <!-- src/components/auth/InstagramAuthButton.vue -->
+        <script setup>
+        import { ref, onMounted, computed } from 'vue';
+        import { useRouter } from 'vue-router';
+        import { useAuthStore } from '@/stores/auth.store';
+        import { getSwalTheme } from '@/utils/swal';
+
+        const props = defineProps({
+            text: {
+                type: String,
+                default: 'Continuar con Instagram'
+            },
+            isRegisterContext: {
+                type: Boolean,
+                default: false
+            }
+        });
+
+        const authStore = useAuthStore();
+        const router = useRouter();
+        const loading = ref(false);
+
+        // Verificamos si la variable de entorno está presente para decidir si mostramos el botón
+        const appId = import.meta.env.VITE_SOCIAL_INSTAGRAM_CLIENT_ID;
+        const isConfigured = computed(() => {
+            return appId && appId !== 'tu-instagram-client-id' && appId.trim() !== '';
+        });
+
+        onMounted(() => {
+            if (!isConfigured.value) return;
+
+            if (!window.FB) {
+                window.fbAsyncInit = function() {
+                    window.FB.init({
+                        appId: appId,
+                        cookie: true,
+                        xfbml: true,
+                        version: 'v18.0'
+                    });
+                };
+
+                const scriptId = 'facebook-jssdk';
+                if (!document.getElementById(scriptId)) {
+                    const js = document.createElement('script');
+                    js.id = scriptId;
+                    js.src = 'https://connect.facebook.net/es_ES/sdk.js';
+                    js.async = true;
+                    js.defer = true;
+                    document.head.appendChild(js);
+                }
+            }
+        });
+
+        const handleInstagramLogin = () => {
+            if (!window.FB) {
+                getSwalTheme().fire({
+                    icon: 'error',
+                    title: 'SDK no disponible',
+                    text: 'El SDK de autenticación de Meta aún se está cargando. Inténtalo de nuevo en unos segundos.',
+                });
+                return;
+            }
+
+            loading.value = true;
+            
+            // Solicitamos acceso vinculando los permisos necesarios de Instagram/Meta
+            window.FB.login((response) => {
+                if (response.authResponse) {
+                    const accessToken = response.authResponse.accessToken;
+                    
+                    authStore.loginWithInstagram(accessToken)
+                        .then(async (result) => {
+                            const resData = result.data || result;
+                            await router.push({ name: 'dashboard' });
+
+                            if (props.isRegisterContext && resData.isNewUser === false) {
+                                getSwalTheme().fire({
+                                    icon: 'info',
+                                    title: '¡Hola de nuevo!',
+                                    text: 'Detectamos que ya tenías una cuenta registrada, por lo que hemos iniciado sesión directamente.',
+                                    toast: true,
+                                    position: 'center',
+                                    showConfirmButton: true,
+                                    confirmButtonText: 'Entendido',
+                                    timer: 7500
+                                });
+                            }
+                        })
+                        .catch((err) => {
+                            console.error('Error al autenticar con el backend:', err);
+                            getSwalTheme().fire({
+                                icon: 'error',
+                                title: 'Error de autenticación',
+                                text: authStore.error || 'No se pudo iniciar sesión con Instagram',
+                            });
+                        })
+                        .finally(() => {
+                            loading.value = false;
+                        });
+                } else {
+                    loading.value = false;
+                    console.log('El usuario canceló el inicio de sesión con Instagram.');
+                }
+            }, { scope: 'public_profile,email' });
+        };
+        </script>
+
+        <template>
+            <!-- Renderizado condicional: Si no hay credenciales configuradas, el componente no se muestra -->
+            <div v-if="isConfigured" class="w-full relative">
+                <button 
+                    type="button" 
+                    @click="handleInstagramLogin"
+                    :disabled="loading"
+                    class="w-full h-[40px] flex items-center justify-center gap-3 px-4 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 text-white text-sm font-medium transition-opacity shadow-sm disabled:opacity-50">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                    <span>{{ loading ? 'Conectando...' : text }}</span>
+                </button>
+            </div>
+        </template>        
+        ```
+13. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
     ```vue
     <template>
         <svg class="fill-current" viewBox="0 0 24 24" aria-hidden="true">
@@ -2802,6 +2963,7 @@
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
         import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
         import LinkedInAuthButton from '@/components/auth/LinkedInAuthButton.vue';
+        import InstagramAuthButton from '@/components/auth/InstagramAuthButton.vue';
 
         const authStore = useAuthStore();
         const router = useRouter();
@@ -2913,6 +3075,7 @@
                         <GoogleAuthButton text="Iniciar sesión con Google" />            
                         <FacebookAuthButton text="Iniciar sesión con Facebook" />
                         <LinkedInAuthButton text="Continuar con LinkedIn" />
+                        <InstagramAuthButton text="Iniciar sesión con Instagram" />
                     </div>
 
                     <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
@@ -2936,6 +3099,7 @@
         import GoogleAuthButton from '@/components/auth/GoogleAuthButton.vue';
         import FacebookAuthButton from '@/components/auth/FacebookAuthButton.vue';
         import LinkedInAuthButton from '@/components/auth/LinkedInAuthButton.vue';
+        import InstagramAuthButton from '@/components/auth/InstagramAuthButton.vue';
         import { getSwalTheme } from '@/utils/swal';
 
         const authStore = useAuthStore();
@@ -3135,6 +3299,7 @@
                         <GoogleAuthButton text="Registrarse con Google" :isRegisterContext="true" />            
                         <FacebookAuthButton text="Registrarse con Facebook" :isRegisterContext="true" />
                         <LinkedInAuthButton text="Registrarse con LinkedIn" />
+                        <InstagramAuthButton text="Registrarse con Instagram" :isRegisterContext="true" />
                     </div>
 
                     <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">

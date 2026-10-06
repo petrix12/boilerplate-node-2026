@@ -80,9 +80,9 @@
 + ◻️ Login con redes sociales.
     + ✅ Google (OAuth 2.0 / OpenID Connect).
     + ✅ Meta (Facebook Login).
+    + ✅ LinkedIn.
     + ◻️ GitHub.
     + ◻️ Instagram.
-    + ◻️ LinkedIn.
 + ◻️ Casar bien esta ruta del backend backend/src/routes con esta del frontend frontend/src/services (hacer backend y el frontend queden bien sincronizados)
 
 

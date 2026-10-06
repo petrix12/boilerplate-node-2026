@@ -705,6 +705,24 @@
 
     module.exports = { checkLinkedinAuthEnabled };   
     ```
+10. `backend/src/middlewares/instagramEnabled.middleware.js`: Garantiza que si las credenciales de Instagram no están configuradas en las variables de entorno, el endpoint devuelva 404 bloqueando su uso por completo (idéntico al de Facebook y LinkedIn):
+    ```js
+    /* src/middlewares/instagramEnabled.middleware.js */
+    const checkInstagramAuthEnabled = (req, res, next) => {
+        const clientId = process.env.SOCIAL_INSTAGRAM_CLIENT_ID;
+        const clientSecret = process.env.SOCIAL_INSTAGRAM_CLIENT_SECRET;
+
+        if (!clientId || clientId.trim() === '' || !clientSecret || clientSecret.trim() === '') {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'El inicio de sesión con Instagram no está habilitado.'
+            });
+        }
+        next();
+    };
+
+    module.exports = { checkInstagramAuthEnabled };    
+    ```
 
 ## 💼 Paso 5: Servicios de Negocio (`src/services/`)
 + Crea la lógica de negocio independiente de las rutas HTTP:
@@ -1402,9 +1420,259 @@
     + Aquí es donde nos conectamos a la Graph API de Facebook para validar el token (o el accessToken que nos manda el frontend) y obtener el perfil del usuario.
 9. Creaar servicio de Auth con Linkedin (`backend/src/services/linkedinAuth.service.js`):
     ```js
-    
+    const prisma = require('../config/prisma');
+    const jwt = require('jsonwebtoken');
+    const bcrypt = fn => bcrypt; // (o mantén tu importación de bcryptjs como la tenías)
+
+    const generateToken = (user, roles = [], permissions = []) => {
+        return jwt.sign(
+            { id: user.id, email: user.email, roles, permissions },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        );
+    };
+
+    const linkedinAuthService = {
+        async authenticateWithLinkedin(code) {
+            // 1. Intercambiar el 'code' por el 'access_token' de LinkedIn
+            const frontendUrl = process.env.FRONTEND_URL;
+            
+            const tokenParams = new URLSearchParams({
+                grant_type: 'authorization_code',
+                code: code,
+                client_id: process.env.SOCIAL_LINKEDIN_CLIENT_ID,
+                client_secret: process.env.SOCIAL_LINKEDIN_CLIENT_SECRET,
+                redirect_uri: `${frontendUrl}/auth/linkedin/callback`
+            });
+
+            const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: tokenParams.toString()
+            });
+
+            if (!tokenResponse.ok) {
+                throw new Error('No se pudo obtener el token de acceso de LinkedIn. Código inválido o expirado.');
+            }
+
+            const tokenData = await tokenResponse.json();
+            const accessToken = tokenData.access_token;
+
+            if (!accessToken) {
+                throw new Error('LinkedIn no devolvió un token de acceso válido.');
+            }
+
+            // 2. Consultar la información del usuario usando el access_token real
+            const response = await fetch('https://api.linkedin.com/v2/userinfo', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Token de LinkedIn inválido o expirado al consultar el perfil');
+            }
+
+            const linkedinData = await response.json();
+            const { email, name, picture } = linkedinData;
+
+            if (!email) {
+                throw new Error('La cuenta de LinkedIn no proporcionó un correo electrónico');
+            }
+
+            // 3. Lógica de búsqueda / creación de usuario (mantén tu código de Prisma tal cual)
+            let user = await prisma.user.findUnique({
+                where: { email },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: { include: { permission: true } }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            let isNewUser = false;
+
+            if (!user) {
+                isNewUser = true;
+                const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
+                const bcryptjs = require('bcryptjs');
+                const randomPassword = await bcryptjs.hash(Math.random().toString(36), 10);
+
+                user = await prisma.user.create({
+                    data: {
+                        email,
+                        name: name || 'Usuario de LinkedIn',
+                        password: randomPassword,
+                        avatarUrl: picture || null,
+                        roles: userRole ? { create: { roleId: userRole.id } } : undefined
+                    },
+                    include: {
+                        roles: {
+                            include: {
+                                role: {
+                                    include: {
+                                        permissions: { include: { permission: true } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (!user.isActive) {
+                throw new Error('La cuenta de usuario está desactivada');
+            }
+
+            const userRoles = user.roles.map(ur => ur.role.name);
+            const permissionsSet = new Set();
+            user.roles.forEach(ur => {
+                ur.role.permissions.forEach(rp => {
+                    permissionsSet.add(rp.permission.action);
+                });
+            });
+            const userPermissions = Array.from(permissionsSet);
+
+            const token = generateToken(user, userRoles, userPermissions);
+
+            return {
+                isNewUser,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    roles: userRoles,
+                    permissions: userPermissions
+                },
+                token
+            };
+        }
+    };
+
+    module.exports = linkedinAuthService;    
     ```
     + Maneja el intercambio del código de autorización o token de acceso de LinkedIn con la API oficial (`https://api.linkedin.com/v2/userinfo` o validación de token), busca/crea el usuario y emite el JWT del sistema.
+10. Creaar servicio de Auth con Instagram (`backend/src/services/instagramAuth.service.js`):
+    ```js
+    /* src/services/instagramAuth.service.js */
+    const prisma = require('../config/prisma');
+    const jwt = require('jsonwebtoken');
+    const bcrypt = require('bcryptjs');
+
+    const generateToken = (user, roles = [], permissions = []) => {
+        return jwt.sign(
+            { id: user.id, email: user.email, roles, permissions },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        );
+    };
+
+    const instagramAuthService = {
+        async authenticateWithInstagram(accessToken) {
+            // Consultar a la Graph API pidiendo también el email
+            const response = await fetch(`https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`);
+            
+            if (!response.ok) {
+                throw new Error('Token de Instagram inválido o expirado');
+            }
+
+            const instagramData = await response.json();
+            const { id, name: accountName, email: socialEmail } = instagramData;
+
+            if (!id) {
+                throw new Error('No se pudo obtener el identificador de la cuenta de usuario');
+            }
+
+            // Si Meta devuelve un correo real, lo usamos; si viene vacío, usamos el sintético
+            const email = socialEmail || `${id}@instagram.oauth.local`;
+            const name = accountName ? `Usuario (${accountName})` : 'Usuario de Instagram';
+
+            // Buscar si el usuario ya existe por su email (ya sea el real o el sintético anterior)
+            let user = await prisma.user.findUnique({
+                where: { email },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: { include: { permission: true } }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            let isNewUser = false;
+
+            if (!user) {
+                isNewUser = true;
+                const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
+                const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
+
+                user = await prisma.user.create({
+                    data: {
+                        email,
+                        name,
+                        password: randomPassword,
+                        avatarUrl: null,
+                        roles: userRole ? { create: { roleId: userRole.id } } : undefined
+                    },
+                    include: {
+                        roles: {
+                            include: {
+                                role: {
+                                    include: {
+                                        permissions: { include: { permission: true } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (!user.isActive) {
+                throw new Error('La cuenta de usuario está desactivada');
+            }
+
+            const userRoles = user.roles.map(ur => ur.role.name);
+            const permissionsSet = new Set();
+            user.roles.forEach(ur => {
+                ur.role.permissions.forEach(rp => {
+                    permissionsSet.add(rp.permission.action);
+                });
+            });
+            const userPermissions = Array.from(permissionsSet);
+
+            const token = generateToken(user, userRoles, userPermissions);
+
+            return {
+                isNewUser,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    avatarUrl: user.avatarUrl,
+                    roles: userRoles,
+                    permissions: userPermissions
+                },
+                token
+            };
+        }
+    };
+
+    module.exports = instagramAuthService; 
+    ```
 
 ## 🎮 Paso 7: Controladores de la API (`src/controllers/`)
 + Implementa la capa de orquestación de respuesta para cada dominio:
@@ -2958,6 +3226,62 @@
     module.exports = { linkedinLogin };    
     ```
     + Sigue exactamente la misma estructura de auditoría y respuesta que el de Google.
+11. `backend/src/controllers/instagramAuth.controller.js`: Controlador para Auth con Instagram:
+    ```js
+    /* src/controllers/instagramAuth.controller.js */
+    const instagramAuthService = require('../services/instagramAuth.service');
+    const { getClientIp } = require('../utils/request.utils');
+    const prisma = require('../config/prisma');
+
+    const instagramLogin = async (req, res) => {
+        try {
+            const { accessToken } = req.body;
+
+            if (!accessToken) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'El token de acceso de Instagram es obligatorio'
+                });
+            }
+
+            const authResult = await instagramAuthService.authenticateWithInstagram(accessToken);
+
+            const isAiEnabled = !!process.env.AI_API_KEY && process.env.AI_API_KEY.trim() !== '';
+
+            // Registrar auditoría de éxito
+            await prisma.auditLog.create({
+                data: {
+                    action: 'LOGIN_SUCCESS_INSTAGRAM',
+                    entity: 'Auth',
+                    entityId: String(authResult.user.id),
+                    ipAddress: getClientIp(req),
+                    user: { connect: { id: authResult.user.id } },
+                    details: JSON.stringify({ ip: req.ip, userAgent: req.headers['user-agent'] }),
+                },
+            });
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Inicio de sesión con Instagram exitoso',
+                data: {
+                    user: authResult.user,
+                    features: {
+                        aiDiagnostic: isAiEnabled
+                    },
+                    token: authResult.token
+                }
+            });
+        } catch (error) {
+            console.error('Error en instagramLogin:', error.message);
+            return res.status(401).json({
+                status: 'fail',
+                message: error.message || 'Error al autenticar con Instagram'
+            });
+        }
+    };
+
+    module.exports = { instagramLogin };    
+    ```
 
 ## 🛣️ Paso 8: Definición de Rutas (`src/routes/`)
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
@@ -3154,8 +3478,24 @@
 
     module.exports = router;    
     ```
-10. `backend/src/routes/index.js`: Router central que registra todos los módulos:
+10. `backend/src/routes/instagramAuth.routes.js`: Define las rutas protegidas por el middleware de entorno:
     ```js
+    /* src/routes/instagramAuth.routes.js */
+    const express = require('express');
+    const router = express.Router();
+    const { instagramLogin } = require('../controllers/instagramAuth.controller');
+    const { checkInstagramAuthEnabled } = require('../middlewares/instagramEnabled.middleware');
+
+    // Aplicar el middleware de verificación a todas las rutas de este archivo
+    router.use(checkInstagramAuthEnabled);
+
+    router.post('/instagram', instagramLogin);
+
+    module.exports = router;    
+    ```
+11. `backend/src/routes/index.js`: Router central que registra todos los módulos:
+    ```js
+    /* src/routes/index.js */
     const express = require('express');
     const router = express.Router();
 
@@ -3163,17 +3503,18 @@
     const googleAuthRoutes = require('./googleAuth.routes');
     const facebookAuthRoutes = require('./facebookAuth.routes');
     const linkedinAuthRoutes = require('./linkedinAuth.routes');
+    const instagramAuthRoutes = require('./instagramAuth.routes');
     const userRoutes = require('./user.routes');
     const roleRoutes = require('./role.routes');
     const auditRoutes = require('./audit.routes');
     const systemRoutes = require('./systemLog.routes');
     const aiRoutes = require('./ai.routes');
 
-    // Definición limpia de módulos
     router.use('/auth', authRoutes);
     router.use('/auth', googleAuthRoutes);
     router.use('/auth', facebookAuthRoutes);
     router.use('/auth', linkedinAuthRoutes);
+    router.use('/auth', instagramAuthRoutes);
     router.use('/users', userRoutes);
     router.use('/roles', roleRoutes);
     router.use('/audit-logs', auditRoutes);

@@ -146,6 +146,9 @@
 
     SOCIAL_LINKEDIN_CLIENT_ID=tu_client_id
     SOCIAL_LINKEDIN_CLIENT_SECRET=tu_client_secret
+
+    SOCIAL_INSTAGRAM_CLIENT_ID=tu-instagram-client-id
+    SOCIAL_INSTAGRAM_CLIENT_SECRET=tu-instagram-client-secret
     ```
 2. Actualizar variables de entorno en `https://render.com`.
 
@@ -175,6 +178,7 @@
     VITE_SOCIAL_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
     VITE_SOCIAL_META_CLIENT_ID=tu-facebook-app-id
     VITE_SOCIAL_LINKEDIN_CLIENT_ID=tu-linkedin-client-id
+    VITE_SOCIAL_INSTAGRAM_CLIENT_ID=tu-instagram-client-id
 
 
     # ===========================================
