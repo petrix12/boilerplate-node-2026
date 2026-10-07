@@ -121,4 +121,26 @@ const sendPasswordResetEmail = async (toEmail, token, userName = 'Usuario') => {
     await dispatchEmail(toEmail, userName, subject, htmlContent, config);
 };
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail };
+const sendContactEmail = async (contactName, contactEmail, contactMessage) => {
+    const config = getEmailConfig();
+    const adminEmail = process.env.MAIL_FROM || 'admin@boilerplate.com'; // O un correo de soporte específico
+    const subject = `Nuevo mensaje de contacto de ${contactName} (${config.appName})`;
+
+    const htmlContent = renderTemplate({
+        subject,
+        appName: config.appName,
+        logoUrl: config.logoUrl,
+        heading: `Nuevo mensaje recibido`,
+        bodyText: `Has recibido un nuevo mensaje a través del formulario de contacto de la plataforma:<br><br>` +
+                  `<strong>Nombre:</strong> ${contactName}<br>` +
+                  `<strong>Correo:</strong> ${contactEmail}<br><br>` +
+                  `<strong>Mensaje:</strong><br><em>"${contactMessage}"</em>`,
+        actionText: 'Responder al usuario',
+        actionUrl: `mailto:${contactEmail}`,
+        securityNotice: `Este mensaje fue enviado desde el formulario público de soporte de ${config.appName}.`
+    });
+
+    await dispatchEmail(adminEmail, 'Administrador', subject, htmlContent, config);
+};
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendContactEmail };

@@ -2,6 +2,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useAuthStore } from '../stores/auth.store';
+import FooterComponent from '@/components/common/FooterComponent.vue';
 import GithubIcon from '@/components/icons/GithubIcon.vue';
 import { 
     ShieldCheckIcon, 
@@ -177,9 +178,7 @@ const footerText = computed(() => {
             </div>
         </div>
 
-        <!-- Pie de página integrado -->
-        <footer class="w-full border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-4 px-6 mt-auto text-center text-xs text-slate-500 dark:text-slate-400">
-            {{ footerText }}
-        </footer>
+        <!-- Pie de página -->
+        <FooterComponent />
     </div>
 </template>

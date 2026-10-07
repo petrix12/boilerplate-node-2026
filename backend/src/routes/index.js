@@ -12,6 +12,7 @@ const roleRoutes = require('./role.routes');
 const auditRoutes = require('./audit.routes');
 const systemRoutes = require('./systemLog.routes');
 const aiRoutes = require('./ai.routes');
+const contactRoutes = require('./contact.routes');
 
 router.use('/auth', authRoutes);
 router.use('/auth', googleAuthRoutes);
@@ -23,5 +24,6 @@ router.use('/roles', roleRoutes);
 router.use('/audit-logs', auditRoutes);
 router.use('/system-logs', systemRoutes);
 router.use('/ai', aiRoutes);
+router.use('/contact', contactRoutes);
 
 module.exports = router;

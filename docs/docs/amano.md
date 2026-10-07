@@ -77,12 +77,7 @@
 + ◻️ Asegurar que los endpoints en el backend se puedan ejecutar según los permisos que les corresponde.
 + ◻️ Indicar la creación de los archivos README.md y LICENSE
 + ◻️ Ajustar detalles en subidas de avatar (que el backend y el frontend soliciten el mismo peso, mensajes más claros).
-+ ◻️ Login con redes sociales.
-    + ✅ Google (OAuth 2.0 / OpenID Connect).
-    + ✅ Meta (Facebook Login).
-    + ✅ LinkedIn.
-    + ◻️ GitHub.
-    + ◻️ Instagram.
++ ◻️ Cuando un usuario se registre por cualquier medio y ya estaba registrado, unificar el mensaje.
 + ◻️ Casar bien esta ruta del backend backend/src/routes con esta del frontend frontend/src/services (hacer backend y el frontend queden bien sincronizados)
 
 
@@ -115,6 +110,13 @@
 + ✅ Ayudante IA para la aplicación, que se puede meter en la documentación.
 + ✅ Poner modo oscuro por defecto y ver como mejorar el footer.
 + ✅ Pedir repetir contraseña tanto en el register como en el profile.
++ ✅ Login con redes sociales.
+    + ✅ Google (OAuth 2.0 / OpenID Connect).
+    + ✅ Meta (Facebook Login).
+    + ✅ LinkedIn.
+    + ✅ Instagram.
++ ✅ Unificar Footer.
++ ✅ Agregar páginas de: Quienes somos, etc.
 
 
 

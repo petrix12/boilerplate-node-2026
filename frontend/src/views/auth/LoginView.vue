@@ -118,7 +118,7 @@ const handleSubmit = async () => {
             <div class="space-y-3">
                 <GoogleAuthButton text="Iniciar sesión con Google" />            
                 <FacebookAuthButton text="Iniciar sesión con Facebook" />
-                <LinkedInAuthButton text="Continuar con LinkedIn" />
+                <LinkedInAuthButton text="Iniciar sesión con LinkedIn" />
                 <InstagramAuthButton text="Iniciar sesión con Instagram" />
             </div>
 

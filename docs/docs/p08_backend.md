@@ -896,7 +896,29 @@
         await dispatchEmail(toEmail, userName, subject, htmlContent, config);
     };
 
-    module.exports = { sendVerificationEmail, sendPasswordResetEmail };
+    const sendContactEmail = async (contactName, contactEmail, contactMessage) => {
+        const config = getEmailConfig();
+        const adminEmail = process.env.MAIL_FROM || 'admin@boilerplate.com'; // O un correo de soporte específico
+        const subject = `Nuevo mensaje de contacto de ${contactName} (${config.appName})`;
+
+        const htmlContent = renderTemplate({
+            subject,
+            appName: config.appName,
+            logoUrl: config.logoUrl,
+            heading: `Nuevo mensaje recibido`,
+            bodyText: `Has recibido un nuevo mensaje a través del formulario de contacto de la plataforma:<br><br>` +
+                    `<strong>Nombre:</strong> ${contactName}<br>` +
+                    `<strong>Correo:</strong> ${contactEmail}<br><br>` +
+                    `<strong>Mensaje:</strong><br><em>"${contactMessage}"</em>`,
+            actionText: 'Responder al usuario',
+            actionUrl: `mailto:${contactEmail}`,
+            securityNotice: `Este mensaje fue enviado desde el formulario público de soporte de ${config.appName}.`
+        });
+
+        await dispatchEmail(adminEmail, 'Administrador', subject, htmlContent, config);
+    };
+
+    module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendContactEmail };
     ```
 3. Crear el Servicio de Ingesta (`backend/src/services/systemLog.service.js`):
     ```js
@@ -3282,6 +3304,40 @@
 
     module.exports = { instagramLogin };    
     ```
+12. `backend/src/controllers/contact.controller.js`: Controlador para el envío de correo de soporte:
+    ```js
+    /* src/controllers/contact.controller.js */
+    const { sendContactEmail } = require('../services/email.service');
+
+    const submitContactForm = async (req, res) => {
+        try {
+            const { name, email, message } = req.body;
+
+            if (!name || !email || !message) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'Todos los campos son obligatorios'
+                });
+            }
+
+            // Enviamos el correo al administrador/soporte utilizando el servicio centralizado
+            await sendContactEmail(name, email, message);
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Mensaje enviado correctamente. Nos pondremos en contacto pronto.'
+            });
+        } catch (error) {
+            console.error('Error en submitContactForm:', error);
+            return res.status(500).json({
+                status: 'error',
+                message: 'No se pudo enviar el mensaje. Inténtalo de más tarde.'
+            });
+        }
+    };
+
+    module.exports = { submitContactForm };    
+    ```
 
 ## 🛣️ Paso 8: Definición de Rutas (`src/routes/`)
 + Enlaza los endpoints HTTP con sus respectivos middlewares y controladores:
@@ -3493,7 +3549,18 @@
 
     module.exports = router;    
     ```
-11. `backend/src/routes/index.js`: Router central que registra todos los módulos:
+11. `backend/src/routes/contact.routes.js`: Ruta para el envío de correo de soporte:
+    ```js
+    /* src/routes/contact.routes.js */
+    const express = require('express');
+    const router = express.Router();
+    const { submitContactForm } = require('../controllers/contact.controller');
+
+    router.post('/', submitContactForm);
+
+    module.exports = router;    
+    ```
+12. `backend/src/routes/index.js`: Router central que registra todos los módulos:
     ```js
     /* src/routes/index.js */
     const express = require('express');
@@ -3509,6 +3576,7 @@
     const auditRoutes = require('./audit.routes');
     const systemRoutes = require('./systemLog.routes');
     const aiRoutes = require('./ai.routes');
+    const contactRoutes = require('./contact.routes');
 
     router.use('/auth', authRoutes);
     router.use('/auth', googleAuthRoutes);
@@ -3520,6 +3588,7 @@
     router.use('/audit-logs', auditRoutes);
     router.use('/system-logs', systemRoutes);
     router.use('/ai', aiRoutes);
+    router.use('/contact', contactRoutes);
 
     module.exports = router;
     ```

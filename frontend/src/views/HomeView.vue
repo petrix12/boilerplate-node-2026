@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useAuthStore } from '../stores/auth.store';
+import FooterComponent from '@/components/common/FooterComponent.vue';
 
 const authStore = useAuthStore();
 const hasLogoError = ref(false);
@@ -111,8 +112,6 @@ const handleLogoError = () => {
         </main>
 
         <!-- Footer -->
-        <footer class="py-6 text-center text-slate-500 text-sm border-t border-slate-800">
-            &copy; 2026 {{ $appName }}. Todos los derechos reservados.
-        </footer>
+        <FooterComponent />
     </div>
 </template>

@@ -15,6 +15,9 @@ const router = createRouter({
         { path: '/privacy', name: 'privacy', component: () => import('@/views/legal/PrivacyPolicyView.vue'), meta: { requiresAuth: false } },
         { path: '/terms', name: 'terms', component: () => import('@/views/legal/TermsView.vue'), meta: { requiresAuth: false } },
         { path: '/data-deletion', name: 'data-deletion', component: () => import('@/views/legal/DataDeletionView.vue'), meta: { requiresAuth: false } },
+        { path: '/about', name: 'about', component: () => import('@/views/AboutView.vue'), meta: { requiresAuth: false } },
+        { path: '/contact', name: 'contact', component: () => import('@/views/legal/ContactView.vue'), meta: { requiresAuth: false } },
+        { path: '/cookies', name: 'cookies', component: () => import('@/views/legal/CookiesView.vue'), meta: { requiresAuth: false } },
         {
             // Rutas protegidas que comparten el mismo Navbar sin pestañeos
             path: '/',

@@ -2,6 +2,7 @@
 <script setup>
 import { computed } from 'vue';
 import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+import FooterComponent from '@/components/common/FooterComponent.vue';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Mi Aplicación';
 const currentYear = new Date().getFullYear();
@@ -82,11 +83,7 @@ const footerText = computed(() => {
 
         </div>
 
-        <!-- Pie de página integrado -->
-        <footer v-if="showFooter" class="w-full border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-4 px-6 mt-auto text-center text-xs text-slate-500 dark:text-slate-400">
-            <slot name="footer">
-                {{ footerText }}
-            </slot>
-        </footer>
+        <!-- Pie de página -->
+        <FooterComponent v-if="showFooter" :isAdmin="isAdmin" />
     </div>
 </template>

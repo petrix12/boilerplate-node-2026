@@ -11,7 +11,6 @@
     + `frontend/src/components/HelloWorld.vue`.
     + `frontend/src/components/WelcomeItem.vue`.
     + `frontend/src/stores/counter.js`.
-    + `frontend/src/views/AboutView.vue`.
 
 ## 👁️‍🗨️ Implementar el Protocolo Open Graph
 1. Diseñar tu imagen Open Graph (`og:image`):
@@ -585,6 +584,9 @@
                 { path: '/privacy', name: 'privacy', component: () => import('@/views/legal/PrivacyPolicyView.vue'), meta: { requiresAuth: false } },
                 { path: '/terms', name: 'terms', component: () => import('@/views/legal/TermsView.vue'), meta: { requiresAuth: false } },
                 { path: '/data-deletion', name: 'data-deletion', component: () => import('@/views/legal/DataDeletionView.vue'), meta: { requiresAuth: false } },
+                { path: '/about', name: 'about', component: () => import('@/views/AboutView.vue'), meta: { requiresAuth: false } },
+                { path: '/contact', name: 'contact', component: () => import('@/views/legal/ContactView.vue'), meta: { requiresAuth: false } },
+                { path: '/cookies', name: 'cookies', component: () => import('@/views/legal/CookiesView.vue'), meta: { requiresAuth: false } },
                 {
                     // Rutas protegidas que comparten el mismo Navbar sin pestañeos
                     path: '/',
@@ -941,13 +943,26 @@
         }
     };   
     ```
-6. Crear archivo unificador `frontend/src/services/index.js` (Patrón Barrel Export):
+6. Crear servicio `frontend/src/services/contact.service.js`:
+    ```js
+    /* src/services/contact.service.js */
+    import api from '@/api/axios';
+
+    export const contactService = {
+        async sendMessage(formData) {
+            const response = await api.post('/contact', formData);
+            return response.data;
+        }
+    };    
+    ```
+7. Crear archivo unificador `frontend/src/services/index.js` (Patrón Barrel Export):
     ```js
     export { authService } from './auth.service';
     export { userService } from './user.service';
     export { roleService } from './role.service';
     export { auditService } from './audit.service';
     export { aiService } from './ai.service';
+    export { contactService } from './contact.service';
     ```
 
 ## 🧩 Componentes
@@ -1171,13 +1186,122 @@
             </header>
         </template>
         ```
-2. Componente para vistas estándar:
+2. Componente para consentimiento de cookies:
+    + Crea el archivo `frontend/src/components/common/CookieConsent.vue`:
+        ```vue
+        <!-- src/components/common/CookieConsent.vue -->
+        <script setup>
+        import { ref, onMounted } from 'vue';
+
+        const showBanner = ref(false);
+
+        onMounted(() => {
+            const consent = localStorage.getItem('cookie_consent');
+            if (!consent) {
+                // Mostramos el banner si el usuario no ha tomado una decisión previa
+                showBanner.value = true;
+            }
+        });
+
+        const acceptAll = () => {
+            localStorage.setItem('cookie_consent', 'accepted');
+            showBanner.value = false;
+        };
+
+        const rejectOptional = () => {
+            localStorage.setItem('cookie_consent', 'essential_only');
+            showBanner.value = false;
+        };
+        </script>
+
+        <template>
+            <transition
+                enter-active-class="transform transition duration-300 ease-out"
+                enter-from-class="translate-y-full opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transform transition duration-200 ease-in"
+                leave-from-class="translate-y-0 opacity-100"
+                leave-to-class="translate-y-full opacity-0"
+            >
+                <div v-if="showBanner" class="fixed bottom-0 left-0 right-0 z-50 p-4 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-800 text-slate-100 shadow-2xl">
+                    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-sm text-slate-300 text-center sm:text-left">
+                            Utilizamos cookies propias y técnicas (almacenamiento local) para garantizar el funcionamiento seguro de la sesión y mejorar tu experiencia. Puedes consultar más detalles en nuestra 
+                            <router-link to="/cookies" class="text-emerald-400 hover:underline font-medium">Política de Cookies</router-link>.
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <button 
+                                @click="rejectOptional"
+                                class="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer border border-slate-700"
+                            >
+                                Solo técnicas
+                            </button>
+                            <button 
+                                @click="acceptAll"
+                                class="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-md transition-colors cursor-pointer"
+                            >
+                                Aceptar todas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+        </template>        
+        ```
+3. Componente para pintar el footer:
+    + Crea el archivo `frontend/src/components/common/FooterComponent.vue`:
+        ```vue
+        <!-- src/components/common/FooterComponent.vue -->
+        <script setup>
+        import { computed } from 'vue';
+
+        const props = defineProps({
+            isAdmin: {
+                type: Boolean,
+                default: false
+            }
+        });
+
+        const appName = import.meta.env.VITE_APP_NAME || 'NodeVue Boilerplate';
+        const currentYear = new Date().getFullYear();
+
+        const copyrightText = computed(() => {
+            if (props.isAdmin) {
+                return `© ${currentYear} Panel de Administración. Todos los derechos reservados.`;
+            }
+            return `© ${currentYear} ${appName}. Todos los derechos reservados.`;
+        });
+        </script>
+
+        <template>
+            <footer class="w-full border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-6 px-6 mt-auto text-xs text-slate-500 dark:text-slate-400">
+                <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                    <!-- Texto de Copyright dinámico -->
+                    <div>
+                        {{ copyrightText }}
+                    </div>
+
+                    <!-- Enlaces Legales y de Soporte -->
+                    <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                        <router-link to="/about" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Quiénes Somos</router-link>
+                        <router-link to="/contact" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Contacto</router-link>
+                        <router-link to="/privacy" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Privacidad</router-link>
+                        <router-link to="/terms" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Términos</router-link>
+                        <router-link to="/cookies" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Cookies</router-link>
+                        <router-link to="/data-deletion" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Eliminación de Datos</router-link>
+                    </div>
+                </div>
+            </footer>
+        </template>        
+        ```
+4. Componente para vistas estándar:
     + Crea el archivo `frontend/src/components/common/PageLayout.vue`:
         ```vue
         <!-- src/components/common/PageLayout.vue -->
         <script setup>
         import { computed } from 'vue';
         import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+        import FooterComponent from '@/components/common/FooterComponent.vue';
 
         const appName = import.meta.env.VITE_APP_NAME || 'Mi Aplicación';
         const currentYear = new Date().getFullYear();
@@ -1258,16 +1382,12 @@
 
                 </div>
 
-                <!-- Pie de página integrado -->
-                <footer v-if="showFooter" class="w-full border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-4 px-6 mt-auto text-center text-xs text-slate-500 dark:text-slate-400">
-                    <slot name="footer">
-                        {{ footerText }}
-                    </slot>
-                </footer>
+                <!-- Pie de página -->
+                <FooterComponent v-if="showFooter" :isAdmin="isAdmin" />
             </div>
-        </template>        
+        </template>       
         ```
-2. Componente para homologar tablas:
+5. Componente para homologar tablas:
     + Crea el archivo `frontend/src/components/common/AdminTableLayout.vue`:
         ```vue
         <!-- src/components/common/AdminTableLayout.vue -->
@@ -1446,7 +1566,7 @@
             </div>
         </template>        
         ```
-3. Componente para homologar modales:
+6. Componente para homologar modales:
     + Crea el archivo `frontend/src/components/common/BaseModal.vue`:
         ```vue
         <!-- src/components/common/BaseModal.vue -->
@@ -1596,7 +1716,7 @@
             </Transition>
         </template>      
         ```
-4. Componente para chat con IA:
+7. Componente para chat con IA:
     + Crea el archivo `frontend/src/components/common/AIChatWidget.vue`:
         ```vue
         <!-- src/components/common/AIChatWidget.vue -->
@@ -1851,7 +1971,7 @@
         }
         </style>    
         ```
-5. Componente para gestionar el modal de roles en la administración de usuarios:
+8. Componente para gestionar el modal de roles en la administración de usuarios:
     + Crea el archivo `frontend/src/components/admin/UserRoleModal.vue`:
         ```vue
         <!-- src/components/admin/UserRoleModal.vue -->
@@ -1952,7 +2072,7 @@
             </BaseModal>
         </template>        
         ```
-6. Componente para gestionar el modal de edición y creación de usuarios:
+9.  Componente para gestionar el modal de edición y creación de usuarios:
     + Crea el archivo `frontend/src/components/admin/UserFormModal.vue`:
         ```vue
         <!-- src/components/admin/UserFormModal.vue -->
@@ -2295,7 +2415,7 @@
             </BaseModal>
         </template>        
         ```
-7. Componente para gestionar el modal de administración de roles:
+10. Componente para gestionar el modal de administración de roles:
     + Crea el archivo `frontend/src/components/admin/RoleFormModal.vue`:
         ```vue
         <!-- src/components/admin/RoleFormModal.vue -->
@@ -2454,7 +2574,7 @@
             </BaseModal>
         </template>        
         ```
-8. Componente para gestionar el modal de visualización de JSON de logs de auditorias:
+11. Componente para gestionar el modal de visualización de JSON de logs de auditorias:
     + Crea el archivo `frontend/src/components/admin/AuditDetailModal.vue`:
         ```vue
         <!-- src/components/admin/AuditDetailModal.vue -->
@@ -2525,7 +2645,7 @@
             </BaseModal>
         </template>        
         ```
-9. Componente para login con Google:
+12. Componente para login con Google:
     + Cera el archivo `frontend/src/components/auth/GoogleAuthButton.vue`:
         ```vue
         <!-- src/components/auth/GoogleAuthButton.vue -->
@@ -2642,7 +2762,7 @@
             </div>
         </template>
         ```
-10. Componente para login con Facebook:
+13. Componente para login con Facebook:
     + Cera el archivo `frontend/src/components/auth/FacebookAuthButton.vue`:
         ```vue
         <!-- src/components/auth/FacebookAuthButton.vue -->
@@ -2766,7 +2886,7 @@
             </div>
         </template>     
         ```
-11. Componente para login con Linkedin:
+14. Componente para login con Linkedin:
     + Cera el archivo `frontend/src/components/auth/LinkedInAuthButton.vue`:
         ```vue
         <!-- src/components/auth/LinkedInAuthButton.vue -->
@@ -2813,7 +2933,7 @@
             </div>
         </template>        
         ```
-12. Componente para login con Linkedin:
+15. Componente para login con Linkedin:
     + Cera el archivo `frontend/src/components/auth/InstagramAuthButton.vue`:
         ```vue
         <!-- src/components/auth/InstagramAuthButton.vue -->
@@ -2939,7 +3059,7 @@
             </div>
         </template>        
         ```
-13. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
+17. Componente para icono de GitHub `frontend/src/components/icons/GithubIcon.vue`:
     ```vue
     <template>
         <svg class="fill-current" viewBox="0 0 24 24" aria-hidden="true">
@@ -3659,6 +3779,7 @@
         <script setup>
         import { ref } from 'vue';
         import { useAuthStore } from '../stores/auth.store';
+        import FooterComponent from '@/components/common/FooterComponent.vue';
 
         const authStore = useAuthStore();
         const hasLogoError = ref(false);
@@ -3769,13 +3890,43 @@
                 </main>
 
                 <!-- Footer -->
-                <footer class="py-6 text-center text-slate-500 text-sm border-t border-slate-800">
-                    &copy; 2026 {{ $appName }}. Todos los derechos reservados.
-                </footer>
+                <FooterComponent />
             </div>
         </template>
         ```
-9.  Crear el Layout Principal (`frontend/src/layouts/AppLayout.vue`)
+9. Rediseñar vista About:
+    + Modificar el archivo `frontend/src/views/AboutView.vue`:
+        ```vue
+        <!-- src/views/AboutView.vue -->
+        <script setup>
+        import { useRouter } from 'vue-router';
+        const router = useRouter();
+        const appName = import.meta.env.VITE_APP_NAME || 'NodeVue Boilerplate';
+        </script>
+
+        <template>
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8 border border-slate-200 dark:border-slate-700">
+                    <button @click="router.back()" class="mb-6 text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium">
+                        ← Volver
+                    </button>
+                    <h1 class="text-3xl font-bold mb-4">Acerca de Nosotros</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Conoce más sobre {{ appName }}</p>
+                    
+                    <div class="space-y-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                        <p><strong>{{ appName }}</strong> nace como una solución moderna, robusta y modular orientada a desarrolladores que buscan acelerar el despliegue de aplicaciones web seguras y listas para producción.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">Nuestra Misión</h2>
+                        <p>Simplificar la arquitectura full-stack integrando las mejores prácticas de desarrollo: autenticación robusta mediante múltiples proveedores sociales (Google, Facebook, LinkedIn, Instagram), control de roles y permisos granulares, auditoría de seguridad y una interfaz limpia basada en Vue 3 y Tailwind CSS.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">¿Por qué elegir esta arquitectura?</h2>
+                        <p>Porque priorizamos la modularidad, la mantenibilidad del código y la seguridad desde la primera línea, permitiéndote concentrarte en la lógica de negocio única de tu producto.</p>
+                    </div>
+                </div>
+            </div>
+        </template>        
+        ```
+10. Crear el Layout Principal (`frontend/src/layouts/AppLayout.vue`)
     + Crea un layout que envuelva todas las páginas autenticadas:
         ```vue
         <script setup>
@@ -3825,13 +3976,14 @@
         }
         </style>
         ```
-10. Vista Protegida del Dashboard:
+11. Vista Protegida del Dashboard:
     + Crea el archivo `frontend/src/views/DashboardView.vue`:
         ```vue
         <!-- src/views/DashboardView.vue -->
         <script setup>
         import { computed } from 'vue';
         import { useAuthStore } from '../stores/auth.store';
+        import FooterComponent from '@/components/common/FooterComponent.vue';
         import GithubIcon from '@/components/icons/GithubIcon.vue';
         import { 
             ShieldCheckIcon, 
@@ -4007,14 +4159,12 @@
                     </div>
                 </div>
 
-                <!-- Pie de página integrado -->
-                <footer class="w-full border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-4 px-6 mt-auto text-center text-xs text-slate-500 dark:text-slate-400">
-                    {{ footerText }}
-                </footer>
+                <!-- Pie de página -->
+                <FooterComponent />
             </div>
         </template>
         ```
-11. Vista de Configuración / Perfil (`frontend/src/views/ProfileView.vue`)
+12. Vista de Configuración / Perfil (`frontend/src/views/ProfileView.vue`)
     + Crearemos la nueva pantalla de perfil limpia y estructurada:
         ```vue
         <!-- src/views/ProfileView.vue -->
@@ -4468,20 +4618,22 @@
             </PageLayout>
         </template>
         ```
-12. Limpiar `App.vue`:
+13. Limpiar `App.vue`:
     + Abre `frontend/src/App.vue` y reemplaza todo su contenido con esto:
         ```vue
         <script setup>
         import { RouterView } from 'vue-router'
         import { useThemeStore } from '@/stores/theme.store'
+        import CookieConsent from '@/components/common/CookieConsent.vue';
         useThemeStore()
         </script>
 
         <template>
             <RouterView />
+            <CookieConsent />
         </template>
         ```
-13. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
+14. Crear vista administrativa `frontend/src/views/admin/AdminDashboardView.vue`:
     ```vue
     <!-- src/views/admin/AdminDashboardView.vue -->
     <script setup>
@@ -4570,7 +4722,7 @@
         </PageLayout>
     </template>
     ```
-14. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
+15. 🎨 Crear la Vista UsersAdminView.vue (`frontend/src/views/admin/UsersAdminView.vue`):
     + Crea la carpeta src/views/admin/ si no existe y añade la vista:
         ```vue
         <!-- src/views/admin/UsersAdminView.vue -->
@@ -4877,7 +5029,7 @@
             </PageLayout>
         </template>
         ```
-15. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
+16. Vista Vue (`frontend/src/views/admin/RolesAdminView.vue`):
     + Crea el componente `RolesAdminView.vue` para la interfaz de gestión de roles y asignación de permisos:
         ```vue
         <!-- src/views/admin/RolesAdminView.vue -->
@@ -5075,7 +5227,7 @@
             </PageLayout>
         </template>
         ```
-16. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
+17. Creamos la vista `frontend/src/views/admin/AuditLogsView.vue`:
     ```vue
         <!-- src/views/admin/AuditLogsView.vue -->
         <script setup>
@@ -5397,7 +5549,7 @@
             </PageLayout>
         </template>
     ```
-17. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
+18. Creamos la vista `frontend/src/views/admin/SystemDiagnosticView.vue`:
     ```vue
     <!-- src/views/admin/SystemDiagnosticView.vue -->
     <script setup>
@@ -5568,7 +5720,7 @@
         </PageLayout>
     </template>
     ```
-18. Crear Vista 404 (not-found):
+19. Crear Vista 404 (not-found):
     + Crea el archivo `frontend/src/views/errors/NotFoundView.vue`:
         ```vue
         <template>
@@ -5587,7 +5739,7 @@
             </div>
         </template>        
         ```
-19. Crear Vista 403 (forbidden):
+20. Crear Vista 403 (forbidden):
     + Crea el archivo `frontend/src/views/errors/ForbiddenView.vue`:
         ```vue
         <template>
@@ -5617,7 +5769,7 @@
             </div>
         </template>       
         ```
-20. Crear vista de políticas de privacidad:
+21. Crear vista de políticas de privacidad:
     + Crea el archivo `frontend/src/views/legal/PrivacyPolicyView.vue`:
         ```vue
         <!-- src/views/legal/PrivacyPolicyView.vue -->
@@ -5651,7 +5803,7 @@
             </div>
         </template>        
         ```
-21. Crear vista de condiciones de servicio:
+22. Crear vista de condiciones de servicio:
     + Crea el archivo `frontend/src/views/legal/TermsView.vue`:
         ```vue
         <!-- src/views/legal/TermsView.vue -->
@@ -5685,7 +5837,137 @@
             </div>
         </template>        
         ```
-22. Crear vista de políticas de eliminación de datos:
+23. Crear vista Contacto
+    + Crea el archivo `frontend/src/views/legal/ContactView.vue`:
+        ```vue
+        <!-- src/views/legal/ContactView.vue -->
+        <script setup>
+        import { ref } from 'vue';
+        import { useRouter } from 'vue-router';
+        import { getSwalTheme } from '@/utils/swal';
+        import { contactService } from '@/services';
+
+        const router = useRouter();
+        const loading = ref(false);
+        const form = ref({
+            name: '',
+            email: '',
+            message: ''
+        });
+
+        const handleSubmit = async () => {
+            loading.value = true;
+            try {
+                const data = await contactService.sendMessage(form.value);
+                getSwalTheme().fire({
+                    icon: 'success',
+                    title: '¡Mensaje enviado!',
+                    text: data.message || 'Gracias por ponerte en contacto. Te responderemos a la brevedad.',
+                });
+                form.value = { name: '', email: '', message: '' };
+            } catch (err) {
+                getSwalTheme().fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: err.response?.data?.message || 'Hubo un error al enviar el mensaje.',
+                });
+            } finally {
+                loading.value = false;
+            }
+        };
+        </script>
+
+        <template>
+            <!-- Tu plantilla HTML se mantiene exactamente igual -->
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+                <div class="max-w-xl mx-auto bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8 border border-slate-200 dark:border-slate-700">
+                    <button @click="router.back()" class="mb-6 text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium">
+                        ← Volver
+                    </button>
+                    <h1 class="text-3xl font-bold mb-2">Contacto y Soporte</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">¿Tienes alguna pregunta o sugerencia? Escríbenos.</p>
+                    
+                    <form @submit.prevent="handleSubmit" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Nombre</label>
+                            <input 
+                                v-model="form.name"
+                                type="text" 
+                                required
+                                class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
+                                placeholder="Tu nombre"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Correo Electrónico</label>
+                            <input 
+                                v-model="form.email"
+                                type="email" 
+                                required
+                                class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
+                                placeholder="tu@correo.com"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Mensaje</label>
+                            <textarea 
+                                v-model="form.message"
+                                rows="4" 
+                                required
+                                class="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-900 dark:text-slate-200"
+                                placeholder="¿Cómo podemos ayudarte?"
+                            ></textarea>
+                        </div>
+                        <button 
+                            type="submit" 
+                            :disabled="loading"
+                            class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-md transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                            {{ loading ? 'Enviando...' : 'Enviar Mensaje' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </template>        
+        ```
+24. Crear vista Política de Cookies:
+    + Crea el archivo `frontend/src/views/legal/CookiesView.vue`:
+        ```vue
+        <!-- src/views/legal/CookiesView.vue -->
+        <script setup>
+        import { useRouter } from 'vue-router';
+        const router = useRouter();
+        </script>
+
+        <template>
+            <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+                <div class="max-w-3xl mx-auto bg-white dark:bg-slate-800 shadow-xl rounded-2xl p-8 border border-slate-200 dark:border-slate-700">
+                    <button @click="router.back()" class="mb-6 text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium">
+                        ← Volver
+                    </button>
+                    <h1 class="text-3xl font-bold mb-4">Política de Cookies</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Última actualización: Octubre de 2026</p>
+                    
+                    <div class="space-y-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                        <p>En <strong>NodeVue Boilerplate</strong> utilizamos almacenamiento local y cookies técnicas para garantizar el correcto funcionamiento de la plataforma y la persistencia de tu sesión.</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">1. ¿Qué son las cookies y el almacenamiento local?</h2>
+                        <p>Son pequeños archivos de texto que se almacenan en tu navegador web. Utilizamos principalmente <code>localStorage</code> para guardar tu token de autenticación cifrado y las preferencias de interfaz (como el modo oscuro).</p>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">2. Tipos de tecnologías utilizadas</h2>
+                        <ul class="list-disc pl-5 space-y-1 mt-2">
+                            <li><strong>Cookies técnicas / de sesión:</strong> Indispensables para mantener tu sesión iniciada de forma segura mientras navegas por el panel de administración o el dashboard.</li>
+                            <li><strong>Preferencias de usuario:</strong> Almacenan ajustes visuales (como el tema oscuro o claro) elegidos por ti.</li>
+                        </ul>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">3. Cómo gestionar o deshabilitar las cookies</h2>
+                        <p>Puedes configurar tu navegador para bloquear o eliminar las cookies y los datos de almacenamiento local en cualquier momento. Ten en cuenta que si deshabilitas las cookies técnicas o de sesión, es posible que no puedas iniciar sesión ni utilizar las funciones protegidas de la aplicación.</p>
+                    </div>
+                </div>
+            </div>
+        </template>        
+        ```
+25. Crear vista de políticas de eliminación de datos:
     + Crea el archivo `frontend/src/views/legal/DataDeletionView.vue`:
         ```vue
         <!-- src/views/legal/DataDeletionView.vue -->
@@ -5700,28 +5982,32 @@
                     <button @click="router.back()" class="mb-6 text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium">
                         ← Volver
                     </button>
-                    <h1 class="text-3xl font-bold mb-4">Instrucciones para la Eliminación de Datos de Usuario</h1>
-                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Conforme a las políticas de Meta y Facebook</p>
+                    <h1 class="text-3xl font-bold mb-4">Instrucciones para la Eliminación de Datos</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Última actualización: Octubre de 2026</p>
                     
                     <div class="space-y-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                        <p>De acuerdo con la normativa de privacidad de Facebook, los usuarios tienen derecho a solicitar la eliminación de sus datos vinculados a nuestra aplicación.</p>
+                        <p>De acuerdo con las políticas de las plataformas de autenticación social (como Facebook, Instagram y Google), los usuarios tienen derecho a solicitar la eliminación de sus datos personales almacenados en nuestra aplicación.</p>
                         
-                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">¿Cómo eliminar tus datos?</h2>
-                        <ol class="list-decimal list-inside space-y-2">
-                            <li>Inicia sesión en tu cuenta dentro de <strong>NodeVue Boilerplate</strong>.</li>
-                            <li>Dirígete a la sección de <strong>Configuración de Perfil</strong>.</li>
-                            <li>Haz clic en el botón de <strong>Eliminar Cuenta / Borrar Datos</strong>. Esto purgará automáticamente tu información de nuestras bases de datos locales.</li>
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">1. Cómo solicitar la eliminación de tus datos</h2>
+                        <p>Si iniciaste sesión mediante una red social o creaste una cuenta y deseas eliminar por completo tu perfil y los registros asociados de nuestra base de datos, puedes hacerlo siguiendo estos pasos:</p>
+                        <ol class="list-decimal pl-5 space-y-2 mt-2">
+                            <li>Inicia sesión en tu cuenta dentro de la plataforma.</li>
+                            <li>Dirígete a la sección de <strong>Perfil de Usuario</strong> en el menú de navegación.</li>
+                            <li>Haz clic en el botón de eliminar cuenta o comunícate directamente con nuestro equipo de soporte técnico.</li>
                         </ol>
-
-                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">Eliminación mediante Facebook</h2>
-                        <p>Si iniciaste sesión usando Facebook, puedes eliminar la actividad de nuestra app directamente desde la configuración de tu cuenta de Facebook:</p>
-                        <ul class="list-disc list-inside space-y-1">
-                            <li>Ve a la <strong>Configuración y privacidad</strong> de tu cuenta de Facebook.</li>
-                            <li>Entra en <strong>Aplicaciones y sitios web</strong>.</li>
-                            <li>Busca nuestra aplicación y haz clic en <strong>Eliminar</strong> para revocar el acceso y solicitar la eliminación de los datos asociados.</li>
+                        
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">2. Eliminación desde la configuración de Meta (Facebook / Instagram)</h2>
+                        <p>Si utilizaste el inicio de sesión con Facebook o Instagram, también puedes revocar el acceso de nuestra aplicación desde la configuración de tu cuenta social:</p>
+                        <ul class="list-disc pl-5 space-y-1 mt-2">
+                            <li>Ve a la Configuración de tu cuenta de Facebook o Instagram.</li>
+                            <li>Busca la sección <strong>Aplicaciones y sitios web</strong> o <strong>Apps empresariales</strong>.</li>
+                            <li>Selecciona nuestra aplicación y haz clic en <strong>Eliminar</strong> o <strong>Revocar acceso</strong>. Esto notificará a nuestro sistema la desconexión de tus datos.</li>
                         </ul>
+
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">3. Soporte y Consultas</h2>
+                        <p>Para cualquier duda adicional sobre la retención o privacidad de tus datos, puedes contactarnos a través de nuestra sección de soporte.</p>
                     </div>
                 </div>
             </div>
-        </template>        
+        </template>       
         ```
